@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 import { validateEnvironment } from './config/environment';
 import { OrchestratorModule } from './orchestrator/orchestrator.module';
@@ -12,6 +14,10 @@ import { TasksModule } from './tasks/tasks.module';
       isGlobal: true,
       cache: true,
       validate: validateEnvironment,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
+      exclude: ['/api*'],
     }),
     ProvidersModule,
     TasksModule,

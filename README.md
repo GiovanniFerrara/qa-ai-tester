@@ -4,6 +4,9 @@ AI-assisted QA orchestration scaffold that combines a NestJS control plane with 
 
 ## Project Layout
 
+This is a monorepo with separate backend and frontend packages:
+
+### Backend (`backend/`)
 - `src/app.module.ts` – NestJS root module wiring config, providers, orchestrator, and worker modules.
 - `src/orchestrator` – Run management services, REST controller for runs, and scaffolded execution pipeline.
 - `src/providers` – OpenAI and Anthropic provider helpers plus shared JSON schema conversion.
@@ -14,16 +17,19 @@ AI-assisted QA orchestration scaffold that combines a NestJS control plane with 
 - `scripts/generate-schemas.ts` – Emits JSON Schemas derived from Zod contracts (for provider definitions, validation, tooling).
 - `tests/auth.setup.ts` – Placeholder Playwright project to generate authenticated storage state.
 
+### Frontend (`frontend/`)
+- React + Vite web UI for task management, run creation, and QA report visualization.
+
 ## Prerequisites
 
 - Node.js 20+
-- OpenAI and/or Claude API keys in `.env`
-- Playwright browsers installed (`npx playwright install`)
-- Authenticated storage state saved at `playwright/.auth/analyst.json` (or update `STORAGE_STATE_PATH`)
+- OpenAI and/or Claude API keys in `backend/.env`
+- Playwright browsers installed (`cd backend && npx playwright install`)
+- Authenticated storage state saved at `backend/playwright/.auth/analyst.json` (or update `STORAGE_STATE_PATH`)
 
 ## Environment Variables
 
-Configure via `.env` or shell:
+Configure via `backend/.env`:
 
 ```
 OPENAI_API_KEY=...
@@ -41,17 +47,58 @@ KPI_TOLERANCE_PERCENT=1
 ## Install & Build
 
 ```bash
+# Install root dependencies (for dev scripts)
 npm install
+
+# Install backend dependencies
+cd backend && npm install && cd ..
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
+
+# Build everything
 npm run build
 ```
 
 ## Development Scripts
 
+### Backend & API
 - `npm run start:dev` – Launch NestJS orchestrator (REST API at `http://localhost:3000/api`).
 - `npm run worker` – Manual worker smoke run (captures a screenshot using the authenticated storage state).
 - `npm run generate:schema` – Output JSON schemas to the `schemas/` directory.
 - `npm run playwright:test` – Execute Playwright tests (once storage state setup is complete).
 - `npm run lint` – Lint TypeScript sources.
+
+### Frontend UI
+- `npm run dev` – Launch both backend API and frontend UI in development mode (with hot reload)
+  - Backend: `http://localhost:3000/api`
+  - Frontend: `http://localhost:5173`
+- `npm run build:frontend` – Build frontend for production
+- `npm run build` – Build both backend and frontend
+
+### Production
+After building both frontend and backend, start the production server:
+```bash
+npm start
+```
+The backend serves the built frontend at `http://localhost:3000`
+
+## Web UI
+
+The project now includes a modern React-based web interface for managing QA tests:
+
+### Features
+- 🎯 Task selection with visual cards
+- 🚀 Simple form to start new QA runs
+- 📊 Real-time run history with status updates
+- 📈 Detailed QA reports with findings visualization
+- 🎨 Responsive design with modern styling
+
+### Accessing the UI
+- **Development**: `http://localhost:5173` (with `npm run dev`)
+- **Production**: `http://localhost:3000` (after `npm run build` and `npm start`)
+
+See [`frontend/README.md`](frontend/README.md) for more details.
 
 ## API Endpoints (scaffold)
 

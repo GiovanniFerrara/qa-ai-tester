@@ -18,6 +18,10 @@ async function bootstrap(): Promise<void> {
   const globalPrefix = 'api';
 
   app.setGlobalPrefix(globalPrefix);
+  app.enableCors({
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+  });
   app.enableShutdownHooks();
 
   await app.listen(port);

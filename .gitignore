@@ -1,8 +1,11 @@
 node_modules
-dist
 *.log
-playwright-report
-test-results
-trace-output
 .env.local
-artifacts
+backend/node_modules
+backend/dist
+backend/playwright-report
+backend/test-results
+backend/trace-output
+backend/artifacts
+frontend/node_modules
+frontend/dist
