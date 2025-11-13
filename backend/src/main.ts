@@ -14,12 +14,12 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const configService = app.get(ConfigService<AppEnvironment>);
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 3005);
   const globalPrefix = 'api';
 
   app.setGlobalPrefix(globalPrefix);
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: ['http://localhost:5173', 'http://localhost:3005'],
     credentials: true,
   });
   app.enableShutdownHooks();

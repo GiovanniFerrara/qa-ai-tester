@@ -27,7 +27,7 @@ npm run dev
 
 Frontend will be available at http://localhost:5173
 
-The Vite dev server automatically proxies API requests to http://localhost:3000/api
+The Vite dev server automatically proxies API requests to http://localhost:3005/api
 
 ### Build for Production
 

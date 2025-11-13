@@ -45,7 +45,7 @@ npm install
 npm run start:dev
 ```
 
-API available at `http://localhost:3000/api`
+API available at `http://localhost:3005/api`
 
 ## Scripts
 

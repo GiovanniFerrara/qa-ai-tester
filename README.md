@@ -63,7 +63,7 @@ npm run build
 ## Development Scripts
 
 ### Backend & API
-- `npm run start:dev` – Launch NestJS orchestrator (REST API at `http://localhost:3000/api`).
+- `npm run start:dev` – Launch NestJS orchestrator (REST API at `http://localhost:3005/api`).
 - `npm run worker` – Manual worker smoke run (captures a screenshot using the authenticated storage state).
 - `npm run generate:schema` – Output JSON schemas to the `schemas/` directory.
 - `npm run playwright:test` – Execute Playwright tests (once storage state setup is complete).
@@ -71,7 +71,7 @@ npm run build
 
 ### Frontend UI
 - `npm run dev` – Launch both backend API and frontend UI in development mode (with hot reload)
-  - Backend: `http://localhost:3000/api`
+  - Backend: `http://localhost:3005/api`
   - Frontend: `http://localhost:5173`
 - `npm run build:frontend` – Build frontend for production
 - `npm run build` – Build both backend and frontend
@@ -81,7 +81,7 @@ After building both frontend and backend, start the production server:
 ```bash
 npm start
 ```
-The backend serves the built frontend at `http://localhost:3000`
+The backend serves the built frontend at `http://localhost:3005`
 
 ## Web UI
 
@@ -96,7 +96,7 @@ The project now includes a modern React-based web interface for managing QA test
 
 ### Accessing the UI
 - **Development**: `http://localhost:5173` (with `npm run dev`)
-- **Production**: `http://localhost:3000` (after `npm run build` and `npm start`)
+- **Production**: `http://localhost:3005` (after `npm run build` and `npm start`)
 
 See [`frontend/README.md`](frontend/README.md) for more details.
 
