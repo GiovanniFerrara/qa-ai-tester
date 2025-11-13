@@ -1,0 +1,33 @@
+{
+  "$ref": "#/definitions/domSnapshotRequest",
+  "definitions": {
+    "domSnapshotRequest": {
+      "type": "object",
+      "properties": {
+        "selector": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "single",
+            "all"
+          ],
+          "default": "single"
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "selector"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

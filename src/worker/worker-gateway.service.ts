@@ -1,0 +1,255 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+import path from 'node:path';
+
+import type { AppEnvironment } from '../config/environment';
+import type {
+  ComputerAction,
+  ComputerActionResult,
+  DomSnapshotRequest,
+  DomSnapshotResponse,
+} from '../models/contracts';
+
+export interface BrowserRunHandle {
+  browser: Browser;
+  context: BrowserContext;
+  page: Page;
+  artifactDir: string;
+  screenshotDir: string;
+  screenshots: string[];
+}
+
+@Injectable()
+export class WorkerGatewayService {
+  private readonly logger = new Logger(WorkerGatewayService.name);
+  private readonly artifactRoot: string;
+  private readonly storageStatePath: string;
+  private readonly baseUrl: string;
+
+  constructor(private readonly configService: ConfigService<AppEnvironment, true>) {
+    this.artifactRoot = path.resolve(
+      this.configService.get('ARTIFACT_DIR', { infer: true }) ?? 'artifacts',
+    );
+    this.storageStatePath = this.configService.get('STORAGE_STATE_PATH', {
+      infer: true,
+    });
+    this.baseUrl = this.configService.get('BASE_URL', { infer: true });
+  }
+
+  async startRun(runId: string, route: string): Promise<BrowserRunHandle> {
+    const browser = await chromium.launch({
+      headless: true,
+    });
+
+    const artifactDir = path.join(this.artifactRoot, runId);
+    const screenshotDir = path.join(artifactDir, 'screenshots');
+    await mkdir(screenshotDir, { recursive: true });
+
+    const context = await browser.newContext({
+      storageState: this.storageStatePath,
+      viewport: { width: 1366, height: 768 },
+    });
+
+    await context.tracing.start({
+      screenshots: true,
+      snapshots: true,
+      sources: true,
+    });
+
+    const page = await context.newPage();
+    const targetUrl = new URL(route, this.baseUrl).toString();
+    this.logger.debug(`Navigating to ${targetUrl}`);
+    await page.goto(targetUrl, { waitUntil: 'networkidle' });
+
+    return {
+      browser,
+      context,
+      page,
+      artifactDir,
+      screenshotDir,
+      screenshots: [],
+    };
+  }
+
+  async stopRun(handle: BrowserRunHandle): Promise<void> {
+    const tracePath = path.join(handle.artifactDir, 'trace.zip');
+    await handle.context.tracing.stop({ path: tracePath });
+    await handle.context.close();
+    await handle.browser.close();
+  }
+
+  async performComputerAction(
+    handle: BrowserRunHandle,
+    action: ComputerAction,
+  ): Promise<ComputerActionResult> {
+    const { page } = handle;
+
+    if (action.selector) {
+      const locator = page.locator(action.selector);
+      if (await locator.count()) {
+        const box = await locator.first().boundingBox();
+        if (box) {
+          action.coords = {
+            x: Math.round(box.x + box.width / 2),
+            y: Math.round(box.y + box.height / 2),
+          };
+        }
+      }
+    }
+
+    await this.dispatchAction(page, action);
+    await this.applyWait(page, action);
+
+    const screenshotPath = path.join(
+      handle.screenshotDir,
+      `${Date.now()}-${action.action}.png`,
+    );
+
+    const screenshotBuffer = await page.screenshot({
+      path: screenshotPath,
+      fullPage: false,
+    });
+    handle.screenshots.push(screenshotPath);
+
+    const viewport = page.viewportSize() ?? { width: 0, height: 0 };
+
+    return {
+      screenshot: screenshotBuffer.toString('base64'),
+      viewport,
+      consoleEvents: [],
+      networkEvents: [],
+    };
+  }
+
+  async getDomSnapshot(
+    handle: BrowserRunHandle,
+    request: DomSnapshotRequest,
+  ): Promise<DomSnapshotResponse> {
+    const locator = handle.page.locator(request.selector);
+    const elements: DomSnapshotResponse['elements'] = [];
+
+    if (request.mode === 'single') {
+      const element = locator.first();
+      if (await element.count()) {
+        elements.push(await this.serializeElement(element, request.attributes));
+      }
+    } else {
+      const count = await locator.count();
+      for (let index = 0; index < count; index += 1) {
+        const element = locator.nth(index);
+        elements.push(await this.serializeElement(element, request.attributes));
+      }
+    }
+
+    return { elements };
+  }
+
+  private async serializeElement(
+    locator: import('playwright').Locator,
+    attributes: string[],
+  ): Promise<DomSnapshotResponse['elements'][number]> {
+    const boundingBox = await locator.boundingBox();
+    const attrEntries = await Promise.all(
+      attributes.map(async (attribute) => [attribute, await locator.getAttribute(attribute)]),
+    );
+
+    return {
+      selector: locator.toString(),
+      innerText: (await locator.innerText({ timeout: 1000 }).catch(() => '')) ?? '',
+      attributes: Object.fromEntries(attrEntries),
+      boundingBox: boundingBox
+        ? {
+            x: Math.round(boundingBox.x),
+            y: Math.round(boundingBox.y),
+            width: Math.round(boundingBox.width),
+            height: Math.round(boundingBox.height),
+          }
+        : null,
+    };
+  }
+
+  async captureScreenshot(handle: BrowserRunHandle, label: string): Promise<string> {
+    const screenshotPath = path.join(handle.screenshotDir, `${Date.now()}-${label}.png`);
+    await mkdir(handle.screenshotDir, { recursive: true });
+    await handle.page.screenshot({
+      path: screenshotPath,
+      fullPage: true,
+    });
+    handle.screenshots.push(screenshotPath);
+    return screenshotPath;
+  }
+
+  private async dispatchAction(page: Page, action: ComputerAction): Promise<void> {
+    const coords = action.coords ?? { x: 0, y: 0 };
+
+    switch (action.action) {
+      case 'move':
+        await page.mouse.move(coords.x, coords.y);
+        break;
+      case 'click':
+        await page.mouse.click(coords.x, coords.y);
+        break;
+      case 'double_click':
+        await page.mouse.dblclick(coords.x, coords.y);
+        break;
+      case 'right_click':
+        await page.mouse.click(coords.x, coords.y, { button: 'right' });
+        break;
+      case 'type':
+        if (action.text) {
+          await page.keyboard.type(action.text);
+        }
+        break;
+      case 'hotkey':
+        if (action.hotkey) {
+          await page.keyboard.press(action.hotkey);
+        }
+        break;
+      case 'scroll':
+        if (action.scroll) {
+          await page.mouse.wheel(action.scroll.deltaX ?? 0, action.scroll.deltaY ?? 0);
+        }
+        break;
+      case 'hover':
+        await page.mouse.move(coords.x, coords.y);
+        break;
+      case 'drag':
+        if (!action.scroll) {
+          return;
+        }
+        await page.mouse.move(coords.x, coords.y);
+        await page.mouse.down();
+        await page.mouse.move(coords.x + (action.scroll.deltaX ?? 0), coords.y + (action.scroll.deltaY ?? 0));
+        await page.mouse.up();
+        break;
+      default:
+        this.logger.warn(`Action ${action.action} not implemented in worker adapter`);
+    }
+  }
+
+  private async applyWait(page: Page, action: ComputerAction): Promise<void> {
+    if (!action.wait) {
+      return;
+    }
+
+    switch (action.wait.type) {
+      case 'ms':
+        if (action.wait.value) {
+          await page.waitForTimeout(action.wait.value);
+        }
+        break;
+      case 'networkidle':
+        await page.waitForLoadState('networkidle');
+        break;
+      case 'selectorVisible':
+        if (action.wait.selector) {
+          await page.waitForSelector(action.wait.selector, { state: 'visible' });
+        }
+        break;
+      default:
+        break;
+    }
+  }
+}

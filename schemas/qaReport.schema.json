@@ -1,0 +1,240 @@
+{
+  "$ref": "#/definitions/qaReport",
+  "definitions": {
+    "qaReport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "taskId": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "string"
+        },
+        "finishedAt": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "failed",
+            "inconclusive"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "blocker",
+                  "critical",
+                  "major",
+                  "minor",
+                  "info"
+                ]
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "functional",
+                  "data-consistency",
+                  "performance",
+                  "a11y",
+                  "reliability"
+                ]
+              },
+              "assertion": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "observed": {
+                "type": "string"
+              },
+              "tolerance": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "screenshotRef": {
+                      "type": "string"
+                    },
+                    "selector": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "time": {
+                      "type": "string"
+                    },
+                    "networkRequestId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "screenshotRef",
+                    "selector",
+                    "time",
+                    "networkRequestId"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "suggestedFix": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "id",
+              "severity",
+              "category",
+              "assertion",
+              "expected",
+              "observed",
+              "tolerance",
+              "evidence",
+              "suggestedFix",
+              "confidence"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "kpiTable": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "observed": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "mismatch",
+                  "missing"
+                ]
+              }
+            },
+            "required": [
+              "label",
+              "expected",
+              "observed",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "links": {
+          "type": "object",
+          "properties": {
+            "traceUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "screenshotsGalleryUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "rawTranscriptUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "traceUrl",
+            "screenshotsGalleryUrl",
+            "rawTranscriptUrl"
+          ],
+          "additionalProperties": false
+        },
+        "costs": {
+          "type": "object",
+          "properties": {
+            "tokensInput": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tokensOutput": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "toolCalls": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "tokensInput",
+            "tokensOutput",
+            "toolCalls",
+            "durationMs"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "id",
+        "runId",
+        "taskId",
+        "startedAt",
+        "finishedAt",
+        "summary",
+        "status",
+        "findings",
+        "kpiTable",
+        "links",
+        "costs"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
