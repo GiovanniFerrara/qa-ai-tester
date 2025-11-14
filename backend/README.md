@@ -34,6 +34,7 @@ ARTIFACT_DIR=artifacts
 DEFAULT_PROVIDER=openai
 OPENAI_MODEL=gpt-4
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
+KPI_BASE_URL=https://your-api-host.example
 KPI_ENDPOINT=/api/kpi
 KPI_TOLERANCE_PERCENT=1
 ```

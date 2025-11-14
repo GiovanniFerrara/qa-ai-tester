@@ -19,6 +19,7 @@ describe('KpiOracleService', () => {
       OPENAI_API_KEY: 'openai',
       CLAUDE_API_KEY: 'claude',
       BASE_URL: 'https://qa.example',
+      KPI_BASE_URL: 'https://api.example',
       STORAGE_STATE_PATH: 'state.json',
       ARTIFACT_DIR: 'artifacts',
       DEFAULT_PROVIDER: 'openai',
@@ -50,7 +51,10 @@ describe('KpiOracleService', () => {
   it('performs GET fetch when apiEndpoint spec defined', async () => {
     mockedFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ revenue: 200 }),
+      headers: {
+        get: () => 'application/json',
+      },
+      text: async () => JSON.stringify({ revenue: 200 }),
     });
     const service = new KpiOracleService(createConfigService());
     const result = await service.resolve(
@@ -64,7 +68,7 @@ describe('KpiOracleService', () => {
     );
 
     expect(mockedFetch).toHaveBeenCalledWith(
-      'https://qa.example/api/kpi?range=last7days&role=analyst',
+      'https://api.example/api/kpi?range=last7days&role=analyst',
       expect.objectContaining({ method: 'GET' }),
     );
     expect(result).toEqual({ data: { revenue: 200 } });
@@ -75,6 +79,9 @@ describe('KpiOracleService', () => {
       ok: false,
       status: 500,
       text: async () => 'server error',
+      headers: {
+        get: () => 'text/html',
+      },
     });
 
     const service = new KpiOracleService(createConfigService());
@@ -91,7 +98,7 @@ describe('KpiOracleService', () => {
     ).rejects.toThrow(/KPI oracle request failed/);
 
     expect(mockedFetch).toHaveBeenCalledWith(
-      'https://qa.example/api/kpi',
+      'https://api.example/api/kpi',
       expect.objectContaining({
         method: 'POST',
       }),

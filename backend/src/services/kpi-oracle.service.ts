@@ -11,7 +11,10 @@ export class KpiOracleService {
   private readonly baseUrl: string;
 
   constructor(private readonly configService: ConfigService<AppEnvironment, true>) {
-    this.baseUrl = this.configService.get('BASE_URL', { infer: true });
+    const baseUrl = this.configService.get('BASE_URL', { infer: true });
+    this.baseUrl =
+      this.configService.get('KPI_BASE_URL', { infer: true }) ??
+      baseUrl;
   }
 
   async resolve(spec: KpiSpec, context: Record<string, unknown> = {}): Promise<KpiOracleResponse> {
@@ -19,7 +22,9 @@ export class KpiOracleService {
       return { data: spec.values };
     }
 
-    const url = new URL(spec.url, this.baseUrl);
+    const url = spec.url.startsWith('http')
+      ? new URL(spec.url)
+      : new URL(spec.url, this.baseUrl);
     if (spec.method === 'GET') {
       const params = new URLSearchParams();
       const queryPayload = {
@@ -48,7 +53,27 @@ export class KpiOracleService {
       throw new Error(`KPI oracle request failed with status ${response.status}`);
     }
 
-    const json = (await response.json()) as Record<string, string | number>;
-    return { data: json };
+    const contentType =
+      typeof response.headers?.get === 'function'
+        ? response.headers.get('content-type') ?? ''
+        : '';
+    const bodyText = await response.text();
+
+    try {
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Unexpected content-type "${contentType}"`);
+      }
+
+      const json = JSON.parse(bodyText) as Record<string, string | number>;
+      return { data: json };
+    } catch (error) {
+      const preview = bodyText.slice(0, 200).replace(/\s+/g, ' ');
+      this.logger.error(
+        `Failed to parse KPI oracle response as JSON: ${(error as Error).message}. Payload preview: ${preview}`,
+      );
+      throw new Error(
+        `KPI oracle response for ${url.toString()} was not valid JSON. Confirm the backend returns application/json.`,
+      );
+    }
   }
 }

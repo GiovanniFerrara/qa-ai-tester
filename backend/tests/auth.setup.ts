@@ -1,8 +1,11 @@
 import { test as setup } from '@playwright/test';
 
 setup('create authenticated storage state', async ({ page }) => {
-  // TODO: Implement login flow to generate storage state for the dashboard role.
-  // This placeholder marks the spot where credentials-based login should occur.
-  // After logging in, call `await page.context().storageState({ path: process.env.STORAGE_STATE_PATH });`
-  // and ensure sensitive data is managed via environment variables or secret managers.
+await page.goto('http://localhost:3000/login');
+await page.fill('#username', 'demo@jurny.com');
+await page.click('button[type="submit"]');
+await page.waitForURL('**/login/challenge');
+await page.fill('#password', 'demo@jurny.com');
+await page.click('button[type="submit"]');
+await page.waitForURL('**/dashboard');
 });

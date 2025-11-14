@@ -35,6 +35,7 @@ Configure via `backend/.env`:
 OPENAI_API_KEY=...
 CLAUDE_API_KEY=...
 BASE_URL=https://your-sandbox-app.example
+KPI_BASE_URL=https://your-api-host.example
 STORAGE_STATE_PATH=playwright/.auth/analyst.json
 ARTIFACT_DIR=artifacts
 DEFAULT_PROVIDER=openai
