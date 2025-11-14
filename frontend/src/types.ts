@@ -86,23 +86,52 @@ export interface QAReport {
   };
 }
 
-export interface Run {
+export type RunStatus = 'running' | 'completed' | 'failed';
+
+export interface RunArtifacts {
+  screenshots: string[];
+  traceZipPath?: string;
+  reportPath?: string;
+  metadataPath?: string;
+  logsPath?: string;
+  transcriptPath?: string;
+  eventsPath?: string;
+}
+
+export interface RunState {
   runId: string;
+  taskId: string;
   provider: string;
-  report: QAReport;
-  artifacts: {
-    screenshots: string[];
-    traceZipPath: string;
-    reportPath: string;
-    metadataPath: string;
-    logsPath: string;
-    transcriptPath?: string;
-    eventsPath?: string;
-  };
+  status: RunStatus;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+  report?: QAReport;
+  artifacts?: RunArtifacts;
 }
 
 export interface CreateRunRequest {
   taskId: string;
   provider?: string;
   model?: string;
+}
+
+export type RunEventType = 'log' | 'tool_call' | 'screenshot' | 'status';
+
+export interface RunEventPayload {
+  [key: string]: unknown;
+  image?: string;
+  callId?: string;
+  viewport?: {
+    width: number;
+    height: number;
+  };
+  report?: QAReport;
+}
+
+export interface RunEvent {
+  type: RunEventType;
+  message?: string;
+  payload?: RunEventPayload;
+  timestamp: string;
 }

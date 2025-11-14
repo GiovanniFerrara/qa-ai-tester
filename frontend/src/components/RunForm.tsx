@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TaskSpec } from '../types';
 import { api } from '../api';
 
@@ -10,6 +11,7 @@ export function RunForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadTasks();
@@ -50,7 +52,8 @@ export function RunForm() {
         provider: provider || undefined,
         model: model || undefined,
       });
-      setSuccess(`Run created successfully! ID: ${run.id}`);
+      setSuccess(`Run ${run.runId} started.`);
+      navigate(`/runs/${run.runId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create run');
     } finally {

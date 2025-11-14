@@ -20,7 +20,7 @@ export class RunsController {
 
   @Get(':runId')
   getRun(@Param('runId') runId: string) {
-    return this.orchestratorService.getReport(runId);
+    return this.orchestratorService.getRun(runId);
   }
 
   @Post()

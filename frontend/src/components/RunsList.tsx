@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Run } from "../types";
+import { RunState } from "../types";
 import { api } from "../api";
 
 export function RunsList() {
-  const [runs, setRuns] = useState<Run[]>([]);
+  const [runs, setRuns] = useState<RunState[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -22,8 +22,7 @@ export function RunsList() {
       setRuns(
         data.sort(
           (a, b) =>
-            new Date(b.report.startedAt).getTime() -
-            new Date(a.report.startedAt).getTime()
+            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
         )
       );
     } catch (err) {
@@ -77,18 +76,28 @@ export function RunsList() {
           >
             <div className="run-header">
               <span className="run-id">Run #{run.runId.slice(0, 8)}</span>
-              <span className={getStatusClass(run.report.status)}>
-                {run.report.status.toUpperCase()}
+              <span className={getStatusClass(run.status)}>
+                {run.status.toUpperCase()}
               </span>
             </div>
             <div className="run-info">
-              <span>Task: {run.report.taskId}</span>
+              <span>Task: {run.taskId}</span>
               <span>Provider: {run.provider}</span>
-              <span>Started: {formatDate(run.report.startedAt)}</span>
+              <span>Started: {formatDate(run.startedAt)}</span>
             </div>
             <div className="run-info" style={{ marginTop: "0.5rem" }}>
-              <span>Findings: {run.report.findings.length}</span>
-              <span>Duration: {run.report.costs.durationMs}ms</span>
+              {run.status === "completed" && run.report ? (
+                <>
+                  <span>Findings: {run.report.findings.length}</span>
+                  <span>Duration: {run.report.costs.durationMs}ms</span>
+                </>
+              ) : run.status === "failed" ? (
+                <span className="error-text">
+                  Failed{run.error ? `: ${run.error}` : ""}
+                </span>
+              ) : (
+                <span>In progress…</span>
+              )}
             </div>
           </div>
         ))}

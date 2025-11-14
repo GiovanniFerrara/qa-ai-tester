@@ -37,3 +37,17 @@ export interface RunResult {
   report: QaReport;
   artifacts: RunArtifacts;
 }
+
+export type RunStatus = 'running' | 'completed' | 'failed';
+
+export interface StoredRunRecord {
+  runId: string;
+  taskId: string;
+  provider: AiProvider;
+  status: RunStatus;
+  startedAt: string;
+  finishedAt?: string;
+  error?: string;
+  report?: QaReport;
+  artifacts?: RunArtifacts;
+}

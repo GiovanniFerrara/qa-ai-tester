@@ -91,7 +91,17 @@ describe('RunExecutionService', () => {
       }),
     };
 
-    const service = new RunExecutionService(providerRegistry as any, workerGateway as any, orchestrator as any);
+    const runEvents = {
+      emit: jest.fn(),
+      complete: jest.fn(),
+    };
+
+    const service = new RunExecutionService(
+      providerRegistry as any,
+      workerGateway as any,
+      orchestrator as any,
+      runEvents as any,
+    );
 
     const result = await service.execute('run-1', baseTask, 'openai');
 

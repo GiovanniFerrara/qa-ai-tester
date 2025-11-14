@@ -24,6 +24,7 @@ import type { TaskSpec } from '../models/contracts';
 import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 import { OpenAiProviderService } from './openai-provider.service';
+import type { RunEvent, RunEventsService } from '../orchestrator/run-events.service';
 
 interface ComputerUseRunOptions {
   runId: string;
@@ -31,6 +32,7 @@ interface ComputerUseRunOptions {
   handle: BrowserRunHandle;
   initialScreenshotPath: string;
   startedAt: Date;
+  events?: Pick<RunEventsService, 'emit'>;
 }
 
 export interface ComputerUseSessionResult {
@@ -68,6 +70,17 @@ export class OpenAiComputerUseService {
     const { handle, runId, task } = options;
     const plan = this.provider.buildComputerUsePlan(task, runId);
     const client = this.provider.getClient();
+    const emitEvent = (
+      event: Omit<RunEvent, 'timestamp'> & Partial<Pick<RunEvent, 'timestamp'>>,
+    ) => {
+      if (!options.events) {
+        return;
+      }
+      options.events.emit(runId, {
+        ...event,
+        timestamp: event.timestamp ?? new Date().toISOString(),
+      });
+    };
 
     const initialScreenshotBuffer = await fs.readFile(options.initialScreenshotPath);
     const initialScreenshotBase64 = initialScreenshotBuffer.toString('base64');
@@ -117,10 +130,16 @@ export class OpenAiComputerUseService {
       `Run ${runId}: received initial response ${response.id} (status=${response.status})`,
     );
     responsesSummary.push({ id: response.id, status: response.status, usage: response.usage });
+    emitEvent({
+      type: 'log',
+      message: `Initial model response ${response.id} (${response.status})`,
+      payload: response.usage ? { usage: response.usage } : undefined,
+    });
 
     let iterations = 0;
     const maxIterations = task.budgets?.maxToolCalls ?? 200;
     let totalToolCalls = 0;
+    let promptedForReport = false;
 
     while (iterations < maxIterations) {
       iterations += 1;
@@ -130,6 +149,10 @@ export class OpenAiComputerUseService {
       this.logger.debug(
         `Run ${runId}: iteration ${iterations} => function calls=${functionCalls.length}, computer calls=${computerCalls.length}`,
       );
+      emitEvent({
+        type: 'log',
+        message: `Iteration ${iterations}: function calls=${functionCalls.length}, computer calls=${computerCalls.length}`,
+      });
 
       const followUpInputs: ResponseInputItem[] = [];
 
@@ -157,6 +180,16 @@ export class OpenAiComputerUseService {
             output: result.output,
             timestamp: new Date().toISOString(),
           });
+          emitEvent({
+            type: 'tool_call',
+            message: `Function tool "${call.name}" executed`,
+            payload: {
+              callId: call.call_id,
+              tool: call.name,
+              input: result.input,
+              output: result.output,
+            },
+          });
           totalToolCalls += 1;
         }
       }
@@ -176,6 +209,25 @@ export class OpenAiComputerUseService {
             input: call.action,
             output: { viewport: actionResult.viewport },
             timestamp: new Date().toISOString(),
+          });
+          emitEvent({
+            type: 'tool_call',
+            message: `Computer action ${call.action.type}`,
+            payload: {
+              callId: call.call_id,
+              action: call.action,
+              viewport: actionResult.viewport,
+              pendingSafetyChecks: call.pending_safety_checks,
+            },
+          });
+          emitEvent({
+            type: 'screenshot',
+            message: `Screenshot after ${call.action.type}`,
+            payload: {
+              callId: call.call_id,
+              image: `data:image/png;base64,${actionResult.screenshot}`,
+              viewport: actionResult.viewport,
+            },
           });
 
           followUpInputs.push({
@@ -198,6 +250,11 @@ export class OpenAiComputerUseService {
       const maybeReport = this.tryExtractReport(response, findingsFromTool, options);
       if (followUpInputs.length === 0) {
         if (maybeReport) {
+          emitEvent({
+            type: 'status',
+            message: `Structured QAReport received with status ${maybeReport.status}`,
+            payload: { report: maybeReport },
+          });
           await this.writeSessionArtifacts(handle.artifactDir, events, responsesSummary);
           this.logger.debug(`Run ${runId}: AI returned structured report, finishing.`);
           return {
@@ -217,6 +274,11 @@ export class OpenAiComputerUseService {
               200,
             )}`,
           );
+          emitEvent({
+            type: 'status',
+            message: 'Model completed without returning structured QAReport.',
+            payload: finalText ? { finalText } : undefined,
+          });
           throw new Error(
             `Model completed without returning a structured QAReport. Final output: ${
               finalText ? finalText.slice(0, 500) : '<empty>'
@@ -226,18 +288,39 @@ export class OpenAiComputerUseService {
       }
 
       if (followUpInputs.length === 0) {
-        // Nothing to send back but also not completed – prevent tight loop
-        this.logger.debug(
-          `Run ${runId}: no tool outputs to return; resending initial screenshot to keep session alive.`,
-        );
-        followUpInputs.push({
-          type: 'computer_call_output',
-          call_id: uuidv4(),
-          output: {
-            type: 'computer_screenshot',
-            image_url: `data:image/png;base64,${initialScreenshotBase64}`,
-          },
-        });
+        if (!promptedForReport) {
+          promptedForReport = true;
+          const reminderText =
+            'Please respond with ONLY the QAReport JSON object that matches the provided schema. Include at least one finding entry.';
+          this.logger.debug(
+            `Run ${runId}: prompting model for structured QAReport (no tool outputs returned).`,
+          );
+          emitEvent({
+            type: 'log',
+            message: 'Prompting model to produce structured QAReport.',
+          });
+          followUpInputs.push({
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: reminderText,
+              },
+            ],
+          });
+        } else {
+          this.logger.warn(
+            `Run ${runId}: no tool outputs after reminder, stopping to avoid invalid follow-up.`,
+          );
+          emitEvent({
+            type: 'status',
+            message:
+              'No additional tool outputs received after reminder; aborting computer-use session.',
+          });
+          throw new Error(
+            'AI session stalled without returning tool outputs or structured QAReport.',
+          );
+        }
       }
 
       const followUpParams: ResponseCreateParams = {
@@ -458,15 +541,83 @@ export class OpenAiComputerUseService {
   }
 
   private extractJsonObject(text: string): Record<string, unknown> | null {
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    const trimmed = text.trim();
+    if (!trimmed) {
       return null;
     }
 
-    const candidate = text.slice(firstBrace, lastBrace + 1);
+    const direct = this.parseJsonObjectCandidate(trimmed);
+    if (direct) {
+      return direct;
+    }
+
+    const codeFenceRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+    let match: RegExpExecArray | null;
+    while ((match = codeFenceRegex.exec(trimmed)) !== null) {
+      const fenced = this.parseJsonObjectCandidate(match[1]);
+      if (fenced) {
+        return fenced;
+      }
+    }
+
+    let startIndex = -1;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = 0; index < trimmed.length; index += 1) {
+      const char = trimmed[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (char === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === '{') {
+        if (depth === 0) {
+          startIndex = index;
+        }
+        depth += 1;
+        continue;
+      }
+
+      if (char === '}' && depth > 0) {
+        depth -= 1;
+        if (depth === 0 && startIndex !== -1) {
+          const candidate = trimmed.slice(startIndex, index + 1);
+          const parsed = this.parseJsonObjectCandidate(candidate);
+          if (parsed) {
+            return parsed;
+          }
+          startIndex = -1;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private parseJsonObjectCandidate(candidate: string): Record<string, unknown> | null {
     try {
-      return JSON.parse(candidate) as Record<string, unknown>;
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+      return null;
     } catch {
       return null;
     }

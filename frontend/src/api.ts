@@ -1,4 +1,4 @@
-import { TaskSpec, Run, QAReport, CreateRunRequest, TaskInput } from './types';
+import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent } from './types';
 
 const API_BASE = '/api';
 
@@ -36,14 +36,28 @@ export const api = {
       method: 'DELETE',
     }),
   
-  getRuns: () => fetchJSON<Run[]>(`${API_BASE}/runs`),
-  
+  getRuns: () => fetchJSON<RunState[]>(`${API_BASE}/runs`),
+
   createRun: (data: CreateRunRequest) =>
-    fetchJSON<Run>(`${API_BASE}/runs`, {
+    fetchJSON<RunState>(`${API_BASE}/runs`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  
-  getRunReport: (runId: string) =>
-    fetchJSON<QAReport>(`${API_BASE}/runs/${runId}`),
+
+  getRun: (runId: string) =>
+    fetchJSON<RunState>(`${API_BASE}/runs/${runId}`),
+
+  subscribeToRunEvents: (runId: string, onEvent: (event: RunEvent) => void) => {
+    const source = new EventSource(`${API_BASE}/runs/${runId}/events`);
+    source.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data) as RunEvent;
+        onEvent(data);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to parse run event', error);
+      }
+    };
+    return source;
+  },
 };

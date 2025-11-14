@@ -4,6 +4,7 @@ import type { TaskSpec } from '../models/contracts';
 import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { AnthropicComputerUseService } from './anthropic-computer-use.service';
 import { OpenAiComputerUseService, type ComputerUseSessionResult } from './openai-computer-use.service';
+import { RunEventsService } from '../orchestrator/run-events.service';
 
 export interface ComputerUseOptions {
   provider: 'openai' | 'anthropic';
@@ -19,6 +20,7 @@ export class ComputerUseOrchestratorService {
   constructor(
     private readonly openAiComputerUseService: OpenAiComputerUseService,
     private readonly anthropicComputerUseService: AnthropicComputerUseService,
+    private readonly runEventsService: RunEventsService,
   ) {}
 
   async run(options: ComputerUseOptions): Promise<ComputerUseSessionResult> {
@@ -29,6 +31,7 @@ export class ComputerUseOrchestratorService {
         handle: options.handle,
         initialScreenshotPath: options.initialScreenshotPath,
         startedAt: options.startedAt,
+        events: this.runEventsService,
       });
     }
 

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -7,6 +7,7 @@ import type { Finding, QaReport, TaskSpec } from '../models/contracts';
 import type { AiProvider, RunResult } from '../models/run';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
 import { ComputerUseOrchestratorService } from '../providers/computer-use-orchestrator.service';
+import { RunEventsService } from './run-events.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 
 @Injectable()
@@ -17,6 +18,7 @@ export class RunExecutionService {
     private readonly providerRegistry: AiProviderRegistryService,
     private readonly workerGateway: WorkerGatewayService,
     private readonly computerUseOrchestratorService: ComputerUseOrchestratorService,
+    private readonly runEvents: RunEventsService,
   ) {}
 
   async execute(runId: string, task: TaskSpec, providerKey: AiProvider): Promise<RunResult> {
@@ -27,9 +29,31 @@ export class RunExecutionService {
     );
 
     const handle = await this.workerGateway.startRun(runId, task.route);
+    this.runEvents.emit(runId, {
+      type: 'status',
+      message: `Run ${runId} started`,
+      timestamp: startedAt.toISOString(),
+      payload: { taskId: task.id },
+    });
 
     try {
       const initialScreenshot = await this.workerGateway.captureScreenshot(handle, 'initial');
+      try {
+        const screenshotBuffer = await readFile(initialScreenshot);
+        this.runEvents.emit(runId, {
+          type: 'screenshot',
+          message: 'Initial viewport capture',
+          timestamp: new Date().toISOString(),
+          payload: {
+            image: `data:image/png;base64,${screenshotBuffer.toString('base64')}`,
+            path: initialScreenshot,
+          },
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to read initial screenshot for streaming: ${(error as Error).message}`,
+        );
+      }
       let report: QaReport | null = null;
       let eventsPath: string | undefined;
       let responsesPath: string | undefined;
@@ -56,6 +80,11 @@ export class RunExecutionService {
         this.logger.error(
           `Computer-use session failed for run ${runId}: ${(error as Error).message}`,
         );
+        this.runEvents.emit(runId, {
+          type: 'status',
+          message: `Computer-use session error: ${(error as Error).message}`,
+          timestamp: new Date().toISOString(),
+        });
       }
 
       const finishedAt = new Date();
@@ -145,6 +174,12 @@ export class RunExecutionService {
         });
       }
       await writeFile(logPath, JSON.stringify({ runId, events: logEvents }, null, 2), 'utf8');
+      this.runEvents.emit(runId, {
+        type: 'status',
+        message: `Run ${runId} completed with status ${report.status}`,
+        timestamp: finishedAt.toISOString(),
+      });
+      this.runEvents.complete(runId);
 
       return {
         report,
