@@ -18,6 +18,7 @@ import {
   type ComputerAction,
   type DomSnapshotRequest,
   type QaReport,
+  type Finding,
 } from '../models/contracts';
 import type { TaskSpec } from '../models/contracts';
 import type { BrowserRunHandle } from '../worker/worker-gateway.service';
@@ -402,6 +403,14 @@ export class OpenAiComputerUseService {
       if (!reportCandidate.findings.length && findings.length) {
         reportCandidate.findings = findings;
       }
+      if (options.task.requireFindings && reportCandidate.findings.length === 0) {
+        reportCandidate.findings = [
+          this.buildDefaultFinding(
+            options,
+            'The AI session completed without reporting specific issues.',
+          ),
+        ];
+      }
       return reportCandidate;
     } catch (error) {
       this.logger.warn(`Failed to validate QAReport JSON: ${(error as Error).message}`);
@@ -424,6 +433,28 @@ export class OpenAiComputerUseService {
     this.logger.debug(
       `Computer-use artifacts persisted to ${artifactDir} (events=${events.length}, responses=${responses.length})`,
     );
+  }
+
+  private buildDefaultFinding(options: ComputerUseRunOptions, message: string): Finding {
+    return {
+      id: uuidv4(),
+      severity: 'info',
+      category: 'functional',
+      assertion: 'AI session summary',
+      expected: 'A summary finding should be recorded for the run.',
+      observed: message,
+      tolerance: null,
+      evidence: [
+        {
+          screenshotRef: options.initialScreenshotPath,
+          selector: null,
+          time: options.startedAt.toISOString(),
+          networkRequestId: null,
+        },
+      ],
+      suggestedFix: 'Review the run transcript for additional context if needed.',
+      confidence: 0.5,
+    };
   }
 
   private extractJsonObject(text: string): Record<string, unknown> | null {

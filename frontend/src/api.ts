@@ -1,4 +1,4 @@
-import { TaskSpec, Run, QAReport, CreateRunRequest } from './types';
+import { TaskSpec, Run, QAReport, CreateRunRequest, TaskInput } from './types';
 
 const API_BASE = '/api';
 
@@ -21,6 +21,20 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   getTasks: () => fetchJSON<TaskSpec[]>(`${API_BASE}/tasks`),
+  createTask: (data: TaskInput) =>
+    fetchJSON<TaskSpec>(`${API_BASE}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateTask: (taskId: string, data: Partial<TaskInput>) =>
+    fetchJSON<TaskSpec>(`${API_BASE}/tasks/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteTask: (taskId: string) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/tasks/${taskId}`, {
+      method: 'DELETE',
+    }),
   
   getRuns: () => fetchJSON<Run[]>(`${API_BASE}/runs`),
   

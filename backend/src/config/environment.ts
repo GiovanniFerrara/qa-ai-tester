@@ -8,6 +8,7 @@ export const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1, 'OPENAI_API_KEY is required'),
   CLAUDE_API_KEY: z.string().min(1, 'CLAUDE_API_KEY is required'),
   BASE_URL: z.string().url().default('https://example.com'),
+  TASKS_DB_PATH: z.string().optional(),
   KPI_BASE_URL: z.string().url().optional(),
   STORAGE_STATE_PATH: z.string().default('playwright/.auth/analyst.json'),
   ARTIFACT_DIR: z.string().default('artifacts'),

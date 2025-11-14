@@ -2,13 +2,47 @@ export interface TaskSpec {
   id: string;
   name: string;
   description: string;
+  goal: string;
+  instructions: string;
+  route: string;
+  role: string;
   provider?: string;
   model?: string;
+  requireFindings: boolean;
+  budgets: {
+    maxToolCalls: number;
+    maxTimeMs: number;
+    maxScreenshots: number;
+  };
+  kpiSpec?: {
+    type: 'staticValues' | 'apiEndpoint';
+    values?: Record<string, string | number>;
+    url?: string;
+    params?: Record<string, unknown>;
+    method?: 'GET' | 'POST';
+  };
+}
+
+export interface TaskInput {
+  name: string;
+  description?: string;
+  goal: string;
+  instructions?: string;
+  route: string;
+  role: string;
+  provider?: string;
+  model?: string;
+  requireFindings: boolean;
+  budgets?: {
+    maxToolCalls?: number;
+    maxTimeMs?: number;
+    maxScreenshots?: number;
+  };
 }
 
 export interface Finding {
   id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  severity: 'blocker' | 'critical' | 'major' | 'minor' | 'info';
   category: string;
   assertion: string;
   expected: string;
@@ -31,13 +65,13 @@ export interface QAReport {
   startedAt: string;
   finishedAt: string;
   summary: string;
-  status: 'pass' | 'fail' | 'inconclusive';
+  status: 'passed' | 'failed' | 'inconclusive';
   findings: Finding[];
   kpiTable: Array<{
     label: string;
     expected: string;
     observed: string;
-    status: 'pass' | 'fail' | 'missing';
+    status: 'ok' | 'mismatch' | 'missing';
   }>;
   links: {
     traceUrl: string;
@@ -62,6 +96,8 @@ export interface Run {
     reportPath: string;
     metadataPath: string;
     logsPath: string;
+    transcriptPath?: string;
+    eventsPath?: string;
   };
 }
 

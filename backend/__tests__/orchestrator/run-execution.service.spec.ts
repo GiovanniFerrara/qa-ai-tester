@@ -8,9 +8,15 @@ import { RunExecutionService } from 'src/orchestrator/run-execution.service';
 describe('RunExecutionService', () => {
   const baseTask = {
     id: 'dashboard-sanity',
+    name: 'Dashboard Sanity',
+    description: 'Ensure the analyst dashboard renders correctly.',
     goal: 'Verify dashboard',
+    instructions: 'Load the dashboard and confirm main widgets render.',
     route: '/dashboard',
     role: 'analyst',
+    provider: 'openai',
+    model: 'computer-use-preview',
+    requireFindings: true,
     kpiSpec: { type: 'staticValues', values: { revenue: 1000 } } as const,
     budgets: {
       maxToolCalls: 200,
@@ -79,7 +85,7 @@ describe('RunExecutionService', () => {
         usageTotals: {
           tokensInput: 10,
           tokensOutput: 5,
-          reasoningTokens: 0,
+          totalTokens: 15,
         },
         totalToolCalls: 2,
       }),

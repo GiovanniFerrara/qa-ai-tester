@@ -21,8 +21,8 @@ export function RunForm() {
       setTasks(data);
       if (data.length > 0) {
         setSelectedTaskId(data[0].id);
-        if (data[0].provider) setProvider(data[0].provider);
-        if (data[0].model) setModel(data[0].model);
+        setProvider(data[0].provider ?? '');
+        setModel(data[0].model ?? '');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load tasks');
@@ -33,8 +33,8 @@ export function RunForm() {
     setSelectedTaskId(taskId);
     const task = tasks.find((t) => t.id === taskId);
     if (task) {
-      if (task.provider) setProvider(task.provider);
-      if (task.model) setModel(task.model);
+      setProvider(task.provider ?? '');
+      setModel(task.model ?? '');
     }
   };
 
@@ -68,6 +68,8 @@ export function RunForm() {
       </div>
     );
   }
+
+  const selectedTask = tasks.find((task) => task.id === selectedTaskId);
 
   return (
     <div className="card">
@@ -129,6 +131,24 @@ export function RunForm() {
           {loading ? 'Starting Run...' : 'Start Run'}
         </button>
       </form>
+
+      {selectedTask && (
+        <div className="task-preview">
+          <h3>{selectedTask.name}</h3>
+          {selectedTask.description && <p>{selectedTask.description}</p>}
+          <p>
+            <strong>Route:</strong> {selectedTask.route}
+          </p>
+          <p>
+            <strong>Goal:</strong> {selectedTask.goal}
+          </p>
+          {selectedTask.instructions && (
+            <p>
+              <strong>Instructions:</strong> {selectedTask.instructions}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

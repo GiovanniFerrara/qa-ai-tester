@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { RunForm } from './components/RunForm';
 import { RunsList } from './components/RunsList';
 import { RunDetail } from './components/RunDetail';
+import { TasksManager } from './components/TasksManager';
 import './styles.css';
 
 function Navigation() {
@@ -22,6 +23,9 @@ function Navigation() {
           </Link>
           <Link to="/runs" className={isActive('/runs')}>
             Run History
+          </Link>
+          <Link to="/tasks" className={isActive('/tasks')}>
+            Tasks
           </Link>
         </nav>
       </div>
@@ -61,6 +65,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/runs" element={<Runs />} />
         <Route path="/runs/:runId" element={<RunDetailPage />} />
+        <Route path="/tasks" element={<TasksManager />} />
       </Routes>
     </BrowserRouter>
   );

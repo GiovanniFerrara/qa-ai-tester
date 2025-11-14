@@ -1,10 +1,35 @@
+import os from 'node:os';
+import path from 'node:path';
+import { mkdtempSync, rmSync } from 'node:fs';
+
+import type { ConfigService } from '@nestjs/config';
+
 import { TaskRegistryService } from 'src/tasks/task-registry.service';
+import { TaskStorageService } from 'src/tasks/task-storage.service';
+
+class MockConfigService implements Pick<ConfigService, 'get'> {
+  constructor(private readonly values: Record<string, unknown>) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get<T = any>(key: string): T {
+    return this.values[key] as T;
+  }
+}
 
 describe('TaskRegistryService', () => {
   let service: TaskRegistryService;
+  let tempDir: string;
 
   beforeEach(() => {
-    service = new TaskRegistryService();
+    tempDir = mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
+    const storagePath = path.join(tempDir, 'tasks.json');
+    const config = new MockConfigService({ TASKS_DB_PATH: storagePath }) as unknown as ConfigService;
+    const storage = new TaskStorageService(config);
+    service = new TaskRegistryService(storage);
+  });
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('registers default dashboard task on init', () => {
@@ -12,6 +37,7 @@ describe('TaskRegistryService', () => {
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({
       id: 'dashboard-sanity',
+      name: 'Dashboard Sanity',
       route: '/dashboard',
       role: 'analyst',
     });
@@ -19,9 +45,14 @@ describe('TaskRegistryService', () => {
 
   it('registers and retrieves custom tasks', () => {
     const spec = service.registerTask({
+      name: 'Settings Flow',
+      description: 'Validate settings flow for admin user',
       goal: 'Validate settings flow',
+      instructions: 'Navigate through settings and confirm tabs render.',
       route: '/settings',
       role: 'admin',
+      provider: 'openai',
+      requireFindings: true,
       kpiSpec: {
         type: 'staticValues',
         values: { noop: 'ok' },

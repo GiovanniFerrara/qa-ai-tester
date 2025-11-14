@@ -20,9 +20,14 @@ describe('AnthropicProviderService', () => {
     const plan = service.buildPlan(
       {
         id: 'task-1',
+        name: 'Dashboard Check',
+        description: 'Ensure dashboard widgets render correctly.',
         goal: 'Check KPIs',
+        instructions: 'Confirm charts render and note any missing data.',
         route: '/dashboard',
         role: 'analyst',
+        provider: 'anthropic',
+        requireFindings: true,
         kpiSpec: { type: 'staticValues', values: { revenue: 100 } },
         budgets: { maxToolCalls: 10, maxTimeMs: 1000, maxScreenshots: 5 },
       },

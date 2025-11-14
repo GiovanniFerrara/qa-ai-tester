@@ -9,3 +9,4 @@ backend/trace-output
 backend/artifacts
 frontend/node_modules
 frontend/dist
+data/

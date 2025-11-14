@@ -59,9 +59,15 @@ export type Budgets = z.infer<typeof BudgetSchema>;
 
 export const TaskSpecSchema = z.object({
   id: z.string(),
+  name: z.string(),
+  description: z.string().default(''),
   goal: z.string(),
+  instructions: z.string().default(''),
   route: z.string(),
   role: z.string(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  requireFindings: z.boolean().default(true),
   kpiSpec: KpiSpecSchema,
   budgets: BudgetSchema,
 });

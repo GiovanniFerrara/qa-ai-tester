@@ -43,7 +43,7 @@ export class OpenAiProviderService {
     const qaReportSchema = this.schemaService.getQaReportSchema();
     const serializedSchema = JSON.stringify(qaReportSchema, null, 2);
 
-    const baseInstruction = [
+    const baseInstructionLines = [
       'You are an AI QA analyst using computer-use tools to inspect a dashboard.',
       `Task goal: ${task.goal}`,
       `Navigate to route ${task.route} on the authenticated page.`,
@@ -52,7 +52,11 @@ export class OpenAiProviderService {
       'At the end of the run, output ONLY a JSON object that matches the QAReport schema below. Do not include commentary or markdown.',
       'Schema:',
       serializedSchema,
-    ].join('\n');
+    ];
+    let baseInstruction = baseInstructionLines.join('\n');
+    if (task.instructions && task.instructions.trim().length > 0) {
+      baseInstruction += `\nAdditional task-specific instructions:\n${task.instructions}`;
+    }
 
     const domSnapshotSchema = this.schemaService.getDomSnapshotSchema();
     const assertSchema = this.schemaService.getAssertToolSchema();
