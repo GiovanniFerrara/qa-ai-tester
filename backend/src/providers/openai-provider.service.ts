@@ -44,12 +44,13 @@ export class OpenAiProviderService {
     const serializedSchema = JSON.stringify(qaReportSchema, null, 2);
 
     const baseInstructionLines = [
-      'You are an AI QA analyst using computer-use tools to inspect a dashboard.',
+      'You are an autonomous AI QA analyst using computer-use tools to inspect the dashboard.',
       `Task goal: ${task.goal}`,
       `Navigate to route ${task.route} on the authenticated page.`,
-      'Use the provided tools to read the DOM and record assertions.',
+      'Use the provided tools to read the DOM, capture evidence, and record assertions without asking the user for clarification.',
+      'Never end with follow-up questions or conversational filler. Always decide independently.',
       'Assume the user should already be authenticated. If you encounter a login block, multi-factor challenge, or cannot reach the dashboard, stop and produce an inconclusive QAReport describing the issue.',
-      'At the end of the run, output ONLY a JSON object that matches the QAReport schema below. Do not include commentary or markdown.',
+      'When you are ready to conclude, output ONLY a JSON object that matches the QAReport schema below. No prose, no markdown, no questions.',
       'Schema:',
       serializedSchema,
     ];

@@ -155,6 +155,31 @@ export class OpenAiComputerUseService {
       });
 
       const followUpInputs: ResponseInputItem[] = [];
+      const pushReportReminder = (): boolean => {
+        if (promptedForReport) {
+          return false;
+        }
+        promptedForReport = true;
+        const reminderText =
+          'Please respond with ONLY the QAReport JSON object that matches the provided schema. Include at least one finding entry if possible.';
+        this.logger.debug(
+          `Run ${runId}: prompting model for structured QAReport (no tool outputs returned).`,
+        );
+        emitEvent({
+          type: 'log',
+          message: 'Prompting model to produce structured QAReport.',
+        });
+        followUpInputs.push({
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: reminderText,
+            },
+          ],
+        });
+        return true;
+      };
 
       if (functionCalls.length > 0) {
         for (const call of functionCalls) {
@@ -266,51 +291,29 @@ export class OpenAiComputerUseService {
           };
         }
 
-        if (response.status === 'completed') {
-          const finalText = (response.output_text ?? '').trim();
-          this.logger.warn(
-            `Run ${runId}: model completed without returning QAReport. Final output preview: ${finalText.slice(
-              0,
-              200,
-            )}`,
-          );
-          emitEvent({
-            type: 'status',
-            message: 'Model completed without returning structured QAReport.',
-            payload: finalText ? { finalText } : undefined,
-          });
-          throw new Error(
-            `Model completed without returning a structured QAReport. Final output: ${
-              finalText ? finalText.slice(0, 500) : '<empty>'
-            }`,
-          );
-        }
-      }
+        if (!pushReportReminder()) {
+          if (response.status === 'completed') {
+            const finalText = (response.output_text ?? '').trim();
+            this.logger.warn(
+              `Run ${runId}: model completed without returning QAReport. Final output preview: ${finalText.slice(
+                0,
+                200,
+              )}`,
+            );
+            emitEvent({
+              type: 'status',
+              message: 'Model completed without returning structured QAReport.',
+              payload: finalText ? { finalText } : undefined,
+            });
+            throw new Error(
+              `Model completed without returning a structured QAReport. Final output: ${
+                finalText ? finalText.slice(0, 500) : '<empty>'
+              }`,
+            );
+          }
 
-      if (followUpInputs.length === 0) {
-        if (!promptedForReport) {
-          promptedForReport = true;
-          const reminderText =
-            'Please respond with ONLY the QAReport JSON object that matches the provided schema. Include at least one finding entry.';
-          this.logger.debug(
-            `Run ${runId}: prompting model for structured QAReport (no tool outputs returned).`,
-          );
-          emitEvent({
-            type: 'log',
-            message: 'Prompting model to produce structured QAReport.',
-          });
-          followUpInputs.push({
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: reminderText,
-              },
-            ],
-          });
-        } else {
           this.logger.warn(
-            `Run ${runId}: no tool outputs after reminder, stopping to avoid invalid follow-up.`,
+            `Run ${runId}: no tool outputs even after reminder; aborting computer-use session.`,
           );
           emitEvent({
             type: 'status',
