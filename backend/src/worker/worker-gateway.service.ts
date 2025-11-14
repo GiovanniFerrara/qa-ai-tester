@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { chromium, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -87,8 +87,8 @@ export class WorkerGatewayService {
     const { page } = handle;
 
     if (action.selector) {
-      const locator = page.locator(action.selector);
-      if (await locator.count()) {
+      const locator = this.createLocator(page, action.selector);
+      if (locator && (await locator.count())) {
         const box = await locator.first().boundingBox();
         if (box) {
           action.coords = {
@@ -127,7 +127,13 @@ export class WorkerGatewayService {
     handle: BrowserRunHandle,
     request: DomSnapshotRequest,
   ): Promise<DomSnapshotResponse> {
-    const locator = handle.page.locator(request.selector);
+    const locator = this.createLocator(handle.page, request.selector);
+    if (!locator) {
+      this.logger.warn(
+        `DOM snapshot skipped: invalid selector "${request.selector}"`,
+      );
+      return { elements: [] };
+    }
     const elements: DomSnapshotResponse['elements'] = [];
 
     if (request.mode === 'single') {
@@ -144,6 +150,28 @@ export class WorkerGatewayService {
     }
 
     return { elements };
+  }
+
+  private normalizeSelector(selector: string): string {
+    if (!selector.includes(':contains(')) {
+      return selector;
+    }
+    return selector.replace(/:contains\((["'`]?)(.*?)\1\)/g, (_match, quote, text) => {
+      const safeText = text.replace(/"/g, '\\"');
+      return `:has-text("${safeText}")`;
+    });
+  }
+
+  private createLocator(page: Page, selector: string): Locator | null {
+    try {
+      const normalizedSelector = this.normalizeSelector(selector);
+      return page.locator(normalizedSelector);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to create locator for selector "${selector}": ${(error as Error).message}`,
+      );
+      return null;
+    }
   }
 
   private async serializeElement(

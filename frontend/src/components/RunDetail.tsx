@@ -194,7 +194,7 @@ export function RunDetail() {
     }
     const interval = setInterval(() => {
       handleNextSlide();
-    }, 2000);
+    }, 1500);
     return () => clearInterval(interval);
   }, [isPlaying, allScreenshots.length, handleNextSlide]);
 
