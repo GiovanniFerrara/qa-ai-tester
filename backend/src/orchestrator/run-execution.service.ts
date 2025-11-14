@@ -111,12 +111,14 @@ export class RunExecutionService {
           screenshotsGalleryUrl: handle.screenshotDir,
           rawTranscriptUrl: responsesPath ?? null,
         };
+        const priceUsd = (usageTotals.tokensInput * 3.0 / 1_000_000) + (usageTotals.tokensOutput * 12.0 / 1_000_000);
         report.costs = {
           ...(report.costs ?? {}),
           tokensInput: usageTotals.tokensInput,
           tokensOutput: usageTotals.tokensOutput,
           toolCalls: totalToolCalls,
           durationMs: finishedAt.getTime() - startedAt.getTime(),
+          priceUsd: parseFloat(priceUsd.toFixed(4)),
         };
       }
 
@@ -233,6 +235,7 @@ export class RunExecutionService {
         tokensOutput: 0,
         toolCalls: 0,
         durationMs: options.finishedAt.getTime() - options.startedAt.getTime(),
+        priceUsd: 0,
       },
     };
   }

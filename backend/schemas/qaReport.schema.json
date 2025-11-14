@@ -24,11 +24,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "passed",
-            "failed",
-            "inconclusive"
-          ]
+          "enum": ["passed", "failed", "inconclusive"]
         },
         "findings": {
           "type": "array",
@@ -40,23 +36,11 @@
               },
               "severity": {
                 "type": "string",
-                "enum": [
-                  "blocker",
-                  "critical",
-                  "major",
-                  "minor",
-                  "info"
-                ]
+                "enum": ["blocker", "critical", "major", "minor", "info"]
               },
               "category": {
                 "type": "string",
-                "enum": [
-                  "functional",
-                  "data-consistency",
-                  "performance",
-                  "a11y",
-                  "reliability"
-                ]
+                "enum": ["functional", "data-consistency", "performance", "a11y", "reliability"]
               },
               "assertion": {
                 "type": "string"
@@ -68,10 +52,7 @@
                 "type": "string"
               },
               "tolerance": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "evidence": {
                 "type": "array",
@@ -82,27 +63,16 @@
                       "type": "string"
                     },
                     "selector": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": ["string", "null"]
                     },
                     "time": {
                       "type": "string"
                     },
                     "networkRequestId": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": ["string", "null"]
                     }
                   },
-                  "required": [
-                    "screenshotRef",
-                    "selector",
-                    "time",
-                    "networkRequestId"
-                  ],
+                  "required": ["screenshotRef", "selector", "time", "networkRequestId"],
                   "additionalProperties": false
                 }
               },
@@ -146,19 +116,10 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "ok",
-                  "mismatch",
-                  "missing"
-                ]
+                "enum": ["ok", "mismatch", "missing"]
               }
             },
-            "required": [
-              "label",
-              "expected",
-              "observed",
-              "status"
-            ],
+            "required": ["label", "expected", "observed", "status"],
             "additionalProperties": false
           }
         },
@@ -166,29 +127,16 @@
           "type": "object",
           "properties": {
             "traceUrl": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "screenshotsGalleryUrl": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "rawTranscriptUrl": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             }
           },
-          "required": [
-            "traceUrl",
-            "screenshotsGalleryUrl",
-            "rawTranscriptUrl"
-          ],
+          "required": ["traceUrl", "screenshotsGalleryUrl", "rawTranscriptUrl"],
           "additionalProperties": false
         },
         "costs": {
@@ -209,14 +157,13 @@
             "durationMs": {
               "type": "integer",
               "minimum": 0
+            },
+            "priceUsd": {
+              "type": "number",
+              "minimum": 0
             }
           },
-          "required": [
-            "tokensInput",
-            "tokensOutput",
-            "toolCalls",
-            "durationMs"
-          ],
+          "required": ["tokensInput", "tokensOutput", "toolCalls", "durationMs", "priceUsd"],
           "additionalProperties": false
         }
       },

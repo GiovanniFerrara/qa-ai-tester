@@ -410,15 +410,9 @@ export function RunDetail() {
               </div>
               <div className="summary-card">
                 <div className="summary-value">
-                  {run.report.costs.tokensInput}
+                  ${run.report.costs.priceUsd.toFixed(4)}
                 </div>
-                <div className="summary-label">Input Tokens</div>
-              </div>
-              <div className="summary-card">
-                <div className="summary-value">
-                  {run.report.costs.tokensOutput}
-                </div>
-                <div className="summary-label">Output Tokens</div>
+                <div className="summary-label">Cost (USD)</div>
               </div>
             </div>
 

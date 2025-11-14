@@ -83,6 +83,7 @@ export interface QAReport {
     tokensOutput: number;
     toolCalls: number;
     durationMs: number;
+    priceUsd: number;
   };
 }
 

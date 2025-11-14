@@ -103,6 +103,7 @@ export const QaReportSchema = z.object({
     tokensOutput: z.number().int().nonnegative(),
     toolCalls: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
+    priceUsd: z.number().nonnegative(),
   }),
 });
 
