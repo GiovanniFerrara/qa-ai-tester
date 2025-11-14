@@ -113,6 +113,9 @@ export const ComputerActionSchema = z.object({
     'scroll',
     'hover',
     'drag',
+    'wait',
+    'screenshot',
+    'keypress',
   ]),
   coords: z
     .object({
@@ -139,6 +142,15 @@ export const ComputerActionSchema = z.object({
     })
     .nullable()
     .optional(),
+  path: z
+    .array(
+      z.object({
+        x: z.number(),
+        y: z.number(),
+      }),
+    )
+    .optional(),
+  keys: z.array(z.string()).optional(),
 });
 
 export type ComputerAction = z.infer<typeof ComputerActionSchema>;

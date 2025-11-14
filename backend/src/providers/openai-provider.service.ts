@@ -3,26 +3,19 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 
 import type { AppEnvironment } from '../config/environment';
+import type { ResponseCreateParams, ResponseFormatTextJSONSchemaConfig } from 'openai/resources/responses/responses';
+
 import type { TaskSpec } from '../models/contracts';
 import type { AiProvider } from '../models/run';
 import { SchemaService } from './schema.service';
 
-export interface ComputerUseToolDefinition {
-  name: string;
-  description: string;
-  input_schema: unknown;
-}
-
 export interface OpenAiComputerUsePlan {
   model: string;
-  input: unknown;
-  tools: ComputerUseToolDefinition[];
-  max_output_tokens: number;
-  parallel_tool_calls: boolean;
-  response_format: {
-    type: 'json_schema';
-    json_schema: unknown;
-  };
+  systemPrompt: string;
+  userPrompt: string;
+  tools: ResponseCreateParams['tools'];
+  textFormat: ResponseFormatTextJSONSchemaConfig;
+  maxOutputTokens: number;
 }
 
 @Injectable()
@@ -54,58 +47,57 @@ export class OpenAiProviderService {
       'You are an AI QA analyst using computer-use tools to inspect a dashboard.',
       `Task goal: ${task.goal}`,
       `Navigate to route ${task.route} on the authenticated page.`,
-      'Use dom_snapshot to understand text, and kpi_oracle to fetch expected KPI values.',
-      'Compare on-screen KPIs with oracle data and register assertions via the assert tool.',
-      'Return a QAReport JSON adhering strictly to the provided schema.',
+      'Use the provided tools to read the DOM, fetch KPI reference data when available, and record assertions.',
+      'Return a QAReport JSON adhering strictly to the provided schema at the end of the session.',
     ].join('\n');
 
-    const toolDefinitions: ComputerUseToolDefinition[] = [
+    const domSnapshotSchema = this.schemaService.getDomSnapshotSchema();
+    const kpiOracleSchema = this.schemaService.getKpiOracleSchema();
+    const assertSchema = this.schemaService.getAssertToolSchema();
+
+    const tools: ResponseCreateParams['tools'] = [
       {
-        name: 'computer_action',
-        description:
-          'Execute low-level mouse and keyboard actions on the active Playwright page and receive a screenshot plus telemetry.',
-        input_schema: this.schemaService.getComputerActionSchema(),
+        type: 'computer-preview',
+        display_width: 1366,
+        display_height: 768,
+        environment: 'browser',
       },
       {
+        type: 'function',
         name: 'dom_snapshot',
         description: 'Capture DOM content and attributes for targeted selectors.',
-        input_schema: this.schemaService.getDomSnapshotSchema(),
+        parameters: domSnapshotSchema as Record<string, unknown>,
+        strict: true,
       },
       {
+        type: 'function',
         name: 'kpi_oracle',
-        description: 'Fetch expected KPI values for validation against what is displayed in the UI.',
-        input_schema: this.schemaService.getKpiOracleSchema(),
+        description:
+          'Fetch expected KPI values for validation against what is displayed in the UI.',
+        parameters: kpiOracleSchema as Record<string, unknown>,
+        strict: true,
       },
       {
+        type: 'function',
         name: 'assert',
         description:
           'Record an assertion or finding with evidence that will be surfaced in the final QAReport.',
-        input_schema: this.schemaService.getAssertToolSchema(),
+        parameters: assertSchema as Record<string, unknown>,
+        strict: true,
       },
     ];
 
     return {
       model: this.getModel(),
-      input: [
-        {
-          role: 'system',
-          content: baseInstruction,
-        },
-        {
-          role: 'user',
-          content: `Begin QA run ${runId}`,
-        },
-      ],
-      tools: toolDefinitions,
-      max_output_tokens: 4000,
-      parallel_tool_calls: false,
-      response_format: {
+      systemPrompt: baseInstruction,
+      userPrompt: `Begin QA run ${runId}. Describe what you observe and ensure the dashboard loads correctly.`,
+      tools,
+      maxOutputTokens: 4000,
+      textFormat: {
+        name: 'QAReport',
         type: 'json_schema',
-        json_schema: {
-          name: 'QAReport',
-          schema: qaReportSchema,
-          strict: true,
-        },
+        schema: qaReportSchema as Record<string, unknown>,
+        strict: true,
       },
     };
   }

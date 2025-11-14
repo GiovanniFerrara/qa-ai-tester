@@ -207,6 +207,13 @@ export class WorkerGatewayService {
           await page.keyboard.press(action.hotkey);
         }
         break;
+      case 'keypress':
+        if (action.keys?.length) {
+          for (const key of action.keys) {
+            await page.keyboard.press(key);
+          }
+        }
+        break;
       case 'scroll':
         if (action.scroll) {
           await page.mouse.wheel(action.scroll.deltaX ?? 0, action.scroll.deltaY ?? 0);
@@ -216,13 +223,31 @@ export class WorkerGatewayService {
         await page.mouse.move(coords.x, coords.y);
         break;
       case 'drag':
-        if (!action.scroll) {
-          return;
+        if (action.path && action.path.length >= 2) {
+          const [first, ...rest] = action.path;
+          await page.mouse.move(first.x, first.y);
+          await page.mouse.down();
+          for (const point of rest) {
+            await page.mouse.move(point.x, point.y);
+          }
+          await page.mouse.up();
+          break;
         }
-        await page.mouse.move(coords.x, coords.y);
-        await page.mouse.down();
-        await page.mouse.move(coords.x + (action.scroll.deltaX ?? 0), coords.y + (action.scroll.deltaY ?? 0));
-        await page.mouse.up();
+        if (action.scroll) {
+          await page.mouse.move(coords.x, coords.y);
+          await page.mouse.down();
+          await page.mouse.move(
+            coords.x + (action.scroll.deltaX ?? 0),
+            coords.y + (action.scroll.deltaY ?? 0),
+          );
+          await page.mouse.up();
+        }
+        break;
+      case 'wait':
+        // handled in applyWait to ensure consistent timing
+        break;
+      case 'screenshot':
+        // no-op before screenshot capture
         break;
       default:
         this.logger.warn(`Action ${action.action} not implemented in worker adapter`);

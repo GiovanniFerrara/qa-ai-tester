@@ -21,6 +21,7 @@ export interface RunArtifacts {
   logsPath?: string;
   reportPath?: string;
   metadataPath?: string;
+  eventsPath?: string;
 }
 
 export interface RunContext {

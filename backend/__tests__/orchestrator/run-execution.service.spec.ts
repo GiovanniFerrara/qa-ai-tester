@@ -2,9 +2,6 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import type { ConfigService } from '@nestjs/config';
-
-import type { AppEnvironment } from 'src/config/environment';
 import type { AiProvider } from 'src/models/run';
 import { RunExecutionService } from 'src/orchestrator/run-execution.service';
 
@@ -21,11 +18,6 @@ describe('RunExecutionService', () => {
       maxScreenshots: 25,
     },
   };
-
-  const createConfigService = (): ConfigService<AppEnvironment, true> =>
-    ({
-      get: jest.fn(),
-    } as unknown as ConfigService<AppEnvironment, true>);
 
   const createTmpDirs = async () => {
     const baseDir = await fs.mkdtemp(path.join(os.tmpdir(), 'qa-run-'));
@@ -58,28 +50,50 @@ describe('RunExecutionService', () => {
       resolve: jest.fn().mockReturnValue({ provider: 'openai' satisfies AiProvider }),
     };
 
-    const kpiOracleService = {
-      resolve: jest.fn().mockResolvedValue({ data: { revenue: 1000, orders: 12 } }),
+    const orchestrator = {
+      run: jest.fn().mockResolvedValue({
+        report: {
+          id: 'report-1',
+          runId: 'run-1',
+          taskId: baseTask.id,
+          startedAt: new Date().toISOString(),
+          finishedAt: new Date().toISOString(),
+          summary: 'Dashboard rendered successfully.',
+          status: 'passed',
+          findings: [],
+          kpiTable: [],
+          links: {
+            traceUrl: null,
+            screenshotsGalleryUrl: null,
+            rawTranscriptUrl: null,
+          },
+          costs: {
+            tokensInput: 10,
+            tokensOutput: 5,
+            toolCalls: 2,
+            durationMs: 500,
+          },
+        },
+        eventsPath: path.join(baseDir, 'computer-use-events.json'),
+        responsesPath: path.join(baseDir, 'model-responses.jsonl'),
+        usageTotals: {
+          tokensInput: 10,
+          tokensOutput: 5,
+          reasoningTokens: 0,
+        },
+        totalToolCalls: 2,
+      }),
     };
 
-    const service = new RunExecutionService(
-      createConfigService(),
-      providerRegistry as any,
-      workerGateway as any,
-      kpiOracleService as any,
-    );
+    const service = new RunExecutionService(providerRegistry as any, workerGateway as any, orchestrator as any);
 
     const result = await service.execute('run-1', baseTask, 'openai');
 
     expect(workerGateway.startRun).toHaveBeenCalledWith('run-1', '/dashboard');
     expect(workerGateway.captureScreenshot).toHaveBeenCalled();
     expect(workerGateway.stopRun).toHaveBeenCalled();
-    expect(result.report.status).toBe('inconclusive');
-    expect(result.report.kpiTable).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'revenue', expected: '1000', status: 'missing' }),
-      ]),
-    );
+    expect(orchestrator.run).toHaveBeenCalled();
+    expect(result.report.status).toBe('passed');
     expect(result.artifacts.reportPath).toBeDefined();
     expect(result.artifacts.metadataPath).toBeDefined();
     expect(result.artifacts.logsPath).toBeDefined();
@@ -94,6 +108,8 @@ describe('RunExecutionService', () => {
       runId: 'run-1',
       taskId: 'dashboard-sanity',
       provider: 'openai',
+      eventsPath: path.join(baseDir, 'computer-use-events.json'),
+      responsesPath: path.join(baseDir, 'model-responses.jsonl'),
     });
 
     await fs.rm(baseDir, { recursive: true, force: true });

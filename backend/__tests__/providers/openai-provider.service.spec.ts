@@ -30,11 +30,21 @@ describe('OpenAiProviderService', () => {
     );
 
     expect(plan.model).toBe('o4-mini');
-    expect(plan.tools).toHaveLength(4);
-    expect(plan.response_format.json_schema).toHaveProperty('schema');
-    const toolNames = plan.tools.map((tool: { name: string }) => tool.name);
-    expect(toolNames).toEqual(
-      expect.arrayContaining(['computer_action', 'dom_snapshot', 'kpi_oracle', 'assert']),
+    expect(plan.tools).toBeDefined();
+    expect(plan.textFormat?.schema).toBeDefined();
+
+    const tools = plan.tools ?? [];
+    const computerTool = tools.find((tool) => tool.type === 'computer-preview');
+    expect(computerTool).toBeDefined();
+
+    const functionTools = tools.filter(
+      (tool): tool is Extract<typeof tools[number], { type: 'function'; name: string }> =>
+        tool.type === 'function',
+    );
+    const functionNames = functionTools.map((tool) => tool.name);
+
+    expect(functionNames).toEqual(
+      expect.arrayContaining(['dom_snapshot', 'kpi_oracle', 'assert']),
     );
   });
 });

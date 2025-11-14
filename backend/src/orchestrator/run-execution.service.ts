@@ -1,14 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { AppEnvironment } from '../config/environment';
 import type { QaReport, TaskSpec } from '../models/contracts';
 import type { AiProvider, RunResult } from '../models/run';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
-import { KpiOracleService } from '../services/kpi-oracle.service';
+import { ComputerUseOrchestratorService } from '../providers/computer-use-orchestrator.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 
 @Injectable()
@@ -16,10 +14,9 @@ export class RunExecutionService {
   private readonly logger = new Logger(RunExecutionService.name);
 
   constructor(
-    private readonly configService: ConfigService<AppEnvironment, true>,
     private readonly providerRegistry: AiProviderRegistryService,
     private readonly workerGateway: WorkerGatewayService,
-    private readonly kpiOracleService: KpiOracleService,
+    private readonly computerUseOrchestratorService: ComputerUseOrchestratorService,
   ) {}
 
   async execute(runId: string, task: TaskSpec, providerKey: AiProvider): Promise<RunResult> {
@@ -33,62 +30,66 @@ export class RunExecutionService {
 
     try {
       const initialScreenshot = await this.workerGateway.captureScreenshot(handle, 'initial');
+      let report: QaReport | null = null;
+      let eventsPath: string | undefined;
+      let responsesPath: string | undefined;
+      let usageTotals = { tokensInput: 0, tokensOutput: 0, totalTokens: 0 };
+      let totalToolCalls = 0;
+      let errorDuringRun: Error | null = null;
+
+      try {
+        const sessionResult = await this.computerUseOrchestratorService.run({
+          provider: provider.provider,
+          runId,
+          task,
+          handle,
+          initialScreenshotPath: initialScreenshot,
+          startedAt,
+        });
+        report = sessionResult.report;
+        eventsPath = sessionResult.eventsPath;
+        responsesPath = sessionResult.responsesPath;
+        usageTotals = sessionResult.usageTotals;
+        totalToolCalls = sessionResult.totalToolCalls;
+      } catch (error) {
+        errorDuringRun = error as Error;
+        this.logger.error(
+          `Computer-use session failed for run ${runId}: ${(error as Error).message}`,
+        );
+      }
 
       const finishedAt = new Date();
       const tracePath = path.join(handle.artifactDir, 'trace.zip');
 
-      const oracle = await this.kpiOracleService.resolve(task.kpiSpec);
-      const kpiTable = Object.entries(oracle.data).map(([label, expected]) => ({
-        label,
-        expected: String(expected),
-        observed: 'pending-ai-verification',
-        status: 'missing' as const,
-      }));
-
-      const placeholderFinding = {
-        id: uuidv4(),
-        severity: 'info' as const,
-        category: 'functional' as const,
-        assertion: 'AI run orchestration is pending completion',
-        expected: 'The AI provider should perform a full computer-use session.',
-        observed:
-          'This is a scaffolded run awaiting integration with the provider-specific loop implementation.',
-        tolerance: null,
-        evidence: [
-          {
-            screenshotRef: initialScreenshot,
-            selector: null,
-            time: startedAt.toISOString(),
-            networkRequestId: null,
-          },
-        ],
-        suggestedFix: 'Implement provider execution loop that relays tool results to the LLM.',
-        confidence: 0.1,
-      };
-
-      const report: QaReport = {
-        id: uuidv4(),
-        runId,
-        taskId: task.id,
-        startedAt: startedAt.toISOString(),
-        finishedAt: finishedAt.toISOString(),
-        summary:
-          'Run scaffold executed. Awaiting implementation of provider-driven computer use orchestration.',
-        status: 'inconclusive',
-        findings: [placeholderFinding],
-        kpiTable,
-        links: {
+      if (!report) {
+        report = this.buildFallbackReport({
+          runId,
+          task,
+          startedAt,
+          finishedAt,
+          initialScreenshot,
+          tracePath,
+          reason: errorDuringRun?.message ?? 'Computer-use session did not return a report.',
+        });
+      } else {
+        report.runId = runId;
+        report.taskId = task.id;
+        report.startedAt = report.startedAt ?? startedAt.toISOString();
+        report.finishedAt = finishedAt.toISOString();
+        report.links = {
+          ...(report.links ?? {}),
           traceUrl: tracePath,
           screenshotsGalleryUrl: handle.screenshotDir,
-          rawTranscriptUrl: null,
-        },
-        costs: {
-          tokensInput: 0,
-          tokensOutput: 0,
-          toolCalls: 0,
+          rawTranscriptUrl: responsesPath ?? null,
+        };
+        report.costs = {
+          ...(report.costs ?? {}),
+          tokensInput: usageTotals.tokensInput,
+          tokensOutput: usageTotals.tokensOutput,
+          toolCalls: totalToolCalls,
           durationMs: finishedAt.getTime() - startedAt.getTime(),
-        },
-      };
+        };
+      }
 
       const reportPath = path.join(handle.artifactDir, 'qa-report.json');
       await writeFile(reportPath, JSON.stringify(report, null, 2), 'utf8');
@@ -103,7 +104,10 @@ export class RunExecutionService {
         screenshots: handle.screenshots,
         budgets: task.budgets,
         kpiSpec: task.kpiSpec,
-        oracleData: oracle.data,
+        eventsPath: eventsPath ?? null,
+        responsesPath: responsesPath ?? null,
+        usageTotals,
+        totalToolCalls,
       };
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
 
@@ -115,26 +119,90 @@ export class RunExecutionService {
           message: `Run ${runId} created for task ${task.id}`,
         },
         {
-          type: 'placeholder_ai_summary',
+          type: report.status === 'passed' ? 'run_completed' : 'run_completed_with_notes',
           timestamp: finishedAt.toISOString(),
           message:
-            'Structured AI session not yet executed; generated placeholder QA report with KPI oracle data.',
+            report.status === 'passed'
+              ? 'AI computer-use session completed successfully.'
+              : `Run finished with status ${report.status}. ${report.summary}`,
         },
       ];
+      if (errorDuringRun) {
+        logEvents.push({
+          type: 'error',
+          timestamp: finishedAt.toISOString(),
+          message: errorDuringRun.message,
+        });
+      }
       await writeFile(logPath, JSON.stringify({ runId, events: logEvents }, null, 2), 'utf8');
 
       return {
         report,
         artifacts: {
-          screenshots: [initialScreenshot],
+          screenshots: handle.screenshots,
           traceZipPath: tracePath,
           reportPath,
           metadataPath,
           logsPath: logPath,
+          transcriptPath: responsesPath,
+          eventsPath,
         },
       };
     } finally {
       await this.workerGateway.stopRun(handle);
     }
+  }
+
+  private buildFallbackReport(options: {
+    runId: string;
+    task: TaskSpec;
+    startedAt: Date;
+    finishedAt: Date;
+    initialScreenshot: string;
+    tracePath: string;
+    reason: string;
+  }): QaReport {
+    return {
+      id: uuidv4(),
+      runId: options.runId,
+      taskId: options.task.id,
+      startedAt: options.startedAt.toISOString(),
+      finishedAt: options.finishedAt.toISOString(),
+      summary: `Run ended without a structured QAReport: ${options.reason}`,
+      status: 'inconclusive',
+      findings: [
+        {
+          id: uuidv4(),
+          severity: 'info',
+          category: 'functional',
+          assertion: 'AI session fallback',
+          expected: 'The AI agent should complete a computer-use loop successfully.',
+          observed: options.reason,
+          tolerance: null,
+          evidence: [
+            {
+              screenshotRef: options.initialScreenshot,
+              selector: null,
+              time: options.startedAt.toISOString(),
+              networkRequestId: null,
+            },
+          ],
+          suggestedFix: 'Review computer-use loop output and retry the run.',
+          confidence: 0.1,
+        },
+      ],
+      kpiTable: [],
+      links: {
+        traceUrl: options.tracePath,
+        screenshotsGalleryUrl: path.dirname(options.initialScreenshot),
+        rawTranscriptUrl: null,
+      },
+      costs: {
+        tokensInput: 0,
+        tokensOutput: 0,
+        toolCalls: 0,
+        durationMs: options.finishedAt.getTime() - options.startedAt.getTime(),
+      },
+    };
   }
 }

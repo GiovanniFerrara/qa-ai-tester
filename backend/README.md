@@ -64,3 +64,14 @@ API available at `http://localhost:3005/api`
 - `POST /api/runs` - Create new run
 - `GET /api/runs` - List all runs
 - `GET /api/runs/:id` - Get run report
+
+## Computer-Use Workflow
+
+- Ensure `OPENAI_API_KEY` is set; the backend defaults to OpenAI for the computer-use loop.
+- The orchestration service captures an initial screenshot, calls the `computer-preview` tool, and relays subsequent `computer_call` and function tool results until a structured `QAReport` is produced.
+- Artifacts per run:
+  - `qa-report.json` – structured model output adhering to the schema in `schemas/qaReport.schema.json`
+  - `computer-use-events.json` – chronological log of DOM snapshots, KPI calls, assertions, and computer actions
+  - `model-responses.jsonl` – condensed transcript with per-step usage figures
+  - `trace.zip` & `screenshots/` – Playwright trace and viewport captures
+- Configure `BASE_URL` for the web app and (optionally) `KPI_BASE_URL` when the model should query backend KPI data with the `kpi_oracle` tool.

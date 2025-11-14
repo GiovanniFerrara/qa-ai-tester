@@ -247,6 +247,18 @@ AI can run custom checks defined in your tasks. The AI has access to these tools
 - `kpi_oracle` - Check metrics
 - `assert` - Verify conditions
 
+### Computer-Use Loop (OpenAI)
+
+- Provide `OPENAI_API_KEY` and (optionally) `CLAUDE_API_KEY`.
+- The orchestrator launches an authenticated Playwright session and streams screenshots to OpenAI's `computer-preview` tool.
+- Tool calls (`dom_snapshot`, `kpi_oracle`, `assert`) are executed in the backend and fed back into the model until it produces a structured `QAReport`.
+- Artifacts per run include:
+  - `qa-report.json` – structured result from the model
+  - `computer-use-events.json` – chronological log of tool calls and actions
+  - `model-responses.jsonl` – compact trail of responses/usage data
+  - `trace.zip` and viewport screenshots for every step
+- Configure the dashboard URL via `BASE_URL` and optionally `KPI_BASE_URL` if the model should compare UI values with your API.
+
 ## Troubleshooting
 
 ### "No tasks available"
