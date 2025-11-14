@@ -47,8 +47,9 @@ export class OpenAiProviderService {
       'You are an AI QA analyst using computer-use tools to inspect a dashboard.',
       `Task goal: ${task.goal}`,
       `Navigate to route ${task.route} on the authenticated page.`,
-      'Use the provided tools to read the DOM, fetch KPI reference data when available, and record assertions.',
-      'Return a QAReport JSON adhering strictly to the provided schema at the end of the session.',
+      'Use the provided tools to read the DOM and record assertions.',
+      'Assume the user should already be authenticated. If you encounter a login block, multi-factor challenge, or cannot reach the dashboard, stop and produce an inconclusive QAReport describing the issue.',
+      'At the end of the run, output ONLY a JSON object that matches the QAReport schema below. Do not include commentary or markdown.',
       'Schema:',
       serializedSchema,
     ].join('\n');

@@ -112,6 +112,9 @@ export class OpenAiComputerUseService {
     };
 
     recordResponseUsage(response.usage);
+    this.logger.debug(
+      `Run ${runId}: received initial response ${response.id} (status=${response.status})`,
+    );
     responsesSummary.push({ id: response.id, status: response.status, usage: response.usage });
 
     let iterations = 0;
@@ -123,6 +126,9 @@ export class OpenAiComputerUseService {
 
       const functionCalls = this.extractFunctionCalls(response);
       const computerCalls = this.extractComputerCalls(response);
+      this.logger.debug(
+        `Run ${runId}: iteration ${iterations} => function calls=${functionCalls.length}, computer calls=${computerCalls.length}`,
+      );
 
       const followUpInputs: ResponseInputItem[] = [];
 
@@ -131,6 +137,10 @@ export class OpenAiComputerUseService {
           const result = await this.handleFunctionCall(call, { runId, task, handle }, findingsFromTool);
           const outputPayload =
             typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
+
+          this.logger.debug(
+            `Run ${runId}: function tool "${call.name}" call_id=${call.call_id}`,
+          );
 
           followUpInputs.push({
             type: 'function_call_output',
@@ -153,6 +163,9 @@ export class OpenAiComputerUseService {
       if (computerCalls.length > 0) {
         for (const call of computerCalls) {
           const mappedAction = this.mapComputerAction(call);
+          this.logger.debug(
+            `Run ${runId}: executing computer action ${call.action.type} (call_id=${call.call_id})`,
+          );
           const actionResult = await this.workerGateway.performComputerAction(handle, mappedAction);
           events.push({
             step: events.length + 1,
@@ -185,6 +198,7 @@ export class OpenAiComputerUseService {
       if (followUpInputs.length === 0) {
         if (maybeReport) {
           await this.writeSessionArtifacts(handle.artifactDir, events, responsesSummary);
+          this.logger.debug(`Run ${runId}: AI returned structured report, finishing.`);
           return {
             report: maybeReport,
             eventsPath: path.join(handle.artifactDir, 'computer-use-events.json'),
@@ -195,12 +209,26 @@ export class OpenAiComputerUseService {
         }
 
         if (response.status === 'completed') {
-          throw new Error('Model completed without returning a structured QAReport.');
+          const finalText = (response.output_text ?? '').trim();
+          this.logger.warn(
+            `Run ${runId}: model completed without returning QAReport. Final output preview: ${finalText.slice(
+              0,
+              200,
+            )}`,
+          );
+          throw new Error(
+            `Model completed without returning a structured QAReport. Final output: ${
+              finalText ? finalText.slice(0, 500) : '<empty>'
+            }`,
+          );
         }
       }
 
       if (followUpInputs.length === 0) {
         // Nothing to send back but also not completed – prevent tight loop
+        this.logger.debug(
+          `Run ${runId}: no tool outputs to return; resending initial screenshot to keep session alive.`,
+        );
         followUpInputs.push({
           type: 'computer_call_output',
           call_id: uuidv4(),
@@ -223,6 +251,9 @@ export class OpenAiComputerUseService {
       response = await client.responses.create(followUpParams);
 
       recordResponseUsage(response.usage);
+      this.logger.debug(
+        `Run ${runId}: received response ${response.id} (status=${response.status})`,
+      );
       responsesSummary.push({ id: response.id, status: response.status, usage: response.usage });
     }
 
@@ -355,19 +386,25 @@ export class OpenAiComputerUseService {
     findings: QaReport['findings'],
     options: ComputerUseRunOptions,
   ): QaReport | null {
-    const text = response.output_text?.trim();
-    if (!text) {
+    const text = response.output_text ?? '';
+    if (!text.trim()) {
       return null;
     }
+
+    const parsed = this.extractJsonObject(text);
+    if (!parsed) {
+      this.logger.warn(`Failed to parse structured QAReport: no JSON detected in "${text.slice(0, 120)}..."`);
+      return null;
+    }
+
     try {
-      const candidate = JSON.parse(text);
-      const report = QaReportSchema.parse(candidate);
-      if (!report.findings.length && findings.length) {
-        report.findings = findings;
+      const reportCandidate = QaReportSchema.parse(parsed);
+      if (!reportCandidate.findings.length && findings.length) {
+        reportCandidate.findings = findings;
       }
-      return report;
+      return reportCandidate;
     } catch (error) {
-      this.logger.warn(`Failed to parse structured QAReport: ${(error as Error).message}`);
+      this.logger.warn(`Failed to validate QAReport JSON: ${(error as Error).message}`);
       return null;
     }
   }
@@ -383,5 +420,24 @@ export class OpenAiComputerUseService {
     const responsesPath = path.join(artifactDir, 'model-responses.jsonl');
     const responseLines = responses.map((entry) => JSON.stringify(entry));
     await fs.writeFile(responsesPath, `${responseLines.join('\n')}\n`, 'utf8');
+
+    this.logger.debug(
+      `Computer-use artifacts persisted to ${artifactDir} (events=${events.length}, responses=${responses.length})`,
+    );
+  }
+
+  private extractJsonObject(text: string): Record<string, unknown> | null {
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      return null;
+    }
+
+    const candidate = text.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(candidate) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
   }
 }

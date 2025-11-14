@@ -210,7 +210,14 @@ export class WorkerGatewayService {
       case 'keypress':
         if (action.keys?.length) {
           for (const key of action.keys) {
-            await page.keyboard.press(key);
+            const normalizedKey = this.normalizeKey(key);
+            try {
+              await page.keyboard.press(normalizedKey);
+            } catch (error) {
+              this.logger.warn(
+                `Failed to press key "${key}" (normalized: "${normalizedKey}") - ${(error as Error).message}`,
+              );
+            }
           }
         }
         break;
@@ -252,6 +259,44 @@ export class WorkerGatewayService {
       default:
         this.logger.warn(`Action ${action.action} not implemented in worker adapter`);
     }
+  }
+
+  private normalizeKey(key: string): string {
+    const trimmed = key.trim();
+    const directMap: Record<string, string> = {
+      ALT: 'Alt',
+      CONTROL: 'Control',
+      CTRL: 'Control',
+      SHIFT: 'Shift',
+      META: 'Meta',
+      ENTER: 'Enter',
+      RETURN: 'Enter',
+      ESC: 'Escape',
+      ESCAPE: 'Escape',
+      SPACE: ' ',
+      TAB: 'Tab',
+      BACKSPACE: 'Backspace',
+      DEL: 'Delete',
+      DELETE: 'Delete',
+    };
+
+    if (directMap[trimmed.toUpperCase()]) {
+      return directMap[trimmed.toUpperCase()];
+    }
+
+    if (/^Key[A-Z]$/.test(trimmed)) {
+      return trimmed.replace(/^Key/, '').toUpperCase();
+    }
+
+    if (/^Digit[0-9]$/.test(trimmed)) {
+      return trimmed.replace(/^Digit/, '');
+    }
+
+    if (/^[Ff][0-9]{1,2}$/.test(trimmed)) {
+      return `F${trimmed.replace(/[Ff]/, '')}`;
+    }
+
+    return trimmed;
   }
 
   private async applyWait(page: Page, action: ComputerAction): Promise<void> {
