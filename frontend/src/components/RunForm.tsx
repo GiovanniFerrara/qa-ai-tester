@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TaskSpec } from '../types';
-import { api } from '../api';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { TaskSpec } from "../types";
+import { api } from "../api";
 
 export function RunForm() {
   const [tasks, setTasks] = useState<TaskSpec[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState('');
-  const [provider, setProvider] = useState('');
-  const [model, setModel] = useState('');
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [provider, setProvider] = useState("");
+  const [model, setModel] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -23,11 +23,11 @@ export function RunForm() {
       setTasks(data);
       if (data.length > 0) {
         setSelectedTaskId(data[0].id);
-        setProvider(data[0].provider ?? '');
-        setModel(data[0].model ?? '');
+        setProvider(data[0].provider ?? "");
+        setModel(data[0].model ?? "");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      setError(err instanceof Error ? err.message : "Failed to load tasks");
     }
   };
 
@@ -35,8 +35,8 @@ export function RunForm() {
     setSelectedTaskId(taskId);
     const task = tasks.find((t) => t.id === taskId);
     if (task) {
-      setProvider(task.provider ?? '');
-      setModel(task.model ?? '');
+      setProvider(task.provider ?? "");
+      setModel(task.model ?? "");
     }
   };
 
@@ -55,7 +55,7 @@ export function RunForm() {
       setSuccess(`Run ${run.runId} started.`);
       navigate(`/runs/${run.runId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create run');
+      setError(err instanceof Error ? err.message : "Failed to create run");
     } finally {
       setLoading(false);
     }
@@ -82,11 +82,11 @@ export function RunForm() {
       {success && (
         <div
           style={{
-            background: '#d1e7dd',
-            color: '#0f5132',
-            padding: '1rem',
-            borderRadius: '6px',
-            marginBottom: '1rem',
+            background: "#d1e7dd",
+            color: "#0f5132",
+            padding: "1rem",
+            borderRadius: "6px",
+            marginBottom: "1rem",
           }}
         >
           {success}
@@ -110,28 +110,8 @@ export function RunForm() {
           </select>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="provider">Provider (optional)</label>
-          <select id="provider" value={provider} onChange={(e) => setProvider(e.target.value)}>
-            <option value="">Default</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="model">Model (optional)</label>
-          <input
-            id="model"
-            type="text"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="e.g., gpt-4, claude-3-opus"
-          />
-        </div>
-
         <button type="submit" disabled={loading}>
-          {loading ? 'Starting Run...' : 'Start Run'}
+          {loading ? "Starting Run..." : "Start Run"}
         </button>
       </form>
 
