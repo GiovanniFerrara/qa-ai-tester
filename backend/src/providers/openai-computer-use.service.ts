@@ -22,7 +22,6 @@ import {
 import type { TaskSpec } from '../models/contracts';
 import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
-import { KpiOracleService } from '../services/kpi-oracle.service';
 import { OpenAiProviderService } from './openai-provider.service';
 
 interface ComputerUseRunOptions {
@@ -62,7 +61,6 @@ export class OpenAiComputerUseService {
   constructor(
     private readonly provider: OpenAiProviderService,
     private readonly workerGateway: WorkerGatewayService,
-    private readonly kpiOracleService: KpiOracleService,
   ) {}
 
   async run(options: ComputerUseRunOptions): Promise<ComputerUseSessionResult> {
@@ -87,14 +85,15 @@ export class OpenAiComputerUseService {
       },
     ] as ResponseCreateParams['input'];
 
-    let response = await client.responses.create({
+    const initialParams: ResponseCreateParams = {
       model: plan.model,
       tools: plan.tools,
       input,
-      text: { format: plan.textFormat },
       max_output_tokens: plan.maxOutputTokens,
       truncation: 'auto',
-    });
+    };
+
+    let response = await client.responses.create(initialParams);
 
     const events: ComputerUseEvent[] = [];
     const findingsFromTool: QaReport['findings'] = [];
@@ -212,15 +211,16 @@ export class OpenAiComputerUseService {
         });
       }
 
-      response = await client.responses.create({
+      const followUpParams: ResponseCreateParams = {
         model: plan.model,
         tools: plan.tools,
         input: followUpInputs,
         previous_response_id: response.id,
-        text: { format: plan.textFormat },
         max_output_tokens: plan.maxOutputTokens,
         truncation: 'auto',
-      });
+      };
+
+      response = await client.responses.create(followUpParams);
 
       recordResponseUsage(response.usage);
       responsesSummary.push({ id: response.id, status: response.status, usage: response.usage });
@@ -302,23 +302,6 @@ export class OpenAiComputerUseService {
         }
         const result = await this.workerGateway.getDomSnapshot(context.handle, snapshotInput.data);
         return { input: snapshotInput.data, output: result };
-      }
-      case 'kpi_oracle': {
-        try {
-          const oracleContext =
-            (args as { context?: Record<string, unknown> }).context ?? {};
-          const result = await this.kpiOracleService.resolve(context.task.kpiSpec, oracleContext);
-          return { input: args, output: result };
-        } catch (error) {
-          this.logger.warn(`kpi_oracle call failed: ${(error as Error).message}`);
-          return {
-            input: args,
-            output: {
-              error: 'Failed to fetch KPI oracle data',
-              message: (error as Error).message,
-            },
-          };
-        }
       }
       case 'assert': {
         const parsed = AssertToolRequestSchema.safeParse(args);

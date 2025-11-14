@@ -31,8 +31,6 @@ describe('OpenAiProviderService', () => {
 
     expect(plan.model).toBe('o4-mini');
     expect(plan.tools).toBeDefined();
-    expect(plan.textFormat?.schema).toBeDefined();
-
     const tools = plan.tools ?? [];
     const computerTool = tools.find((tool) => tool.type === 'computer-preview');
     expect(computerTool).toBeDefined();
@@ -43,8 +41,6 @@ describe('OpenAiProviderService', () => {
     );
     const functionNames = functionTools.map((tool) => tool.name);
 
-    expect(functionNames).toEqual(
-      expect.arrayContaining(['dom_snapshot', 'kpi_oracle', 'assert']),
-    );
+    expect(functionNames).toEqual(expect.arrayContaining(['dom_snapshot', 'assert']));
   });
 });

@@ -14,7 +14,6 @@ export interface OpenAiComputerUsePlan {
   systemPrompt: string;
   userPrompt: string;
   tools: ResponseCreateParams['tools'];
-  textFormat: ResponseFormatTextJSONSchemaConfig;
   maxOutputTokens: number;
 }
 
@@ -42,6 +41,7 @@ export class OpenAiProviderService {
 
   buildComputerUsePlan(task: TaskSpec, runId: string): OpenAiComputerUsePlan {
     const qaReportSchema = this.schemaService.getQaReportSchema();
+    const serializedSchema = JSON.stringify(qaReportSchema, null, 2);
 
     const baseInstruction = [
       'You are an AI QA analyst using computer-use tools to inspect a dashboard.',
@@ -49,10 +49,11 @@ export class OpenAiProviderService {
       `Navigate to route ${task.route} on the authenticated page.`,
       'Use the provided tools to read the DOM, fetch KPI reference data when available, and record assertions.',
       'Return a QAReport JSON adhering strictly to the provided schema at the end of the session.',
+      'Schema:',
+      serializedSchema,
     ].join('\n');
 
     const domSnapshotSchema = this.schemaService.getDomSnapshotSchema();
-    const kpiOracleSchema = this.schemaService.getKpiOracleSchema();
     const assertSchema = this.schemaService.getAssertToolSchema();
 
     const tools: ResponseCreateParams['tools'] = [
@@ -71,14 +72,6 @@ export class OpenAiProviderService {
       },
       {
         type: 'function',
-        name: 'kpi_oracle',
-        description:
-          'Fetch expected KPI values for validation against what is displayed in the UI.',
-        parameters: kpiOracleSchema as Record<string, unknown>,
-        strict: true,
-      },
-      {
-        type: 'function',
         name: 'assert',
         description:
           'Record an assertion or finding with evidence that will be surfaced in the final QAReport.',
@@ -93,12 +86,6 @@ export class OpenAiProviderService {
       userPrompt: `Begin QA run ${runId}. Describe what you observe and ensure the dashboard loads correctly.`,
       tools,
       maxOutputTokens: 4000,
-      textFormat: {
-        name: 'QAReport',
-        type: 'json_schema',
-        schema: qaReportSchema as Record<string, unknown>,
-        strict: true,
-      },
     };
   }
 }

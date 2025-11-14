@@ -19,19 +19,40 @@ export class SchemaService {
   private readonly assertToolSchema: JsonSchema7Type;
 
   constructor() {
-    this.qaReportSchema = zodToJsonSchema(QaReportSchema, { name: 'QAReport' }) as JsonSchema7Type;
-    this.computerActionSchema = zodToJsonSchema(ComputerActionSchema, {
-      name: 'ComputerAction',
-    }) as JsonSchema7Type;
-    this.domSnapshotSchema = zodToJsonSchema(DomSnapshotRequestSchema, {
-      name: 'DomSnapshotRequest',
-    }) as JsonSchema7Type;
-    this.kpiOracleSchema = zodToJsonSchema(KpiOracleRequestSchema, {
-      name: 'KpiOracleRequest',
-    }) as JsonSchema7Type;
-    this.assertToolSchema = zodToJsonSchema(AssertToolRequestSchema, {
-      name: 'AssertToolRequest',
-    }) as JsonSchema7Type;
+    this.qaReportSchema = this.extractRootSchema(
+      zodToJsonSchema(QaReportSchema, { name: 'QAReport' }),
+      'QAReport',
+    );
+    this.computerActionSchema = this.extractRootSchema(
+      zodToJsonSchema(ComputerActionSchema, { name: 'ComputerAction' }),
+      'ComputerAction',
+    );
+    this.domSnapshotSchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        selector: { type: 'string' },
+        mode: {
+          type: 'string',
+          enum: ['single', 'all'],
+          default: 'single',
+        },
+        attributes: {
+          type: 'array',
+          items: { type: 'string' },
+          default: [],
+        },
+      },
+      required: ['selector', 'mode', 'attributes'],
+    } as JsonSchema7Type;
+    this.kpiOracleSchema = this.extractRootSchema(
+      zodToJsonSchema(KpiOracleRequestSchema, { name: 'KpiOracleRequest' }),
+      'KpiOracleRequest',
+    );
+    this.assertToolSchema = this.extractRootSchema(
+      zodToJsonSchema(AssertToolRequestSchema, { name: 'AssertToolRequest' }),
+      'AssertToolRequest',
+    );
   }
 
   getQaReportSchema(): JsonSchema7Type {
@@ -52,5 +73,13 @@ export class SchemaService {
 
   getAssertToolSchema(): JsonSchema7Type {
     return this.assertToolSchema;
+  }
+
+  private extractRootSchema(schema: unknown, definitionName: string): JsonSchema7Type {
+    const jsonSchema = schema as { definitions?: Record<string, JsonSchema7Type>; $ref?: string };
+    if (jsonSchema.definitions?.[definitionName]) {
+      return jsonSchema.definitions[definitionName];
+    }
+    return jsonSchema as JsonSchema7Type;
   }
 }
