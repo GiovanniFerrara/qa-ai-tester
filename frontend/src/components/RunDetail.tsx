@@ -56,6 +56,37 @@ export function RunDetail() {
     eventSource = api.subscribeToRunEvents(runId, (incoming) => {
       setEvents((prev) => [...prev.slice(-199), incoming]);
 
+      if (incoming.payload) {
+        const payload = incoming.payload;
+        setRun((prev) => {
+          const payloadReport = payload.report as QAReport | undefined;
+          const payloadStatus = payload.runStatus as RunState["status"] | undefined;
+          const payloadFinished = payload.finishedAt as string | undefined;
+
+          if (!prev && !payloadReport) {
+            return prev;
+          }
+
+          const placeholder: RunState = {
+            runId,
+            taskId: payloadReport?.taskId ?? "unknown",
+            provider: "unknown",
+            status: payloadStatus ?? "running",
+            startedAt: payloadReport?.startedAt ?? incoming.timestamp,
+          };
+
+          const base = prev ?? placeholder;
+
+          return {
+            ...base,
+            status: payloadStatus ?? base.status,
+            finishedAt: payloadFinished ?? base.finishedAt ?? payloadReport?.finishedAt,
+            taskId: payloadReport?.taskId ?? base.taskId,
+            report: payloadReport ?? base.report,
+          };
+        });
+      }
+
       if (
         incoming.type === "screenshot" &&
         typeof incoming.payload?.image === "string"
@@ -76,20 +107,6 @@ export function RunDetail() {
       }
 
       if (incoming.type === "status") {
-        if (incoming.payload?.report) {
-          const report = incoming.payload.report as QAReport;
-          setRun((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  status: "completed",
-                  finishedAt: prev.finishedAt ?? report.finishedAt,
-                  report,
-                }
-              : prev
-          );
-        }
-
         const message = incoming.message?.toLowerCase() ?? "";
         if (message.includes("completed") || message.includes("error")) {
           if (eventSource) {
@@ -240,7 +257,10 @@ export function RunDetail() {
             Started: <strong>{formatDate(run?.startedAt)}</strong>
           </span>
           <span>
-            Finished: <strong>{formatDate(run?.finishedAt)}</strong>
+            Finished:{" "}
+            <strong>
+              {formatDate(run?.finishedAt ?? run?.report?.finishedAt)}
+            </strong>
           </span>
           <span>
             Provider: <strong>{run?.provider ?? "N/A"}</strong>

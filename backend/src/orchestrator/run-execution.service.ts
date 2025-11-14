@@ -180,6 +180,12 @@ export class RunExecutionService {
         type: 'status',
         message: `Run ${runId} completed with status ${report.status}`,
         timestamp: finishedAt.toISOString(),
+        payload: {
+          runStatus: 'completed',
+          reportStatus: report.status,
+          finishedAt: finishedAt.toISOString(),
+          report,
+        },
       });
       this.runEvents.complete(runId);
 
