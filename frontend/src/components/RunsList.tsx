@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Run } from '../types';
-import { api } from '../api';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Run } from "../types";
+import { api } from "../api";
 
 export function RunsList() {
   const [runs, setRuns] = useState<Run[]>([]);
@@ -20,10 +20,14 @@ export function RunsList() {
       setError(null);
       const data = await api.getRuns();
       setRuns(
-        data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        data.sort(
+          (a, b) =>
+            new Date(b.report.startedAt).getTime() -
+            new Date(a.report.startedAt).getTime()
+        )
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load runs');
+      setError(err instanceof Error ? err.message : "Failed to load runs");
     } finally {
       setLoading(false);
     }
@@ -66,23 +70,26 @@ export function RunsList() {
       <h2>QA Run History</h2>
       <div className="runs-list">
         {runs.map((run) => (
-          <div key={run.id} className="run-item" onClick={() => navigate(`/runs/${run.id}`)}>
+          <div
+            key={run.runId}
+            className="run-item"
+            onClick={() => navigate(`/runs/${run.runId}`)}
+          >
             <div className="run-header">
-              <span className="run-id">Run #{run.id}</span>
-              <span className={getStatusClass(run.status)}>{run.status.toUpperCase()}</span>
+              <span className="run-id">Run #{run.runId.slice(0, 8)}</span>
+              <span className={getStatusClass(run.report.status)}>
+                {run.report.status.toUpperCase()}
+              </span>
             </div>
             <div className="run-info">
-              <span>Task: {run.taskId}</span>
-              <span>Started: {formatDate(run.createdAt)}</span>
-              {run.completedAt && <span>Completed: {formatDate(run.completedAt)}</span>}
+              <span>Task: {run.report.taskId}</span>
+              <span>Provider: {run.provider}</span>
+              <span>Started: {formatDate(run.report.startedAt)}</span>
             </div>
-            {run.report && (
-              <div className="run-info" style={{ marginTop: '0.5rem' }}>
-                <span>Findings: {run.report.summary.totalFindings}</span>
-                <span>Passed: {run.report.summary.passedChecks}</span>
-                <span>Failed: {run.report.summary.failedChecks}</span>
-              </div>
-            )}
+            <div className="run-info" style={{ marginTop: "0.5rem" }}>
+              <span>Findings: {run.report.findings.length}</span>
+              <span>Duration: {run.report.costs.durationMs}ms</span>
+            </div>
           </div>
         ))}
       </div>

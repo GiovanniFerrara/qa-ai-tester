@@ -10,44 +10,59 @@ export interface Finding {
   id: string;
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   category: string;
-  title: string;
-  description: string;
-  impact?: string;
-  recommendation?: string;
-  evidence?: {
-    screenshot?: string;
-    domSnapshot?: string;
-    kpiData?: unknown;
-  };
+  assertion: string;
+  expected: string;
+  observed: string;
+  tolerance: string | null;
+  evidence: Array<{
+    screenshotRef: string;
+    selector: string | null;
+    time: string;
+    networkRequestId: string | null;
+  }>;
+  suggestedFix: string;
+  confidence: number;
 }
 
 export interface QAReport {
+  id: string;
   runId: string;
   taskId: string;
-  status: 'completed' | 'failed' | 'in_progress';
   startedAt: string;
-  completedAt?: string;
+  finishedAt: string;
+  summary: string;
+  status: 'pass' | 'fail' | 'inconclusive';
   findings: Finding[];
-  summary: {
-    totalFindings: number;
-    bySeverity: Record<string, number>;
-    passedChecks: number;
-    failedChecks: number;
+  kpiTable: Array<{
+    label: string;
+    expected: string;
+    observed: string;
+    status: 'pass' | 'fail' | 'missing';
+  }>;
+  links: {
+    traceUrl: string;
+    screenshotsGalleryUrl: string;
+    rawTranscriptUrl: string | null;
   };
-  metadata?: {
-    provider?: string;
-    model?: string;
-    duration?: number;
+  costs: {
+    tokensInput: number;
+    tokensOutput: number;
+    toolCalls: number;
+    durationMs: number;
   };
 }
 
 export interface Run {
-  id: string;
-  taskId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  createdAt: string;
-  completedAt?: string;
-  report?: QAReport;
+  runId: string;
+  provider: string;
+  report: QAReport;
+  artifacts: {
+    screenshots: string[];
+    traceZipPath: string;
+    reportPath: string;
+    metadataPath: string;
+    logsPath: string;
+  };
 }
 
 export interface CreateRunRequest {

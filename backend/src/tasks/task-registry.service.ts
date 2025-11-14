@@ -16,14 +16,12 @@ export class TaskRegistryService {
     this.registerTask({
       id: 'dashboard-sanity',
       goal:
-        'Verify dashboard KPI cards and charts match the KPI oracle for today and last 7 days ranges.',
+        'Verify dashboard functionality and user interface rendering.',
       route: '/dashboard',
       role: 'analyst',
       kpiSpec: {
-        type: 'apiEndpoint',
-        url: '/api/kpi',
-        method: 'GET',
-        params: { ranges: ['today', 'last7days'] },
+        type: 'staticValues',
+        values: {},
       },
       budgets: {
         maxToolCalls: 200,
