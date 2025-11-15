@@ -164,9 +164,7 @@ export function RunsList() {
   const severityTotals = derivedSummary.severity;
   const urgentFindings = derivedSummary.urgentFindings ?? [];
   const kpiAlerts = derivedSummary.kpiAlerts ?? [];
-  const providerUsage = Object.entries(
-    derivedSummary.providerUsage ?? {}
-  );
+  const providerUsage = Object.entries(derivedSummary.providerUsage ?? {});
 
   const formatDuration = (ms: number) => {
     if (!ms || Number.isNaN(ms)) return "—";
@@ -233,11 +231,28 @@ export function RunsList() {
           </div>
           <div className="summary-card">
             <span>Avg Duration</span>
-            <strong>{formatDuration(derivedSummary.totals.avgDurationMs)}</strong>
+            <strong>
+              {formatDuration(derivedSummary.totals.avgDurationMs)}
+            </strong>
           </div>
           <div className="summary-card">
             <span>Total Findings</span>
             <strong>{derivedSummary.totals.findings}</strong>
+          </div>
+          <div className="summary-card">
+            <span>Provider Usage</span>
+            {providerUsage.length === 0 ? (
+              <p className="muted">No provider data yet.</p>
+            ) : (
+              <ul className="provider-list">
+                {providerUsage.map(([provider, count]) => (
+                  <li key={provider}>
+                    <strong>{provider}</strong>
+                    <strong>{count}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
@@ -286,6 +301,7 @@ export function RunsList() {
                   <li key={`${alert.runId}-${alert.label}`}>
                     <div>
                       <strong>{alert.label}</strong>
+                      <br />
                       <span>
                         Expected: {alert.expected} • Observed: {alert.observed}
                       </span>
@@ -311,9 +327,7 @@ export function RunsList() {
               <ul className="urgent-list">
                 {urgentFindings.map((item) => (
                   <li key={`${item.runId}-${item.assertion}`}>
-                    <span
-                      className={`severity-pill severity-${item.severity}`}
-                    >
+                    <span className={`severity-pill severity-${item.severity}`}>
                       {item.severity}
                     </span>
                     <div>
@@ -327,22 +341,6 @@ export function RunsList() {
                     >
                       Open
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="card">
-            <h3>Provider Usage</h3>
-            {providerUsage.length === 0 ? (
-              <p className="muted">No provider data yet.</p>
-            ) : (
-              <ul className="provider-list">
-                {providerUsage.map(([provider, count]) => (
-                  <li key={provider}>
-                    <span>{provider}</span>
-                    <strong>{count}</strong>
                   </li>
                 ))}
               </ul>
