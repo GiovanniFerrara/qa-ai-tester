@@ -9,6 +9,7 @@ export interface TaskSpec {
   provider?: string;
   model?: string;
   requireFindings: boolean;
+  autoAuthEnabled: boolean;
   budgets: {
     maxToolCalls: number;
     maxTimeMs: number;
@@ -33,6 +34,7 @@ export interface TaskInput {
   provider?: string;
   model?: string;
   requireFindings: boolean;
+  autoAuthEnabled?: boolean;
   budgets?: {
     maxToolCalls?: number;
     maxTimeMs?: number;

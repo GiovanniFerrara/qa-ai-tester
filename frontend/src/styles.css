@@ -420,12 +420,17 @@ button:disabled {
 .checkbox {
   display: flex;
   align-items: center;
+  padding: 8px 0;
   gap: 0.5rem;
   font-weight: 500;
 }
 
 .checkbox input {
-  width: auto;
+  width: auto!important;
+}
+
+.field-hint{
+  padding: 0 0 16px 0;
 }
 
 .budgets-fieldset {

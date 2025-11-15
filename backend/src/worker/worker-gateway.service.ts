@@ -38,7 +38,12 @@ export class WorkerGatewayService {
     this.baseUrl = this.configService.get('BASE_URL', { infer: true });
   }
 
-  async startRun(runId: string, route: string, baseUrlOverride?: string): Promise<BrowserRunHandle> {
+  async startRun(
+    runId: string,
+    route: string,
+    baseUrlOverride?: string,
+    storageStatePathOverride?: string,
+  ): Promise<BrowserRunHandle> {
     const browser = await chromium.launch({
       headless: true,
     });
@@ -48,7 +53,7 @@ export class WorkerGatewayService {
     await mkdir(screenshotDir, { recursive: true });
 
     const context = await browser.newContext({
-      storageState: this.storageStatePath,
+      storageState: storageStatePathOverride ?? this.storageStatePath,
       viewport: { width: 1366, height: 768 },
     });
 

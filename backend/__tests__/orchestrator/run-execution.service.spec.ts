@@ -17,6 +17,7 @@ describe('RunExecutionService', () => {
     provider: 'openai',
     model: 'computer-use-preview',
     requireFindings: true,
+    autoAuthEnabled: true,
     kpiSpec: { type: 'staticValues', values: { revenue: 1000 } } as const,
     budgets: {
       maxToolCalls: 200,
@@ -54,6 +55,9 @@ describe('RunExecutionService', () => {
 
     const providerRegistry = {
       resolve: jest.fn().mockReturnValue({ provider: 'openai' satisfies AiProvider }),
+    };
+    const authStateService = {
+      createStorageState: jest.fn().mockResolvedValue('/tmp/run-1.json'),
     };
 
     const orchestrator = {
@@ -99,13 +103,20 @@ describe('RunExecutionService', () => {
     const service = new RunExecutionService(
       providerRegistry as any,
       workerGateway as any,
+      authStateService as any,
       orchestrator as any,
       runEvents as any,
     );
 
     const result = await service.execute('run-1', baseTask, 'openai', undefined);
 
-    expect(workerGateway.startRun).toHaveBeenCalledWith('run-1', '/dashboard', undefined);
+    expect(authStateService.createStorageState).toHaveBeenCalledWith('run-1', undefined);
+    expect(workerGateway.startRun).toHaveBeenCalledWith(
+      'run-1',
+      '/dashboard',
+      undefined,
+      '/tmp/run-1.json',
+    );
     expect(workerGateway.captureScreenshot).toHaveBeenCalled();
     expect(workerGateway.stopRun).toHaveBeenCalled();
     expect(orchestrator.run).toHaveBeenCalled();
@@ -128,6 +139,60 @@ describe('RunExecutionService', () => {
       responsesPath: path.join(baseDir, 'model-responses.jsonl'),
       baseUrlOverride: null,
     });
+
+    await fs.rm(baseDir, { recursive: true, force: true });
+  });
+
+  it('skips auth bootstrap when task disables it', async () => {
+    const { baseDir, screenshotDir } = await createTmpDirs();
+
+    const mockHandle = {
+      artifactDir: baseDir,
+      screenshotDir,
+      screenshots: [] as string[],
+    };
+
+    const workerGateway = {
+      startRun: jest.fn().mockResolvedValue(mockHandle),
+      captureScreenshot: jest.fn().mockImplementation(async (handle: typeof mockHandle) => {
+        const screenshotPath = path.join(handle.screenshotDir, 'initial.png');
+        await fs.writeFile(screenshotPath, 'fake-screenshot');
+        handle.screenshots.push(screenshotPath);
+        return screenshotPath;
+      }),
+      stopRun: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const providerRegistry = {
+      resolve: jest.fn().mockReturnValue({ provider: 'openai' satisfies AiProvider }),
+    };
+    const authStateService = {
+      createStorageState: jest.fn(),
+    };
+
+    const orchestrator = {
+      run: jest.fn().mockRejectedValue(new Error('not important')),
+    };
+
+    const runEvents = {
+      emit: jest.fn(),
+      complete: jest.fn(),
+    };
+
+    const service = new RunExecutionService(
+      providerRegistry as any,
+      workerGateway as any,
+      authStateService as any,
+      orchestrator as any,
+      runEvents as any,
+    );
+
+    const taskWithoutAuth = { ...baseTask, autoAuthEnabled: false };
+
+    await service.execute('run-2', taskWithoutAuth as any, 'openai', undefined);
+
+    expect(authStateService.createStorageState).not.toHaveBeenCalled();
+    expect(workerGateway.startRun).toHaveBeenCalledWith('run-2', '/dashboard', undefined, undefined);
 
     await fs.rm(baseDir, { recursive: true, force: true });
   });

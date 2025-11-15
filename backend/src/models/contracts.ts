@@ -68,6 +68,7 @@ export const TaskSpecSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   requireFindings: z.boolean().default(true),
+  autoAuthEnabled: z.boolean().default(false),
   kpiSpec: KpiSpecSchema,
   budgets: BudgetSchema,
 });

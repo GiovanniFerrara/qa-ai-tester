@@ -21,7 +21,10 @@ export class TaskRegistryService {
       this.seedDefaultTask();
     } else {
       for (const task of persisted) {
-        this.tasks.set(task.id, task);
+        this.tasks.set(task.id, {
+          ...task,
+          autoAuthEnabled: task.autoAuthEnabled ?? false,
+        });
       }
     }
   }
@@ -47,6 +50,7 @@ export class TaskRegistryService {
         maxTimeMs: 180_000,
         maxScreenshots: 25,
       },
+      autoAuthEnabled: taskDefinition.autoAuthEnabled ?? false,
     };
 
     this.tasks.set(persistedTask.id, persistedTask);
@@ -65,6 +69,8 @@ export class TaskRegistryService {
       ...updates,
       id: taskId,
       kpiSpec: updates.kpiSpec ?? existing.kpiSpec,
+      autoAuthEnabled:
+        updates.autoAuthEnabled ?? existing.autoAuthEnabled ?? false,
       budgets: {
         maxToolCalls: updates.budgets?.maxToolCalls ?? existing.budgets.maxToolCalls,
         maxTimeMs: updates.budgets?.maxTimeMs ?? existing.budgets.maxTimeMs,
@@ -99,6 +105,7 @@ export class TaskRegistryService {
       route: '/dashboard',
       role: 'analyst',
       provider: 'openai',
+      autoAuthEnabled: false,
       requireFindings: true,
       kpiSpec: {
         type: 'staticValues',

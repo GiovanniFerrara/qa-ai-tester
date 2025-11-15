@@ -6,6 +6,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { validateEnvironment } from '../config/environment';
+import { AuthStateService } from './auth-state.service';
+import { WorkerModule } from './worker.module';
 import { WorkerGatewayService } from './worker-gateway.service';
 
 @Module({
@@ -15,9 +17,8 @@ import { WorkerGatewayService } from './worker-gateway.service';
       cache: true,
       validate: validateEnvironment,
     }),
+    WorkerModule,
   ],
-  providers: [WorkerGatewayService],
-  exports: [WorkerGatewayService],
 })
 class WorkerCliModule {}
 
@@ -28,6 +29,7 @@ async function bootstrap(): Promise<void> {
   });
 
   const worker = appContext.get(WorkerGatewayService);
+  const authState = appContext.get(AuthStateService);
   const runId = `manual-${Date.now()}`;
 
   logger.log(`Starting manual worker session with runId ${runId}`);
@@ -46,7 +48,8 @@ async function bootstrap(): Promise<void> {
     logger.warn(`Unable to read base URL override: ${(error as Error).message}`);
   }
 
-  const handle = await worker.startRun(runId, '/dashboard', baseUrlOverride);
+  const storageStatePath = await authState.createStorageState(runId, baseUrlOverride);
+  const handle = await worker.startRun(runId, '/dashboard', baseUrlOverride, storageStatePath);
   try {
     await worker.captureScreenshot(handle, 'manual');
     logger.log(`Screenshot saved for run ${runId}`);

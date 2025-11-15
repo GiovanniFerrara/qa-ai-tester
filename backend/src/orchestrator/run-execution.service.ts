@@ -8,7 +8,9 @@ import type { AiProvider, RunResult } from '../models/run';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
 import { ComputerUseOrchestratorService } from '../providers/computer-use-orchestrator.service';
 import { RunEventsService } from './run-events.service';
+import { AuthStateService } from '../worker/auth-state.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
+import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 
 @Injectable()
 export class RunExecutionService {
@@ -17,6 +19,7 @@ export class RunExecutionService {
   constructor(
     private readonly providerRegistry: AiProviderRegistryService,
     private readonly workerGateway: WorkerGatewayService,
+    private readonly authStateService: AuthStateService,
     private readonly computerUseOrchestratorService: ComputerUseOrchestratorService,
     private readonly runEvents: RunEventsService,
   ) {}
@@ -33,15 +36,36 @@ export class RunExecutionService {
       `Starting run ${runId} with task ${task.id} using provider ${provider.provider}`,
     );
 
-    const handle = await this.workerGateway.startRun(runId, task.route, baseUrlOverride);
-    this.runEvents.emit(runId, {
-      type: 'status',
-      message: `Run ${runId} started`,
-      timestamp: startedAt.toISOString(),
-      payload: { taskId: task.id },
-    });
+    let handle: BrowserRunHandle | null = null;
+    let storageStatePath: string | undefined;
 
     try {
+      const shouldBootstrapAuth = task.autoAuthEnabled ?? false;
+      if (shouldBootstrapAuth) {
+        storageStatePath = await this.authStateService.createStorageState(runId, baseUrlOverride);
+      } else {
+        this.logger.debug(
+          `Skipping automated auth bootstrap for run ${runId} (autoAuthEnabled=false)`,
+        );
+      }
+
+      handle = await this.workerGateway.startRun(
+        runId,
+        task.route,
+        baseUrlOverride,
+        storageStatePath,
+      );
+      if (!handle) {
+        throw new Error('Failed to initialize browser run handle');
+      }
+
+      this.runEvents.emit(runId, {
+        type: 'status',
+        message: `Run ${runId} started`,
+        timestamp: startedAt.toISOString(),
+        payload: { taskId: task.id },
+      });
+
       const initialScreenshot = await this.workerGateway.captureScreenshot(handle, 'initial');
       try {
         const screenshotBuffer = await readFile(initialScreenshot);
@@ -223,7 +247,9 @@ export class RunExecutionService {
         },
       };
     } finally {
-      await this.workerGateway.stopRun(handle);
+      if (handle) {
+        await this.workerGateway.stopRun(handle);
+      }
     }
   }
 
