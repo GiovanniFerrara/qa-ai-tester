@@ -45,6 +45,7 @@ export interface ComputerUseSessionResult {
     totalTokens: number;
   };
   totalToolCalls: number;
+  model: string;
 }
 
 interface ComputerUseEvent {
@@ -288,6 +289,7 @@ export class OpenAiComputerUseService {
             responsesPath: path.join(handle.artifactDir, 'model-responses.jsonl'),
             usageTotals,
             totalToolCalls,
+            model: plan.model,
           };
         }
 

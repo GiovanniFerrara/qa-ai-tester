@@ -59,6 +59,7 @@ export class RunExecutionService {
       let responsesPath: string | undefined;
       let usageTotals = { tokensInput: 0, tokensOutput: 0, totalTokens: 0 };
       let totalToolCalls = 0;
+      let modelUsed: string | null = null;
       let errorDuringRun: Error | null = null;
 
       try {
@@ -75,6 +76,7 @@ export class RunExecutionService {
         responsesPath = sessionResult.responsesPath;
         usageTotals = sessionResult.usageTotals;
         totalToolCalls = sessionResult.totalToolCalls;
+        modelUsed = sessionResult.model ?? null;
       } catch (error) {
         errorDuringRun = error as Error;
         this.logger.error(
@@ -111,16 +113,17 @@ export class RunExecutionService {
           screenshotsGalleryUrl: handle.screenshotDir,
           rawTranscriptUrl: responsesPath ?? null,
         };
-        const priceUsd = (usageTotals.tokensInput * 3.0 / 1_000_000) + (usageTotals.tokensOutput * 12.0 / 1_000_000);
-        report.costs = {
-          ...(report.costs ?? {}),
-          tokensInput: usageTotals.tokensInput,
-          tokensOutput: usageTotals.tokensOutput,
-          toolCalls: totalToolCalls,
-          durationMs: finishedAt.getTime() - startedAt.getTime(),
-          priceUsd: parseFloat(priceUsd.toFixed(4)),
-        };
       }
+
+      const priceUsd = this.computePriceUsd(provider.provider, modelUsed, usageTotals);
+      report.costs = {
+        ...(report.costs ?? {}),
+        tokensInput: usageTotals.tokensInput,
+        tokensOutput: usageTotals.tokensOutput,
+        toolCalls: totalToolCalls,
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        priceUsd,
+      };
 
       if (task.requireFindings && (!report.findings || report.findings.length === 0)) {
         report.findings = [
@@ -149,6 +152,7 @@ export class RunExecutionService {
         responsesPath: responsesPath ?? null,
         usageTotals,
         totalToolCalls,
+        model: modelUsed,
       };
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
 
@@ -204,6 +208,49 @@ export class RunExecutionService {
     } finally {
       await this.workerGateway.stopRun(handle);
     }
+  }
+
+  private computePriceUsd(
+    provider: AiProvider,
+    model: string | null,
+    usageTotals: { tokensInput: number; tokensOutput: number },
+  ): number {
+    if (usageTotals.tokensInput === 0 && usageTotals.tokensOutput === 0) {
+      return 0;
+    }
+
+    const normalizedModel = (model ?? '').toLowerCase();
+    let inputRate = 3;
+    let outputRate = 12;
+
+    if (provider === 'anthropic') {
+      if (normalizedModel.includes('haiku-4-5')) {
+        inputRate = 1;
+        outputRate = 5;
+      } else if (normalizedModel.includes('sonnet-4-5')) {
+        const highInput = usageTotals.tokensInput > 200_000;
+        const highOutput = usageTotals.tokensOutput > 200_000;
+        inputRate = highInput ? 6 : 3;
+        outputRate = highOutput ? 22.5 : 15;
+      } else if (normalizedModel.includes('opus')) {
+        inputRate = 15;
+        outputRate = 75;
+      } else {
+        inputRate = 3;
+        outputRate = 15;
+      }
+    } else if (provider === 'openai') {
+      if (normalizedModel.includes('computer-use')) {
+        inputRate = 3;
+        outputRate = 12;
+      }
+    }
+
+    const price =
+      (usageTotals.tokensInput / 1_000_000) * inputRate +
+      (usageTotals.tokensOutput / 1_000_000) * outputRate;
+
+    return parseFloat(price.toFixed(4));
   }
 
   private buildFallbackReport(options: {

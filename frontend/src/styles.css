@@ -1123,8 +1123,8 @@ button:disabled {
 }
 
 .evidence-item img {
-  width: 120px;
-  height: 80px;
+  width: 200px;
+  height: 133px;
   object-fit: cover;
   display: block;
 }

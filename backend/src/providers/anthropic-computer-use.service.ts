@@ -297,6 +297,7 @@ export class AnthropicComputerUseService {
       responsesPath: artifactPaths.responsesPath,
       usageTotals,
       totalToolCalls,
+      model: plan.model,
     };
   }
 

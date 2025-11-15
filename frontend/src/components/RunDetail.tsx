@@ -21,7 +21,9 @@ export function RunDetail() {
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
-  const completionRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completionRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   useEffect(() => {
     if (!runId) {
@@ -55,7 +57,7 @@ export function RunDetail() {
     void refreshRun(true);
 
     eventSource = api.subscribeToRunEvents(runId, (incoming) => {
-      setEvents((prev) => [...prev.slice(-199), incoming]);
+      setEvents((prev) => [...prev.slice(-1000), incoming]);
 
       if (incoming.payload) {
         const payload = incoming.payload;
