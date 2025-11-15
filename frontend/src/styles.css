@@ -668,6 +668,23 @@ button:disabled {
   gap: 1rem;
 }
 
+.dashboard-columns .card {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-top: 0!important;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-columns .card h3 {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding-top: 24px;
+  padding-bottom: 0.75rem;
+  z-index: 1;
+}
+
 .severity-list {
   display: flex;
   flex-direction: column;
@@ -1397,3 +1414,4 @@ button:disabled {
     height: 67px;
   }
 }
+
