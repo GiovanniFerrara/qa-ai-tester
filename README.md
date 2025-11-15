@@ -23,6 +23,17 @@ AI-powered automated quality assurance system that uses AI models (OpenAI GPT or
 - 🔐 **Authentication Support** - Persistent login state for protected applications
 - 📈 **KPI Monitoring** - Optional integration with backend metrics endpoints
 
+## Feature Overview
+
+| Component | Capabilities |
+| --- | --- |
+| **NestJS Backend** | Orchestrates runs, manages tasks and runs database, streams events, and exposes a REST API for UI/CLI usage. |
+| **Worker Gateway (Playwright)** | Maintains authenticated browser contexts, executes AI-generated actions, captures screenshots/DOM snapshots, and gathers artifacts for each run. |
+| **AI Providers** | Pluggable adapters for OpenAI GPT and Anthropic Claude with configurable models, tool-calling support, and KPI oracle access. |
+| **Frontend (React + Vite)** | Dashboard for authoring tasks, launching runs, live-monitoring executions, and browsing reports/artifacts. |
+| **Artifact Store** | Structured per-run folders with screenshots, traces, model responses, and the final QA report JSON. |
+| **CLI & API** | Workspace scripts and REST endpoints for automating runs, integrating CI, or scripting custom workflows. |
+
 ## Project Structure
 
 ```
@@ -53,6 +64,15 @@ qa-ai-tester/
 - **API Keys**: OpenAI and/or Anthropic Claude API key
 - **Playwright**: Browsers will be installed during setup
 
+## Fresh Install Checklist
+
+1. `npm run install:all` (installs root, backend, and frontend dependencies).
+2. Copy `backend/.env.example` to `backend/.env`, then add your API keys, base URL, and preferred models.
+3. Install Playwright browsers once: `cd backend && npx playwright install`.
+4. (Optional but recommended for authenticated apps) Capture a login session: `cd backend && npm run playwright:test`.
+5. Start everything with `npm run dev` from the repo root; this runs the backend API and the frontend UI together.
+6. Open http://localhost:5173 to manage tasks and trigger your first run (or hit the REST API directly at http://localhost:3005/api).
+
 ## Quick Start
 
 ### 1. Install Dependencies
@@ -61,15 +81,12 @@ qa-ai-tester/
 # Install root dependencies
 npm install
 
-# Install backend dependencies
-cd backend && npm install && cd ..
-
-# Install frontend dependencies
-cd frontend && npm install && cd ..
+Run `npm run install:all` from the repo root to execute the three install commands above in sequence.
 
 # Install Playwright browsers
 cd backend && npx playwright install
 ```
+
 
 ### 2. Configure API Keys
 
@@ -168,6 +185,8 @@ npm run playwright:test
 ```
 
 This creates [`backend/playwright/.auth/analyst.json`](backend/playwright/.auth/analyst.json:1) with your authenticated session, which will be used for all subsequent runs.
+
+> **Note:** The worker now logs a warning and continues without persisted authentication if the storage file is missing. Protected apps will still need the command above (or a custom path via `STORAGE_STATE_PATH`) so the AI starts from a logged-in session.
 
 ### 4. Start the Application
 
