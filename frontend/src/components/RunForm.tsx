@@ -150,6 +150,10 @@ export function RunForm() {
           <p>
             <strong>Goal:</strong> {selectedTask.goal}
           </p>
+          <p>
+            <strong>Automated login:</strong>{" "}
+            {selectedTask.autoAuthEnabled ? "Enabled" : "Disabled"}
+          </p>
           {selectedTask.instructions && (
             <p>
               <strong>Instructions:</strong> {selectedTask.instructions}

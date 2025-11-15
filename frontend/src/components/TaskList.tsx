@@ -73,6 +73,11 @@ export function TaskList({ onSelectTask }: TaskListProps) {
             <div className="task-meta">
               {task.provider && <span className="badge badge-provider">{task.provider}</span>}
               {task.model && <span className="badge badge-model">{task.model}</span>}
+              {task.autoAuthEnabled && (
+                <span className="badge badge-auth" title="Automated login enabled">
+                  Auto Auth
+                </span>
+              )}
             </div>
           </div>
         ))}

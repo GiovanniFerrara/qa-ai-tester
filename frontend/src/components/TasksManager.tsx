@@ -6,7 +6,7 @@ import { QuickTaskPanel } from "./QuickTaskPanel";
 const defaultBudgets = {
   maxToolCalls: 200,
   maxTimeMs: 180_000,
-  maxScreenshots: 25,
+  maxScreenshots: 50,
 };
 
 const emptyTask: TaskInput = {
@@ -19,6 +19,7 @@ const emptyTask: TaskInput = {
   provider: "openai",
   model: "",
   requireFindings: true,
+  autoAuthEnabled: false,
   budgets: { ...defaultBudgets },
 };
 
@@ -42,6 +43,7 @@ export function TasksManager() {
     provider: task.provider ?? "openai",
     model: task.model ?? "",
     requireFindings: task.requireFindings ?? true,
+    autoAuthEnabled: task.autoAuthEnabled ?? false,
     budgets: {
       maxToolCalls: task.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
       maxTimeMs: task.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
@@ -368,6 +370,22 @@ export function TasksManager() {
                   />
                   Require at least one finding in reports
                 </label>
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={form.autoAuthEnabled ?? false}
+                    onChange={(e) =>
+                      handleInputChange("autoAuthEnabled", e.target.checked)
+                    }
+                  />
+                  Use automated login before each run
+                </label>
+                <p className="field-hint">
+                  When enabled, the worker signs in with the stored credentials
+                  before starting this task. Leave disabled if your auth state
+                  is already persisted or login is unnecessary. More info here:
+                  <code> backend/tests/auth.setup.ts </code>
+                </p>
 
                 <fieldset className="budgets-fieldset">
                   <legend>Budgets</legend>
@@ -455,6 +473,10 @@ export function TasksManager() {
             </p>
             <p>
               <strong>Goal:</strong> {selectedTask.goal}
+            </p>
+            <p>
+              <strong>Automated login:</strong>{" "}
+              {selectedTask.autoAuthEnabled ? "Enabled" : "Disabled"}
             </p>
             {selectedTask.instructions && (
               <p>

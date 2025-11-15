@@ -1,7 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { chromium, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
-import { mkdir, writeFile } from 'node:fs/promises';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+  type Locator,
+} from 'playwright';
+import { access, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { AppEnvironment } from '../config/environment';
@@ -38,7 +45,12 @@ export class WorkerGatewayService {
     this.baseUrl = this.configService.get('BASE_URL', { infer: true });
   }
 
-  async startRun(runId: string, route: string, baseUrlOverride?: string): Promise<BrowserRunHandle> {
+  async startRun(
+    runId: string,
+    route: string,
+    baseUrlOverride?: string,
+    storageStatePathOverride?: string,
+  ): Promise<BrowserRunHandle> {
     const browser = await chromium.launch({
       headless: true,
     });
@@ -47,10 +59,16 @@ export class WorkerGatewayService {
     const screenshotDir = path.join(artifactDir, 'screenshots');
     await mkdir(screenshotDir, { recursive: true });
 
-    const context = await browser.newContext({
-      storageState: this.storageStatePath,
+    const storageState = await this.resolveStorageStatePath(storageStatePathOverride);
+    const contextOptions: BrowserContextOptions = {
       viewport: { width: 1366, height: 768 },
-    });
+    };
+
+    if (storageState) {
+      contextOptions.storageState = storageState;
+    }
+
+    const context = await browser.newContext(contextOptions);
 
     await context.tracing.start({
       screenshots: true,
@@ -163,6 +181,31 @@ export class WorkerGatewayService {
     }
 
     return { elements };
+  }
+
+  private async resolveStorageStatePath(
+    storageStatePathOverride?: string,
+  ): Promise<string | undefined> {
+    const candidate = storageStatePathOverride ?? this.storageStatePath;
+    if (!candidate) {
+      return undefined;
+    }
+
+    const resolvedPath = path.resolve(candidate);
+
+    try {
+      await access(resolvedPath);
+      return resolvedPath;
+    } catch {
+      this.logger.warn(
+        [
+          `Storage state file not found at ${resolvedPath}.`,
+          'Continuing without persisted authentication.',
+          'Run "npm run playwright:test" inside backend/ to capture an auth session or update STORAGE_STATE_PATH.',
+        ].join(' '),
+      );
+      return undefined;
+    }
   }
 
   private normalizeSelector(selector: string): string {

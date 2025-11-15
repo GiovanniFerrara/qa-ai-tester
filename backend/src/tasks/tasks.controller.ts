@@ -21,6 +21,7 @@ const BaseTaskInputSchema = z.object({
   provider: z.string().optional(),
   model: z.string().optional(),
   requireFindings: z.boolean().default(true),
+  autoAuthEnabled: z.boolean().default(false),
   budgets: BudgetsInputSchema.optional(),
 });
 
@@ -68,6 +69,7 @@ export class TasksController {
       provider: parsed.provider,
       model: parsed.model,
       requireFindings: parsed.requireFindings,
+      autoAuthEnabled: parsed.autoAuthEnabled,
       kpiSpec: {
         type: 'staticValues',
         values: {},
