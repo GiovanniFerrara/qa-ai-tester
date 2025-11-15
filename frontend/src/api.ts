@@ -3,13 +3,18 @@ import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent } from './typ
 const API_BASE = '/api';
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
+  const isFormData = typeof FormData !== 'undefined' && options?.body instanceof FormData;
+  const init: RequestInit = {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-  });
+    headers: isFormData
+      ? options?.headers
+      : {
+          'Content-Type': 'application/json',
+          ...options?.headers,
+        },
+  };
+
+  const response = await fetch(url, init);
 
   if (!response.ok) {
     const error = await response.text().catch(() => response.statusText);
@@ -35,6 +40,21 @@ export const api = {
     fetchJSON<{ success: boolean }>(`${API_BASE}/tasks/${taskId}`, {
       method: 'DELETE',
     }),
+
+  contextualizeTask: (data: { prompt: string }) =>
+    fetchJSON<TaskInput>(`${API_BASE}/tasks/contextualize`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  transcribeAudio: (audio: Blob) => {
+    const formData = new FormData();
+    formData.append('audio', audio, 'quick-task.webm');
+    return fetchJSON<{ text: string }>(`${API_BASE}/tasks/transcribe`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   
   getRuns: () => fetchJSON<RunState[]>(`${API_BASE}/runs`),
 

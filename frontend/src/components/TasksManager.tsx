@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
 import type { TaskInput, TaskSpec } from '../types';
+import { QuickTaskPanel } from './QuickTaskPanel';
 
 const defaultBudgets = {
   maxToolCalls: 200,
@@ -166,9 +167,22 @@ export function TasksManager() {
     }));
   };
 
-  const selectedTask = editingTaskId
-    ? tasks.find((task) => task.id === editingTaskId)
-    : undefined;
+  const selectedTask = editingTaskId ? tasks.find((task) => task.id === editingTaskId) : undefined;
+
+  const handleQuickPrefill = (draft: TaskInput) => {
+    setEditingTaskId(null);
+    setForm({
+      ...emptyTask,
+      ...draft,
+      budgets: {
+        maxToolCalls: draft.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
+        maxTimeMs: draft.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
+        maxScreenshots: draft.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
+      },
+    });
+    setError(null);
+    setSuccess('Task fields populated from quick task draft. Review and save when ready.');
+  };
 
   return (
     <div className="tasks-layout">
@@ -219,6 +233,7 @@ export function TasksManager() {
       </div>
 
       <div className="card tasks-form">
+        <QuickTaskPanel onPrefill={handleQuickPrefill} />
         <h2>{editingTaskId ? 'Edit Task' : 'Create Task'}</h2>
 
         {error && <div className="error">{error}</div>}
