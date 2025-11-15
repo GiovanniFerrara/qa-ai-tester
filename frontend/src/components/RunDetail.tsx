@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import type { QAReport, RunEvent, RunState } from "../types";
@@ -21,6 +21,7 @@ export function RunDetail() {
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
+  const completionRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!runId) {
@@ -116,13 +117,22 @@ export function RunDetail() {
             eventSource.close();
             eventSource = null;
           }
-          void refreshRun(false);
+          if (completionRefreshTimer.current) {
+            clearTimeout(completionRefreshTimer.current);
+          }
+          completionRefreshTimer.current = setTimeout(() => {
+            void refreshRun(false);
+          }, 750);
         }
       }
     });
 
     return () => {
       isMounted = false;
+      if (completionRefreshTimer.current) {
+        clearTimeout(completionRefreshTimer.current);
+        completionRefreshTimer.current = null;
+      }
       if (eventSource) {
         eventSource.close();
       }
