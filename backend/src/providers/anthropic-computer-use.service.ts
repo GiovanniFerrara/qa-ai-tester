@@ -112,6 +112,7 @@ export class AnthropicComputerUseService {
     let iterations = 0;
     let finalReport: QaReport | null = null;
     let lastTextResponse = '';
+    let reportReminderSent = false;
 
     while (iterations < maxIterations) {
       iterations += 1;
@@ -255,6 +256,23 @@ export class AnthropicComputerUseService {
         if (parsed) {
           finalReport = parsed;
           break;
+        }
+        if (!reportReminderSent) {
+          reportReminderSent = true;
+          emitEvent({
+            type: 'log',
+            message: 'Prompting model to submit QA report after inactivity.',
+          });
+          messages.push({
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'You appear to be done. Please call qa_report_submit now with the final QAReport JSON.',
+              },
+            ],
+          });
+          continue;
         }
         this.logger.warn(`Run ${runId}: assistant returned no tool calls or QAReport.`);
         break;
