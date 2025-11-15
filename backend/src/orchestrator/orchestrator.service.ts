@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { AppEnvironment } from '../config/environment';
@@ -13,6 +15,7 @@ import { RunStorageService } from './run-storage.service';
 export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
   private readonly runs = new Map<string, StoredRunRecord>();
+  private readonly lastBaseUrlPath: string;
 
   constructor(
     private readonly configService: ConfigService<AppEnvironment, true>,
@@ -20,6 +23,7 @@ export class OrchestratorService {
     private readonly runExecutionService: RunExecutionService,
     private readonly runStorage: RunStorageService,
   ) {
+    this.lastBaseUrlPath = path.resolve(process.cwd(), 'data', 'last-base-url.txt');
     const storedRuns = this.runStorage.loadRuns();
     storedRuns.forEach((run) => this.runs.set(run.runId, run));
   }
@@ -36,6 +40,9 @@ export class OrchestratorService {
       (this.configService.get('DEFAULT_PROVIDER', { infer: true }) as AiProvider);
 
     this.logger.log(`Creating run ${runId} for task ${taskId} with provider ${provider}`);
+    if (baseUrlOverride) {
+      await this.persistLastBaseUrl(baseUrlOverride);
+    }
     const startedAt = new Date();
     const pendingRecord: StoredRunRecord = {
       runId,
@@ -43,12 +50,13 @@ export class OrchestratorService {
       taskId: task.id,
       status: 'running',
       startedAt: startedAt.toISOString(),
+      baseUrlOverride: baseUrlOverride ?? undefined,
     };
     this.runs.set(runId, pendingRecord);
     this.persistRuns();
 
     void this.runExecutionService
-      .execute(runId, { ...task, route: baseUrlOverride ?? task.route }, provider)
+      .execute(runId, task, provider, baseUrlOverride)
       .then((result: RunResult) => {
         const finishedAt = new Date();
         const completedRecord: StoredRunRecord = {
@@ -94,5 +102,16 @@ export class OrchestratorService {
 
   private persistRuns(): void {
     this.runStorage.saveRuns([...this.runs.values()]);
+  }
+
+  private async persistLastBaseUrl(baseUrl: string): Promise<void> {
+    try {
+      await fs.mkdir(path.dirname(this.lastBaseUrlPath), { recursive: true });
+      await fs.writeFile(this.lastBaseUrlPath, baseUrl.trim(), 'utf8');
+    } catch (error) {
+      this.logger.warn(
+        `Failed to persist last base URL override: ${(error as Error).message}`,
+      );
+    }
   }
 }

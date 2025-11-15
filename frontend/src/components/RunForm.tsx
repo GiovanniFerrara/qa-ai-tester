@@ -8,9 +8,12 @@ export function RunForm() {
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
-  const [baseUrl, setBaseUrl] = useState<string>(
-    () => localStorage.getItem("qa-tester-base-url") ?? ""
-  );
+  const [baseUrl, setBaseUrl] = useState<string>(() => {
+    if (typeof window === "undefined") {
+      return "";
+    }
+    return localStorage.getItem("qa-tester-base-url") ?? "";
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);

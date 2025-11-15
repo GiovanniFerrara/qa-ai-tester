@@ -21,14 +21,19 @@ export class RunExecutionService {
     private readonly runEvents: RunEventsService,
   ) {}
 
-  async execute(runId: string, task: TaskSpec, providerKey: AiProvider): Promise<RunResult> {
+  async execute(
+    runId: string,
+    task: TaskSpec,
+    providerKey: AiProvider,
+    baseUrlOverride?: string,
+  ): Promise<RunResult> {
     const startedAt = new Date();
     const provider = this.providerRegistry.resolve(providerKey);
     this.logger.log(
       `Starting run ${runId} with task ${task.id} using provider ${provider.provider}`,
     );
 
-    const handle = await this.workerGateway.startRun(runId, task.route);
+    const handle = await this.workerGateway.startRun(runId, task.route, baseUrlOverride);
     this.runEvents.emit(runId, {
       type: 'status',
       message: `Run ${runId} started`,
@@ -153,6 +158,7 @@ export class RunExecutionService {
         usageTotals,
         totalToolCalls,
         model: modelUsed,
+        baseUrlOverride: baseUrlOverride ?? null,
       };
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
 

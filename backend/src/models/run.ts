@@ -50,4 +50,5 @@ export interface StoredRunRecord {
   error?: string;
   report?: QaReport;
   artifacts?: RunArtifacts;
+  baseUrlOverride?: string;
 }

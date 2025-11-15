@@ -102,7 +102,7 @@ export class AnthropicProviderService {
     const systemPrompt = [
       'You are an AI QA analyst equipped with computer-use capabilities.',
       `Task: ${task.goal}`,
-      `The authenticated browser is already at base url; navigate to ${task.route}.`,
+      `Navigate to ${task.route}.`,
       'Use tool calls to inspect the dashboard, compare values with kpi_oracle, and log findings via assert.',
       'Once you have verified the key widgets (or determine you are blocked), stop exploring and call qa_report_submit exactly once.',
       'Never loop forever: after roughly 8-10 meaningful actions you should summarize and submit the QAReport.',

@@ -103,9 +103,9 @@ describe('RunExecutionService', () => {
       runEvents as any,
     );
 
-    const result = await service.execute('run-1', baseTask, 'openai');
+    const result = await service.execute('run-1', baseTask, 'openai', undefined);
 
-    expect(workerGateway.startRun).toHaveBeenCalledWith('run-1', '/dashboard');
+    expect(workerGateway.startRun).toHaveBeenCalledWith('run-1', '/dashboard', undefined);
     expect(workerGateway.captureScreenshot).toHaveBeenCalled();
     expect(workerGateway.stopRun).toHaveBeenCalled();
     expect(orchestrator.run).toHaveBeenCalled();
@@ -126,6 +126,7 @@ describe('RunExecutionService', () => {
       provider: 'openai',
       eventsPath: path.join(baseDir, 'computer-use-events.json'),
       responsesPath: path.join(baseDir, 'model-responses.jsonl'),
+      baseUrlOverride: null,
     });
 
     await fs.rm(baseDir, { recursive: true, force: true });

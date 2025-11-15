@@ -38,7 +38,7 @@ export class WorkerGatewayService {
     this.baseUrl = this.configService.get('BASE_URL', { infer: true });
   }
 
-  async startRun(runId: string, route: string): Promise<BrowserRunHandle> {
+  async startRun(runId: string, route: string, baseUrlOverride?: string): Promise<BrowserRunHandle> {
     const browser = await chromium.launch({
       headless: true,
     });
@@ -59,7 +59,8 @@ export class WorkerGatewayService {
     });
 
     const page = await context.newPage();
-    const targetUrl = new URL(route, this.baseUrl).toString();
+    const base = baseUrlOverride ?? this.baseUrl;
+    const targetUrl = new URL(route, base).toString();
     this.logger.debug(`Navigating to ${targetUrl}`);
     await page.goto(targetUrl, { waitUntil: 'networkidle' });
 

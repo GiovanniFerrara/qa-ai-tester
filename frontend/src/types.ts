@@ -109,6 +109,7 @@ export interface RunState {
   error?: string;
   report?: QAReport;
   artifacts?: RunArtifacts;
+  baseUrlOverride?: string | null;
 }
 
 export interface CreateRunRequest {

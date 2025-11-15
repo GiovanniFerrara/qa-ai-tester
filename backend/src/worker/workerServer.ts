@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { validateEnvironment } from '../config/environment';
 import { WorkerGatewayService } from './worker-gateway.service';
@@ -30,7 +32,21 @@ async function bootstrap(): Promise<void> {
 
   logger.log(`Starting manual worker session with runId ${runId}`);
 
-  const handle = await worker.startRun(runId, '/dashboard');
+  let baseUrlOverride: string | undefined;
+  try {
+    const overridePath = path.resolve(process.cwd(), 'data', 'last-base-url.txt');
+    if (existsSync(overridePath)) {
+      const candidate = readFileSync(overridePath, 'utf8').trim();
+      if (candidate) {
+        baseUrlOverride = candidate;
+        logger.log(`Using base URL override from ${overridePath}: ${candidate}`);
+      }
+    }
+  } catch (error) {
+    logger.warn(`Unable to read base URL override: ${(error as Error).message}`);
+  }
+
+  const handle = await worker.startRun(runId, '/dashboard', baseUrlOverride);
   try {
     await worker.captureScreenshot(handle, 'manual');
     logger.log(`Screenshot saved for run ${runId}`);
