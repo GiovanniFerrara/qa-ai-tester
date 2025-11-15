@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { api } from '../api';
-import type { TaskInput, TaskSpec } from '../types';
-import { QuickTaskPanel } from './QuickTaskPanel';
+import { useEffect, useMemo, useState } from "react";
+import { api } from "../api";
+import type { TaskInput, TaskSpec } from "../types";
+import { QuickTaskPanel } from "./QuickTaskPanel";
 
 const defaultBudgets = {
   maxToolCalls: 200,
@@ -10,14 +10,14 @@ const defaultBudgets = {
 };
 
 const emptyTask: TaskInput = {
-  name: '',
-  description: '',
-  goal: '',
-  instructions: '',
-  route: '',
-  role: 'analyst',
-  provider: 'openai',
-  model: '',
+  name: "",
+  description: "",
+  goal: "",
+  instructions: "",
+  route: "",
+  role: "analyst",
+  provider: "openai",
+  model: "",
   requireFindings: true,
   budgets: { ...defaultBudgets },
 };
@@ -30,21 +30,23 @@ export function TasksManager() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const toTaskInput = (task: TaskSpec): TaskInput => ({
     name: task.name,
-    description: task.description ?? '',
+    description: task.description ?? "",
     goal: task.goal,
-    instructions: task.instructions ?? '',
+    instructions: task.instructions ?? "",
     route: task.route,
     role: task.role,
-    provider: task.provider ?? 'openai',
-    model: task.model ?? '',
+    provider: task.provider ?? "openai",
+    model: task.model ?? "",
     requireFindings: task.requireFindings ?? true,
     budgets: {
       maxToolCalls: task.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
       maxTimeMs: task.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
-      maxScreenshots: task.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
+      maxScreenshots:
+        task.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
     },
   });
 
@@ -54,7 +56,7 @@ export function TasksManager() {
 
   const sortedTasks = useMemo(
     () => [...tasks].sort((a, b) => a.name.localeCompare(b.name)),
-    [tasks],
+    [tasks]
   );
 
   const loadTasks = async () => {
@@ -62,7 +64,7 @@ export function TasksManager() {
       const data = await api.getTasks();
       setTasks(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      setError(err instanceof Error ? err.message : "Failed to load tasks");
     }
   };
 
@@ -82,15 +84,16 @@ export function TasksManager() {
   };
 
   const handleDelete = async (taskId: string) => {
-    if (!window.confirm('Delete this task? This action cannot be undone.')) return;
+    if (!window.confirm("Delete this task? This action cannot be undone."))
+      return;
     try {
       await api.deleteTask(taskId);
-      setSuccess('Task deleted.');
+      setSuccess("Task deleted.");
       setError(null);
       resetForm();
       await loadTasks();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete task');
+      setError(err instanceof Error ? err.message : "Failed to delete task");
     }
   };
 
@@ -104,12 +107,12 @@ export function TasksManager() {
         name: `${task.name} (copy)`,
       };
       const created = await api.createTask(clonePayload);
-      setSuccess('Task cloned successfully.');
+      setSuccess("Task cloned successfully.");
       await loadTasks();
       setEditingTaskId(created.id);
       setForm(toTaskInput(created));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to clone task');
+      setError(err instanceof Error ? err.message : "Failed to clone task");
     } finally {
       setActionLoading(false);
     }
@@ -124,24 +127,28 @@ export function TasksManager() {
     const payload: TaskInput = {
       ...form,
       budgets: {
-        maxToolCalls: Number(form.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls),
+        maxToolCalls: Number(
+          form.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls
+        ),
         maxTimeMs: Number(form.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs),
-        maxScreenshots: Number(form.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots),
+        maxScreenshots: Number(
+          form.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots
+        ),
       },
     };
 
     try {
       if (editingTaskId) {
         await api.updateTask(editingTaskId, payload);
-        setSuccess('Task updated successfully.');
+        setSuccess("Task updated successfully.");
       } else {
         await api.createTask(payload);
-        setSuccess('Task created successfully.');
+        setSuccess("Task created successfully.");
       }
       await loadTasks();
       resetForm();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save task');
+      setError(err instanceof Error ? err.message : "Failed to save task");
     } finally {
       setLoading(false);
     }
@@ -149,7 +156,7 @@ export function TasksManager() {
 
   const handleInputChange = (
     field: keyof TaskInput,
-    value: string | boolean | TaskInput['budgets'],
+    value: string | boolean | TaskInput["budgets"]
   ) => {
     setForm((prev) => ({
       ...prev,
@@ -157,7 +164,10 @@ export function TasksManager() {
     }));
   };
 
-  const handleBudgetChange = (field: keyof NonNullable<TaskInput['budgets']>, value: number) => {
+  const handleBudgetChange = (
+    field: keyof NonNullable<TaskInput["budgets"]>,
+    value: number
+  ) => {
     setForm((prev) => ({
       ...prev,
       budgets: {
@@ -167,7 +177,9 @@ export function TasksManager() {
     }));
   };
 
-  const selectedTask = editingTaskId ? tasks.find((task) => task.id === editingTaskId) : undefined;
+  const selectedTask = editingTaskId
+    ? tasks.find((task) => task.id === editingTaskId)
+    : undefined;
 
   const handleQuickPrefill = (draft: TaskInput) => {
     setEditingTaskId(null);
@@ -175,13 +187,17 @@ export function TasksManager() {
       ...emptyTask,
       ...draft,
       budgets: {
-        maxToolCalls: draft.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
+        maxToolCalls:
+          draft.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
         maxTimeMs: draft.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
-        maxScreenshots: draft.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
+        maxScreenshots:
+          draft.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
       },
     });
     setError(null);
-    setSuccess('Task fields populated from quick task draft. Review and save when ready.');
+    setSuccess(
+      "Task fields populated from quick task draft. Review and save when ready."
+    );
   };
 
   return (
@@ -198,7 +214,10 @@ export function TasksManager() {
         ) : (
           <ul className="tasks-list">
             {sortedTasks.map((task) => (
-              <li key={task.id} className={task.id === editingTaskId ? 'active' : ''}>
+              <li
+                key={task.id}
+                className={task.id === editingTaskId ? "active" : ""}
+              >
                 <button type="button" onClick={() => handleEdit(task)}>
                   <span className="task-name">{task.name}</span>
                   <span className="task-route">{task.route}</span>
@@ -234,14 +253,10 @@ export function TasksManager() {
 
       <div className="card tasks-form">
         <QuickTaskPanel onPrefill={handleQuickPrefill} />
-        <h2>{editingTaskId ? 'Edit Task' : 'Create Task'}</h2>
+        <h2>{editingTaskId ? "Edit Task" : "Create Task"}</h2>
 
         {error && <div className="error">{error}</div>}
-        {success && (
-          <div className="success-banner">
-            {success}
-          </div>
-        )}
+        {success && <div className="success-banner">{success}</div>}
 
         <form onSubmit={handleSubmit} className="task-form-grid">
           <label>
@@ -249,7 +264,7 @@ export function TasksManager() {
             <input
               type="text"
               value={form.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              onChange={(e) => handleInputChange("name", e.target.value)}
               required
             />
           </label>
@@ -258,7 +273,7 @@ export function TasksManager() {
             Description
             <textarea
               value={form.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(e) => handleInputChange("description", e.target.value)}
               rows={2}
             />
           </label>
@@ -267,17 +282,19 @@ export function TasksManager() {
             Goal / Prompt
             <textarea
               value={form.goal}
-              onChange={(e) => handleInputChange('goal', e.target.value)}
+              onChange={(e) => handleInputChange("goal", e.target.value)}
               rows={3}
               required
             />
           </label>
 
-  <label>
+          <label>
             Additional Instructions
             <textarea
               value={form.instructions}
-              onChange={(e) => handleInputChange('instructions', e.target.value)}
+              onChange={(e) =>
+                handleInputChange("instructions", e.target.value)
+              }
               rows={3}
             />
           </label>
@@ -288,7 +305,7 @@ export function TasksManager() {
               <input
                 type="text"
                 value={form.route}
-                onChange={(e) => handleInputChange('route', e.target.value)}
+                onChange={(e) => handleInputChange("route", e.target.value)}
                 required
               />
             </label>
@@ -298,92 +315,129 @@ export function TasksManager() {
               <input
                 type="text"
                 value={form.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
+                onChange={(e) => handleInputChange("role", e.target.value)}
               />
             </label>
           </div>
 
-          <div className="form-grid">
-            <label>
-              Provider
-              <select
-                value={form.provider ?? ''}
-                onChange={(e) => handleInputChange('provider', e.target.value)}
-              >
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
-            </label>
+          <div className="advanced-settings-section">
+            <button
+              type="button"
+              className="advanced-toggle"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? "▼" : "▶"} Advanced Settings
+            </button>
 
-            <label>
-              Model (optional)
-              <input
-                type="text"
-                value={form.model ?? ''}
-                onChange={(e) => handleInputChange('model', e.target.value)}
-                placeholder="e.g., computer-use-preview"
-              />
-            </label>
+            {showAdvanced && (
+              <div className="advanced-content">
+                <div className="form-grid">
+                  <label>
+                    Provider
+                    <select
+                      value={form.provider ?? ""}
+                      onChange={(e) =>
+                        handleInputChange("provider", e.target.value)
+                      }
+                    >
+                      <option value="openai">OpenAI</option>
+                      <option value="anthropic">Anthropic</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Model (optional)
+                    <input
+                      type="text"
+                      value={form.model ?? ""}
+                      onChange={(e) =>
+                        handleInputChange("model", e.target.value)
+                      }
+                      placeholder="e.g., computer-use-preview"
+                    />
+                  </label>
+                </div>
+
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={form.requireFindings}
+                    onChange={(e) =>
+                      handleInputChange("requireFindings", e.target.checked)
+                    }
+                  />
+                  Require at least one finding in reports
+                </label>
+
+                <fieldset className="budgets-fieldset">
+                  <legend>Budgets</legend>
+                  <div className="form-grid">
+                    <label>
+                      Max Tool Calls
+                      <input
+                        type="number"
+                        min={1}
+                        value={
+                          form.budgets?.maxToolCalls ??
+                          defaultBudgets.maxToolCalls
+                        }
+                        onChange={(e) =>
+                          handleBudgetChange(
+                            "maxToolCalls",
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Max Time (ms)
+                      <input
+                        type="number"
+                        min={1000}
+                        value={
+                          form.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs
+                        }
+                        onChange={(e) =>
+                          handleBudgetChange(
+                            "maxTimeMs",
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Max Screenshots
+                      <input
+                        type="number"
+                        min={1}
+                        value={
+                          form.budgets?.maxScreenshots ??
+                          defaultBudgets.maxScreenshots
+                        }
+                        onChange={(e) =>
+                          handleBudgetChange(
+                            "maxScreenshots",
+                            Number(e.target.value)
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+            )}
           </div>
-
-          <label className="checkbox">
-            <input
-              type="checkbox"
-              checked={form.requireFindings}
-              onChange={(e) => handleInputChange('requireFindings', e.target.checked)}
-            />
-            Require at least one finding in reports
-          </label>
-
-          <fieldset className="budgets-fieldset">
-            <legend>Budgets</legend>
-            <div className="form-grid">
-              <label>
-                Max Tool Calls
-                <input
-                  type="number"
-                  min={1}
-                  value={form.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls}
-                  onChange={(e) =>
-                    handleBudgetChange('maxToolCalls', Number(e.target.value))
-                  }
-                />
-              </label>
-              <label>
-                Max Time (ms)
-                <input
-                  type="number"
-                  min={1000}
-                  value={form.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs}
-                  onChange={(e) =>
-                    handleBudgetChange('maxTimeMs', Number(e.target.value))
-                  }
-                />
-              </label>
-              <label>
-                Max Screenshots
-                <input
-                  type="number"
-                  min={1}
-                  value={form.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots}
-                  onChange={(e) =>
-                    handleBudgetChange('maxScreenshots', Number(e.target.value))
-                  }
-                />
-              </label>
-            </div>
-          </fieldset>
 
           <div className="form-actions">
             <button type="submit" disabled={loading || actionLoading}>
-              {loading ? 'Saving...' : editingTaskId ? 'Update Task' : 'Create Task'}
+              {loading
+                ? "Saving..."
+                : editingTaskId
+                  ? "Update Task"
+                  : "Create Task"}
             </button>
             {editingTaskId && (
-              <button
-                type="button"
-                className="secondary"
-                onClick={resetForm}
-              >
+              <button type="button" className="secondary" onClick={resetForm}>
                 Cancel
               </button>
             )}

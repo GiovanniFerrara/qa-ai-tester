@@ -326,6 +326,84 @@ button:disabled {
   color: #5a6c7d;
   margin-top: 0.5rem;
 }
+.icon-button {
+  background: none;
+  border: 2px solid #cbd5f5;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button:hover {
+  background: #f0f4ff;
+  border-color: #667eea;
+}
+
+.icon-button.recording {
+  background: #fee;
+  border-color: #f44;
+  animation: pulse 1.5s infinite;
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+.advanced-settings-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed #e0e6ed;
+}
+
+.advanced-toggle {
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #667eea;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s;
+  margin-bottom: 1rem;
+}
+
+.advanced-toggle:hover {
+  color: #5568d3;
+}
+
+.advanced-content {
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+    opacity: 0.6;
+  }
+}
+
 
 .task-form-grid {
   display: flex;

@@ -5,12 +5,6 @@ import type { ResponseFormatTextJSONSchemaConfig } from 'openai/resources/respon
 
 import { OpenAiProviderService } from '../providers/openai-provider.service';
 
-const TaskDraftBudgetsSchema = z.object({
-  maxToolCalls: z.number().int().positive().default(200),
-  maxTimeMs: z.number().int().positive().default(180_000),
-  maxScreenshots: z.number().int().positive().default(25),
-});
-
 export const TaskDraftSchema = z.object({
   name: z.string().min(1),
   description: z.string().default(''),
@@ -18,14 +12,6 @@ export const TaskDraftSchema = z.object({
   instructions: z.string().default(''),
   route: z.string().min(1),
   role: z.string().default('analyst'),
-  provider: z.enum(['openai', 'anthropic']).default('openai'),
-  model: z.string().optional(),
-  requireFindings: z.boolean().default(true),
-  budgets: TaskDraftBudgetsSchema.default({
-    maxToolCalls: 200,
-    maxTimeMs: 180_000,
-    maxScreenshots: 25,
-  }),
 });
 
 export type TaskDraft = z.infer<typeof TaskDraftSchema>;
@@ -39,13 +25,6 @@ export class TaskContextualizerService {
     }) as Record<string, any>;
 
     const properties = schema.properties as Record<string, any> | undefined;
-    if (properties?.budgets) {
-      const budgetProps = properties.budgets.properties as Record<string, any> | undefined;
-      if (budgetProps) {
-        properties.budgets.required = Object.keys(budgetProps);
-      }
-    }
-
     if (properties) {
       schema.required = Object.keys(properties);
     }
@@ -63,9 +42,7 @@ export class TaskContextualizerService {
     'You translate informal QA automation requests into structured tasks for the QA AI Tester app.',
     'Produce concise titles, solid functional descriptions, and a clear goal that states success criteria.',
     'Always include a starting route or URL relative to the dashboard and highlight the primary persona in the role.',
-    'Default provider to "openai" unless the user explicitly asks for another model.',
-    'Set requireFindings=true unless the user instructs otherwise.',
-    'Budgets must stay within reasonable limits: <=400 tool calls, <=600000 ms, <=50 screenshots.',
+    'Generate only the basic task fields: name, description, goal, instructions, route, and role.',
     'Return ONLY valid JSON that matches the provided schema. Do not wrap it in markdown.',
   ].join('\n');
 
@@ -117,7 +94,6 @@ export class TaskContextualizerService {
     const validated = TaskDraftSchema.parse(parsed);
     return {
       ...validated,
-      model: validated.model?.trim() ? validated.model : undefined,
       instructions: validated.instructions ?? '',
       description: validated.description ?? '',
     };
