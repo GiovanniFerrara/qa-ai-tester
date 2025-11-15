@@ -48,7 +48,7 @@ export class SchemaService {
           default: [],
         },
       },
-      required: ['selector', 'mode', 'attributes'],
+      required: ['selector', 'mode', 'attributes', 'computed'],
     } as JsonSchema7Type;
     this.kpiOracleSchema = this.extractRootSchema(
       zodToJsonSchema(KpiOracleRequestSchema, { name: 'KpiOracleRequest' }),
