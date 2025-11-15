@@ -182,14 +182,20 @@ export function RunDetail() {
   };
 
   const toArtifactUrl = useCallback((fullPath: string) => {
+    if (!fullPath) {
+      return "";
+    }
     const normalized = fullPath.replace(/\\/g, "/");
-    const marker = "/artifacts/";
-    const markerIndex = normalized.indexOf(marker);
-    if (markerIndex === -1) {
+    if (normalized.startsWith("/api/artifacts/")) {
       return normalized;
     }
-    const relative = normalized.slice(markerIndex + marker.length);
-    return `/api/artifacts/${relative}`;
+    const marker = "/artifacts/";
+    const markerIndex = normalized.indexOf(marker);
+    if (markerIndex !== -1) {
+      const relative = normalized.slice(markerIndex + marker.length);
+      return `/api/artifacts/${relative}`;
+    }
+    return `/api/artifacts/${normalized.replace(/^\/+/, "")}`;
   }, []);
 
   const extractFilename = useCallback((fullPath: string) => {
@@ -202,10 +208,14 @@ export function RunDetail() {
     if (!run?.artifacts?.screenshots) {
       return [];
     }
-    return run.artifacts.screenshots.map((path) => ({
-      path: toArtifactUrl(path),
-      filename: extractFilename(path),
-    }));
+    return run.artifacts.screenshots.map((path) => {
+      return {
+        path: toArtifactUrl(path),
+        filename: extractFilename(path),
+        originalPath: path,
+        fallbackPath: undefined as string | undefined,
+      };
+    });
   }, [run, toArtifactUrl, extractFilename]);
 
   const handlePrevSlide = useCallback(() => {
@@ -540,11 +550,13 @@ export function RunDetail() {
                           const evidenceFilename = extractFilename(
                             evidence.screenshotRef
                           );
-                          const screenshot = allScreenshots.find(
-                            (s) =>
-                              s.filename === evidenceFilename ||
-                              evidence.screenshotRef.includes(s.filename)
-                          );
+                          const screenshot =
+                            allScreenshots.find(
+                              (s) =>
+                                s.filename === evidenceFilename ||
+                                evidence.screenshotRef.includes(s.filename)
+                            ) ?? null;
+
                           if (!screenshot) {
                             return null;
                           }
@@ -563,6 +575,7 @@ export function RunDetail() {
                               <img
                                 src={screenshot.path}
                                 alt={`Evidence ${idx + 1}`}
+                                data-debug-original={screenshot.originalPath}
                               />
                               <div className="evidence-info">
                                 <span>{evidence.time}</span>
