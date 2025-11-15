@@ -7,6 +7,7 @@ import { OrchestratorService } from './orchestrator.service';
 const StartRunSchema = z.object({
   taskId: z.string().min(1, 'taskId is required'),
   provider: z.enum(['openai', 'anthropic']).optional(),
+  baseUrl: z.string().url().optional(),
 });
 
 @Controller('runs')
@@ -27,7 +28,11 @@ export class RunsController {
   async createRun(@Body() body: unknown) {
     try {
       const payload = StartRunSchema.parse(body);
-      return await this.orchestratorService.startRun(payload.taskId, payload.provider as AiProvider);
+      return await this.orchestratorService.startRun(
+        payload.taskId,
+        payload.provider as AiProvider,
+        payload.baseUrl,
+      );
     } catch (error) {
       if (error instanceof ZodError) {
         throw new BadRequestException(error.errors.map((err) => err.message).join(', '));

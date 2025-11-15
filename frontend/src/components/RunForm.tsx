@@ -8,6 +8,9 @@ export function RunForm() {
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
+  const [baseUrl, setBaseUrl] = useState<string>(
+    () => localStorage.getItem("qa-tester-base-url") ?? ""
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -51,6 +54,7 @@ export function RunForm() {
         taskId: selectedTaskId,
         provider: provider || undefined,
         model: model || undefined,
+        baseUrl: baseUrl || undefined,
       });
       setSuccess(`Run ${run.runId} started.`);
       navigate(`/runs/${run.runId}`);
@@ -108,6 +112,24 @@ export function RunForm() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="base-url">Application Base URL</label>
+          <input
+            id="base-url"
+            type="url"
+            placeholder="http://localhost:3000"
+            value={baseUrl}
+            onChange={(e) => {
+              setBaseUrl(e.target.value);
+              localStorage.setItem("qa-tester-base-url", e.target.value);
+            }}
+          />
+          <small className="hint">
+            This value overrides the server BASE_URL for this run and is stored
+            locally for convenience.
+          </small>
         </div>
 
         <button type="submit" disabled={loading}>

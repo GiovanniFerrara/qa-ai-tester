@@ -24,7 +24,7 @@ export class OrchestratorService {
     storedRuns.forEach((run) => this.runs.set(run.runId, run));
   }
 
-  async startRun(taskId: string, providerOverride?: AiProvider): Promise<StoredRunRecord> {
+  async startRun(taskId: string, providerOverride?: AiProvider, baseUrlOverride?: string): Promise<StoredRunRecord> {
     const task = this.taskRegistry.get(taskId);
     if (!task) {
       throw new NotFoundException(`Task ${taskId} not found`);
@@ -48,7 +48,7 @@ export class OrchestratorService {
     this.persistRuns();
 
     void this.runExecutionService
-      .execute(runId, task, provider)
+      .execute(runId, { ...task, route: baseUrlOverride ?? task.route }, provider)
       .then((result: RunResult) => {
         const finishedAt = new Date();
         const completedRecord: StoredRunRecord = {

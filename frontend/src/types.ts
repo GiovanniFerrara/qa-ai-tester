@@ -115,6 +115,7 @@ export interface CreateRunRequest {
   taskId: string;
   provider?: string;
   model?: string;
+  baseUrl?: string;
 }
 
 export type RunEventType = 'log' | 'tool_call' | 'screenshot' | 'status';
