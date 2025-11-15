@@ -18,6 +18,7 @@ const createConfigService = (
         CLAUDE_API_KEY: 'claude',
         BASE_URL: 'https://example.com',
         TASKS_DB_PATH: '',
+        RUNS_DB_PATH: '',
         KPI_BASE_URL: 'https://api.example',
         STORAGE_STATE_PATH: 'playwright/.auth/analyst.json',
         ARTIFACT_DIR: path.join(os.tmpdir(), 'qa-artifacts'),

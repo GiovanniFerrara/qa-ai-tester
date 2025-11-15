@@ -7,6 +7,7 @@ import type { QaReport } from '../models/contracts';
 import type { AiProvider, RunResult, StoredRunRecord } from '../models/run';
 import { TaskRegistryService } from '../tasks/task-registry.service';
 import { RunExecutionService } from './run-execution.service';
+import { RunStorageService } from './run-storage.service';
 
 @Injectable()
 export class OrchestratorService {
@@ -17,7 +18,11 @@ export class OrchestratorService {
     private readonly configService: ConfigService<AppEnvironment, true>,
     private readonly taskRegistry: TaskRegistryService,
     private readonly runExecutionService: RunExecutionService,
-  ) {}
+    private readonly runStorage: RunStorageService,
+  ) {
+    const storedRuns = this.runStorage.loadRuns();
+    storedRuns.forEach((run) => this.runs.set(run.runId, run));
+  }
 
   async startRun(taskId: string, providerOverride?: AiProvider): Promise<StoredRunRecord> {
     const task = this.taskRegistry.get(taskId);
@@ -40,6 +45,7 @@ export class OrchestratorService {
       startedAt: startedAt.toISOString(),
     };
     this.runs.set(runId, pendingRecord);
+    this.persistRuns();
 
     void this.runExecutionService
       .execute(runId, task, provider)
@@ -53,6 +59,7 @@ export class OrchestratorService {
           artifacts: result.artifacts,
         };
         this.runs.set(runId, completedRecord);
+        this.persistRuns();
       })
       .catch((error) => {
         const finishedAt = new Date();
@@ -67,6 +74,7 @@ export class OrchestratorService {
           error: (error as Error).message,
         };
         this.runs.set(runId, failedRecord);
+        this.persistRuns();
       });
 
     return pendingRecord;
@@ -82,5 +90,9 @@ export class OrchestratorService {
 
   listRuns(): StoredRunRecord[] {
     return [...this.runs.values()];
+  }
+
+  private persistRuns(): void {
+    this.runStorage.saveRuns([...this.runs.values()]);
   }
 }

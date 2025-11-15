@@ -60,7 +60,9 @@ export function RunDetail() {
         const payload = incoming.payload;
         setRun((prev) => {
           const payloadReport = payload.report as QAReport | undefined;
-          const payloadStatus = payload.runStatus as RunState["status"] | undefined;
+          const payloadStatus = payload.runStatus as
+            | RunState["status"]
+            | undefined;
           const payloadFinished = payload.finishedAt as string | undefined;
 
           if (!prev && !payloadReport) {
@@ -80,7 +82,8 @@ export function RunDetail() {
           return {
             ...base,
             status: payloadStatus ?? base.status,
-            finishedAt: payloadFinished ?? base.finishedAt ?? payloadReport?.finishedAt,
+            finishedAt:
+              payloadFinished ?? base.finishedAt ?? payloadReport?.finishedAt,
             taskId: payloadReport?.taskId ?? base.taskId,
             report: payloadReport ?? base.report,
           };
@@ -404,7 +407,8 @@ export function RunDetail() {
               </div>
               <div>
                 <p>
-                  <strong>Duration:</strong> {run.report.costs.durationMs}ms
+                  <strong>Duration:</strong>{" "}
+                  {(run.report.costs.durationMs / 1000).toFixed(2)}s
                 </p>
                 <p>
                   <strong>Tool Calls:</strong> {run.report.costs.toolCalls}

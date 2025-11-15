@@ -15,7 +15,10 @@
             "hotkey",
             "scroll",
             "hover",
-            "drag"
+            "drag",
+            "wait",
+            "screenshot",
+            "keypress"
           ]
         },
         "coords": {
@@ -109,6 +112,31 @@
               "type": "null"
             }
           ]
+        },
+        "path": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "x",
+              "y"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
