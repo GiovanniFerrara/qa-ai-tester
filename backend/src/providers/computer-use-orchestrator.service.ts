@@ -35,13 +35,16 @@ export class ComputerUseOrchestratorService {
       });
     }
 
-    await this.anthropicComputerUseService.run({
-      runId: options.runId,
-      task: options.task,
-      handle: options.handle,
-      initialScreenshotPath: options.initialScreenshotPath,
-      startedAt: options.startedAt,
-    });
+    if (options.provider === 'anthropic') {
+      return this.anthropicComputerUseService.run({
+        runId: options.runId,
+        task: options.task,
+        handle: options.handle,
+        initialScreenshotPath: options.initialScreenshotPath,
+        startedAt: options.startedAt,
+        events: this.runEventsService,
+      });
+    }
 
     throw new Error(`Provider ${options.provider} is not supported at the moment.`);
   }

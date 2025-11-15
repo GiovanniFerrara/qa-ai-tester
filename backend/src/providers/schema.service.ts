@@ -42,6 +42,11 @@ export class SchemaService {
           items: { type: 'string' },
           default: [],
         },
+        computed: {
+          type: 'array',
+          items: { type: 'string' },
+          default: [],
+        },
       },
       required: ['selector', 'mode', 'attributes'],
     } as JsonSchema7Type;

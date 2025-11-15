@@ -91,7 +91,7 @@ DEFAULT_PROVIDER=openai
 
 # Model selection
 OPENAI_MODEL=computer-use-preview
-CLAUDE_MODEL=claude-3-7-sonnet-20250219
+CLAUDE_MODEL=claude-sonnet-4-5-sonnet-20250219
 
 # ============================================
 # Application Configuration
@@ -147,7 +147,7 @@ KPI_TOLERANCE_PERCENT=1
 | `CLAUDE_API_KEY` | Yes* | - | Anthropic API key for Claude models |
 | `DEFAULT_PROVIDER` | No | `openai` | Default AI provider (openai/anthropic) |
 | `OPENAI_MODEL` | No | `computer-use-preview` | OpenAI model to use |
-| `CLAUDE_MODEL` | No | `claude-3-7-sonnet-20250219` | Anthropic model to use |
+| `CLAUDE_MODEL` | No | `claude-sonnet-4-5-sonnet-20250219` | Anthropic model to use |
 | `BASE_URL` | Yes | - | Target application URL |
 | `PORT` | No | `3005` | Backend server port |
 | `STORAGE_STATE_PATH` | No | `playwright/.auth/analyst.json` | Auth state file path |

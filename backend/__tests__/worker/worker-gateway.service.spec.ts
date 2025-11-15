@@ -23,8 +23,8 @@ const createConfigService = (
         STORAGE_STATE_PATH: 'playwright/.auth/analyst.json',
         ARTIFACT_DIR: path.join(os.tmpdir(), 'qa-artifacts'),
         DEFAULT_PROVIDER: 'openai',
-        OPENAI_MODEL: 'o4-mini',
-        CLAUDE_MODEL: 'claude-3-7',
+        OPENAI_MODEL: 'computer-use-preview',
+        CLAUDE_MODEL: 'claude-sonnet-4-5',
         KPI_ENDPOINT: '/api/kpi',
         KPI_TOLERANCE_PERCENT: '1',
       };

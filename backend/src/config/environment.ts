@@ -14,8 +14,8 @@ export const EnvSchema = z.object({
   STORAGE_STATE_PATH: z.string().default('playwright/.auth/analyst.json'),
   ARTIFACT_DIR: z.string().default('artifacts'),
   DEFAULT_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
-  OPENAI_MODEL: z.string().default('o4-mini'),
-  CLAUDE_MODEL: z.string().default('claude-3-7-sonnet-20250219'),
+  OPENAI_MODEL: z.string().default('computer-use-preview'),
+  CLAUDE_MODEL: z.string().default('claude-sonnet-4-5-sonnet-20250219'),
   KPI_ENDPOINT: z.string().default('/api/kpi'),
   KPI_TOLERANCE_PERCENT: z.string().default('1'),
 });

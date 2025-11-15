@@ -88,7 +88,7 @@ DEFAULT_PROVIDER=openai
 
 # AI model selection
 OPENAI_MODEL=computer-use-preview
-CLAUDE_MODEL=claude-3-7-sonnet-20250219
+CLAUDE_MODEL=claude-sonnet-4-5-sonnet-20250219
 
 # Authentication (optional - see Authentication Setup below)
 STORAGE_STATE_PATH=playwright/.auth/analyst.json
@@ -338,7 +338,7 @@ Each run generates comprehensive artifacts in [`backend/artifacts/{runId}/`](bac
 **Anthropic Models:**
 - `claude-3-opus-20240229` - Highest capability
 - `claude-3-sonnet-20240229` - Balanced performance
-- `claude-3-7-sonnet-20250219` - Latest, improved reasoning
+- `claude-sonnet-4-5-sonnet-20250219` - Latest, improved reasoning
 
 ### KPI Monitoring
 

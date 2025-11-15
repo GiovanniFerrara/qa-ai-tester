@@ -32,7 +32,7 @@ export class OpenAiProviderService {
   }
 
   getModel(): string {
-    return this.configService.get('OPENAI_MODEL', { infer: true }) ?? 'o4-mini';
+    return this.configService.get('OPENAI_MODEL', { infer: true }) ?? 'computer-use-preview';
   }
 
   getClient(): OpenAI {

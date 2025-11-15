@@ -7,7 +7,7 @@ import { SchemaService } from 'src/providers/schema.service';
 describe('OpenAiProviderService', () => {
   const configValues = {
     OPENAI_API_KEY: 'test-openai-key',
-    OPENAI_MODEL: 'o4-mini',
+    OPENAI_MODEL: 'computer-use-preview',
   };
 
   const createConfigService = (): ConfigService<AppEnvironment, true> =>
@@ -34,7 +34,7 @@ describe('OpenAiProviderService', () => {
       'run-123',
     );
 
-    expect(plan.model).toBe('o4-mini');
+    expect(plan.model).toBe('computer-use-preview');
     expect(plan.tools).toBeDefined();
     const tools = plan.tools ?? [];
     const computerTool = tools.find((tool) => tool.type === 'computer-preview');

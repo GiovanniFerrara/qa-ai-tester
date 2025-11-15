@@ -25,7 +25,7 @@ describe('KpiOracleService', () => {
       STORAGE_STATE_PATH: 'state.json',
       ARTIFACT_DIR: 'artifacts',
       DEFAULT_PROVIDER: 'openai',
-      OPENAI_MODEL: 'o4-mini',
+      OPENAI_MODEL: 'computer-use-preview',
       CLAUDE_MODEL: 'claude',
       KPI_ENDPOINT: '/api/kpi',
       KPI_TOLERANCE_PERCENT: '1',

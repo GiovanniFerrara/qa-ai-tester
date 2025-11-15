@@ -9,6 +9,7 @@ import { OpenAiProviderService } from './openai-provider.service';
 import { OpenAiComputerUseService } from './openai-computer-use.service';
 import { SchemaService } from './schema.service';
 import { ComputerUseOrchestratorService } from './computer-use-orchestrator.service';
+import { KpiOracleService } from '../services/kpi-oracle.service';
 
 @Module({
   imports: [WorkerModule, RunEventsModule],
@@ -20,6 +21,7 @@ import { ComputerUseOrchestratorService } from './computer-use-orchestrator.serv
     AnthropicComputerUseService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
+    KpiOracleService,
   ],
   exports: [
     SchemaService,
@@ -29,6 +31,7 @@ import { ComputerUseOrchestratorService } from './computer-use-orchestrator.serv
     AnthropicComputerUseService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
+    KpiOracleService,
   ],
 })
 export class ProvidersModule {}

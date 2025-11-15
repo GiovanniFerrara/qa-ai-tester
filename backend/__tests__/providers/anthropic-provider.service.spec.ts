@@ -7,7 +7,7 @@ import { SchemaService } from 'src/providers/schema.service';
 describe('AnthropicProviderService', () => {
   const configValues = {
     CLAUDE_API_KEY: 'test-claude-key',
-    CLAUDE_MODEL: 'claude-3-7',
+    CLAUDE_MODEL: 'claude-sonnet-4-5',
   };
 
   const createConfigService = (): ConfigService<AppEnvironment, true> =>
@@ -34,8 +34,8 @@ describe('AnthropicProviderService', () => {
       'run-abc',
     );
 
-    expect(plan.model).toBe('claude-3-7');
-    expect(plan.tools).toHaveLength(4);
+    expect(plan.model).toBe('claude-sonnet-4-5');
+    expect(plan.tools).toHaveLength(5);
     expect(plan.system).toContain('Check KPIs');
     expect(plan.messages[0].content).toContain('run-abc');
   });

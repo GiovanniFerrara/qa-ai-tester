@@ -7,11 +7,19 @@ import type { TaskSpec } from '../models/contracts';
 import type { AiProvider } from '../models/run';
 import { SchemaService } from './schema.service';
 
-export interface ClaudeToolDefinition {
-  name: string;
-  description: string;
-  input_schema: unknown;
-}
+export type ClaudeToolDefinition =
+  | {
+      type: 'computer_20250124';
+      name: 'computer';
+      display_width_px: number;
+      display_height_px: number;
+      display_number: number;
+    }
+  | {
+      name: string;
+      description: string;
+      input_schema: unknown;
+    };
 
 export interface ClaudePlan {
   model: string;
@@ -42,7 +50,7 @@ export class AnthropicProviderService {
     return (
       this.configService.get('CLAUDE_MODEL', {
         infer: true,
-      }) ?? 'claude-3-7-sonnet-20250219'
+      }) ?? 'claude-sonnet-4-5-sonnet-20250219'
     );
   }
 
@@ -53,10 +61,11 @@ export class AnthropicProviderService {
   buildPlan(task: TaskSpec, runId: string): ClaudePlan {
     const toolDefinitions: ClaudeToolDefinition[] = [
       {
-        name: 'computer_action',
-        description:
-          'Execute mouse and keyboard actions through the Playwright adapter and receive screenshots and telemetry.',
-        input_schema: this.schemaService.getComputerActionSchema(),
+        type: 'computer_20250124',
+        name: 'computer',
+        display_width_px: 1366,
+        display_height_px: 768,
+        display_number: 0,
       },
       {
         name: 'dom_snapshot',
@@ -66,12 +75,27 @@ export class AnthropicProviderService {
       {
         name: 'kpi_oracle',
         description: 'Retrieve expected KPI values to compare with visible dashboard metrics.',
-        input_schema: this.schemaService.getKpiOracleSchema(),
+        input_schema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            filters: {
+              type: 'object',
+              additionalProperties: true,
+              description: 'Optional filters or contextual hints for KPI resolution.',
+            },
+          },
+        },
       },
       {
         name: 'assert',
         description: 'Persist a structured assertion / finding with supporting evidence.',
         input_schema: this.schemaService.getAssertToolSchema(),
+      },
+      {
+        name: 'qa_report_submit',
+        description: 'Submit the final QAReport JSON that summarizes the run.',
+        input_schema: this.schemaService.getQaReportSchema(),
       },
     ];
 
@@ -79,8 +103,8 @@ export class AnthropicProviderService {
       'You are an AI QA analyst equipped with computer-use capabilities.',
       `Task: ${task.goal}`,
       `The authenticated browser is already at base url; navigate to ${task.route}.`,
-      'Use tool calls to inspect the dashboard, compare values with kpi_oracle, and log findings.',
-      'When finished, produce a final QAReport JSON strictly matching the schema provided separately in the orchestrator.',
+      'Use tool calls to inspect the dashboard, compare values with kpi_oracle, and log findings via assert.',
+      'When finished, call the qa_report_submit tool to deliver the final QAReport JSON.',
     ].join('\n');
 
     return {

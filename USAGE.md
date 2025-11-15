@@ -53,7 +53,7 @@ BASE_URL=https://your-app-to-test.com
 # Settings
 DEFAULT_PROVIDER=openai
 OPENAI_MODEL=computer-use-preview
-CLAUDE_MODEL=claude-3-7-sonnet-20250219
+CLAUDE_MODEL=claude-sonnet-4-5-sonnet-20250219
 ```
 
 ### 3. Start the System
