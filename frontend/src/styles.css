@@ -630,6 +630,159 @@ button:disabled {
   background: #f1f5f9;
 }
 
+.runs-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.summary-card span {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.summary-card strong {
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.severity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.severity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.severity-meter {
+  flex: 1;
+  background: #e5e7eb;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.severity-meter-fill {
+  height: 100%;
+}
+
+.kpi-alerts,
+.urgent-list,
+.provider-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.kpi-alerts li,
+.urgent-list li,
+.provider-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.severity-pill {
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.severity-pill.severity-blocker,
+.severity-meter-fill.severity-blocker {
+  background: #b91c1c;
+}
+
+.severity-pill.severity-critical,
+.severity-meter-fill.severity-critical {
+  background: #dc2626;
+}
+
+.severity-pill.severity-major,
+.severity-meter-fill.severity-major {
+  background: #f97316;
+}
+
+.severity-pill.severity-minor,
+.severity-meter-fill.severity-minor {
+  background: #0d9488;
+}
+
+.severity-pill.severity-info,
+.severity-meter-fill.severity-info {
+  background: #64748b;
+}
+
+.provider-list li span {
+  color: #475569;
+}
+
+.provider-list li strong {
+  font-size: 1.1rem;
+  color: #111827;
+}
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .finding-header {
   display: flex;
   justify-content: space-between;

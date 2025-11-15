@@ -51,4 +51,9 @@ export interface StoredRunRecord {
   report?: QaReport;
   artifacts?: RunArtifacts;
   baseUrlOverride?: string;
+  summary?: {
+    findings: number;
+    severityCounts: Record<string, number>;
+    kpiAlerts: number;
+  };
 }

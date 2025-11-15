@@ -57,6 +57,32 @@ export const api = {
   },
   
   getRuns: () => fetchJSON<RunState[]>(`${API_BASE}/runs`),
+  getRunSummary: () =>
+    fetchJSON<{
+      totals: {
+        total: number;
+        completed: number;
+        running: number;
+        failed: number;
+        passed: number;
+        avgDurationMs: number;
+        findings: number;
+      };
+      severity: Record<string, number>;
+      urgentFindings: Array<{
+        runId: string;
+        assertion: string;
+        severity: string;
+        observed: string;
+      }>;
+      kpiAlerts: Array<{
+        runId: string;
+        label: string;
+        expected: string;
+        observed: string;
+      }>;
+      providerUsage: Record<string, number>;
+    }>(`${API_BASE}/runs/summary`),
 
   createRun: (data: CreateRunRequest) =>
     fetchJSON<RunState>(`${API_BASE}/runs`, {

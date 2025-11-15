@@ -19,6 +19,11 @@ export class RunsController {
     return this.orchestratorService.listRuns();
   }
 
+  @Get('summary')
+  getSummary() {
+    return this.orchestratorService.getRunSummary();
+  }
+
   @Get(':runId')
   getRun(@Param('runId') runId: string) {
     return this.orchestratorService.getRun(runId);
@@ -40,4 +45,5 @@ export class RunsController {
       throw error;
     }
   }
+
 }

@@ -100,6 +100,104 @@ export class OrchestratorService {
     return [...this.runs.values()];
   }
 
+  getRunSummary(): {
+    totals: {
+      total: number;
+      completed: number;
+      running: number;
+      failed: number;
+      passed: number;
+      avgDurationMs: number;
+      findings: number;
+    };
+    severity: Record<string, number>;
+    urgentFindings: Array<{
+      runId: string;
+      assertion: string;
+      severity: string;
+      observed: string;
+    }>;
+    kpiAlerts: Array<{
+      runId: string;
+      label: string;
+      expected: string;
+      observed: string;
+    }>;
+    providerUsage: Record<string, number>;
+  } {
+    const runs = [...this.runs.values()];
+    const totals = {
+      total: runs.length,
+      completed: runs.filter((run) => run.status === 'completed').length,
+      running: runs.filter((run) => run.status === 'running').length,
+      failed: runs.filter((run) => run.status === 'failed').length,
+      passed: runs.filter((run) => run.report?.status === 'passed').length,
+      avgDurationMs: 0,
+      findings: runs.reduce((acc, run) => acc + (run.report?.findings.length ?? 0), 0),
+    };
+    const durations = runs
+      .map((run) => run.report?.costs.durationMs)
+      .filter((value): value is number => typeof value === 'number');
+    if (durations.length > 0) {
+      totals.avgDurationMs = Math.round(
+        durations.reduce((sum, val) => sum + val, 0) / durations.length,
+      );
+    }
+
+    const severity: Record<string, number> = {
+      blocker: 0,
+      critical: 0,
+      major: 0,
+      minor: 0,
+      info: 0,
+    };
+    runs.forEach((run) => {
+      run.report?.findings.forEach((finding) => {
+        severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
+      });
+    });
+
+    const urgentFindings = runs
+      .flatMap((run) =>
+        (run.report?.findings ?? []).map((finding) => ({ finding, run })),
+      )
+      .filter(({ finding }) => ['blocker', 'critical'].includes(finding.severity))
+      .slice(0, 10)
+      .map(({ finding, run }) => ({
+        runId: run.runId,
+        assertion: finding.assertion,
+        severity: finding.severity,
+        observed: finding.observed,
+      }));
+
+    const kpiAlerts = runs
+      .flatMap((run) =>
+        (run.report?.kpiTable ?? [])
+          .filter((kpi) => kpi.status !== 'ok')
+          .map((kpi) => ({ kpi, run })),
+      )
+      .slice(0, 10)
+      .map(({ kpi, run }) => ({
+        runId: run.runId,
+        label: kpi.label,
+        expected: kpi.expected,
+        observed: kpi.observed,
+      }));
+
+    const providerUsage = runs.reduce<Record<string, number>>((acc, run) => {
+      acc[run.provider] = (acc[run.provider] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      totals,
+      severity,
+      urgentFindings,
+      kpiAlerts,
+      providerUsage,
+    };
+  }
+
   private persistRuns(): void {
     this.runStorage.saveRuns([...this.runs.values()]);
   }

@@ -159,6 +159,17 @@ export class RunExecutionService {
         totalToolCalls,
         model: modelUsed,
         baseUrlOverride: baseUrlOverride ?? null,
+        summary: {
+          findings: report.findings.length,
+          severityCounts: report.findings.reduce<Record<string, number>>(
+            (acc, finding) => {
+              acc[finding.severity] = (acc[finding.severity] ?? 0) + 1;
+              return acc;
+            },
+            {},
+          ),
+          kpiAlerts: (report.kpiTable ?? []).filter((kpi) => kpi.status !== 'ok').length,
+        },
       };
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
 
