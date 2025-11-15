@@ -156,7 +156,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
           </button>
         )}
         <button type="button" onClick={handleContextualize} disabled={isBusy}>
-          {generating ? "Creating Draft…" : "Prefill Task"}
+          {generating ? "Creating Draft…" : "Create Task Draft"}
         </button>
       </div>
       {recording && (
