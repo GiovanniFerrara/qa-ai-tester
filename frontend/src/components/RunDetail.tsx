@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
-import type { QAReport, RunEvent, RunState } from "../types";
+import type { QAReport, RunEvent, RunState, TaskSpec } from "../types";
 
 interface ScreenshotEntry {
   image: string;
@@ -14,6 +14,7 @@ export function RunDetail() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
   const [run, setRun] = useState<RunState | null>(null);
+  const [task, setTask] = useState<TaskSpec | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [screenshots, setScreenshots] = useState<ScreenshotEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +43,18 @@ export function RunDetail() {
         if (isMounted) {
           setRun(data);
           setError(null);
+
+          if (data.taskId && !task) {
+            try {
+              const tasks = await api.getTasks();
+              const foundTask = tasks.find((t) => t.id === data.taskId);
+              if (foundTask) {
+                setTask(foundTask);
+              }
+            } catch {
+              // Task fetch failed, continue without task details
+            }
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -267,8 +280,8 @@ export function RunDetail() {
       <div className="card">
         <div className="run-detail-header">
           <div>
-            <h2>Run {runId.slice(0, 8)}</h2>
-            <p>Task: {run?.taskId ?? "unknown"}</p>
+            <h2>{task?.name || run?.taskId || "Unknown Task"}</h2>
+            <p>Run ID: {runId.slice(0, 8)}</p>
           </div>
           <div className="run-detail-meta">
             <span className={getStatusClass(run?.status ?? "running")}>

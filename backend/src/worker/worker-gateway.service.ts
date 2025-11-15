@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { chromium, type Browser, type BrowserContext, type Page, type Locator } from 'playwright';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { AppEnvironment } from '../config/environment';
@@ -108,16 +108,28 @@ export class WorkerGatewayService {
       `${Date.now()}-${action.action}.png`,
     );
 
-    const screenshotBuffer = await page.screenshot({
-      path: screenshotPath,
-      fullPage: false,
-    });
-    handle.screenshots.push(screenshotPath);
+    let screenshotBase64: string;
+    try {
+      const screenshotBuffer = await page.screenshot({
+        path: screenshotPath,
+        fullPage: false,
+      });
+      handle.screenshots.push(screenshotPath);
+      screenshotBase64 = screenshotBuffer.toString('base64');
+    } catch (error) {
+      const fallback = this.getFallbackScreenshotBase64();
+      await writeFile(screenshotPath, Buffer.from(fallback, 'base64'));
+      handle.screenshots.push(screenshotPath);
+      this.logger.warn(
+        `Failed to capture screenshot (${action.action}): ${(error as Error).message}. Using fallback image.`,
+      );
+      screenshotBase64 = fallback;
+    }
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
 
     return {
-      screenshot: screenshotBuffer.toString('base64'),
+      screenshot: screenshotBase64,
       viewport,
       consoleEvents: [],
       networkEvents: [],
@@ -350,5 +362,10 @@ export class WorkerGatewayService {
       default:
         break;
     }
+  }
+
+  private getFallbackScreenshotBase64(): string {
+    // Transparent 1x1 PNG
+    return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
   }
 }
