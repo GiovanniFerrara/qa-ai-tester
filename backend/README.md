@@ -90,7 +90,7 @@ CLAUDE_API_KEY=sk-ant-...your-anthropic-key
 DEFAULT_PROVIDER=openai
 
 # Model selection
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=computer-use-preview
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 
 # ============================================
@@ -146,7 +146,7 @@ KPI_TOLERANCE_PERCENT=1
 | `OPENAI_API_KEY` | Yes* | - | OpenAI API key for GPT models |
 | `CLAUDE_API_KEY` | Yes* | - | Anthropic API key for Claude models |
 | `DEFAULT_PROVIDER` | No | `openai` | Default AI provider (openai/anthropic) |
-| `OPENAI_MODEL` | No | `gpt-4` | OpenAI model to use |
+| `OPENAI_MODEL` | No | `computer-use-preview` | OpenAI model to use |
 | `CLAUDE_MODEL` | No | `claude-3-7-sonnet-20250219` | Anthropic model to use |
 | `BASE_URL` | Yes | - | Target application URL |
 | `PORT` | No | `3005` | Backend server port |
@@ -393,7 +393,7 @@ Content-Type: application/json
   "description": "Test homepage functionality and accessibility",
   "route": "/",
   "provider": "openai",
-  "model": "gpt-4"
+  "model": "computer-use-preview"
 }
 ```
 
@@ -423,7 +423,7 @@ Content-Type: application/json
 {
   "taskId": "task-id-here",
   "provider": "openai",
-  "model": "gpt-4"
+  "model": "computer-use-preview"
 }
 ```
 

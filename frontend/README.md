@@ -283,7 +283,7 @@ const newTask = await createTask({
   description: "Test homepage functionality",
   route: "/",
   provider: "openai",
-  model: "gpt-4"
+  model: "computer-use-preview"
 });
 
 // Update task
@@ -299,7 +299,7 @@ await deleteTask(taskId);
 const run = await startRun({
   taskId: "task-id",
   provider: "openai",
-  model: "gpt-4"
+  model: "computer-use-preview"
 });
 
 // Get all runs

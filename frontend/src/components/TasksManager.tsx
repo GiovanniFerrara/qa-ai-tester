@@ -28,6 +28,24 @@ export function TasksManager() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const toTaskInput = (task: TaskSpec): TaskInput => ({
+    name: task.name,
+    description: task.description ?? '',
+    goal: task.goal,
+    instructions: task.instructions ?? '',
+    route: task.route,
+    role: task.role,
+    provider: task.provider ?? 'openai',
+    model: task.model ?? '',
+    requireFindings: task.requireFindings ?? true,
+    budgets: {
+      maxToolCalls: task.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
+      maxTimeMs: task.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
+      maxScreenshots: task.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
+    },
+  });
 
   useEffect(() => {
     loadTasks();
@@ -57,22 +75,7 @@ export function TasksManager() {
 
   const handleEdit = (task: TaskSpec) => {
     setEditingTaskId(task.id);
-    setForm({
-      name: task.name,
-      description: task.description ?? '',
-      goal: task.goal,
-      instructions: task.instructions ?? '',
-      route: task.route,
-      role: task.role,
-      provider: task.provider ?? 'openai',
-      model: task.model ?? '',
-      requireFindings: task.requireFindings ?? true,
-      budgets: {
-        maxToolCalls: task.budgets?.maxToolCalls ?? defaultBudgets.maxToolCalls,
-        maxTimeMs: task.budgets?.maxTimeMs ?? defaultBudgets.maxTimeMs,
-        maxScreenshots: task.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
-      },
-    });
+    setForm(toTaskInput(task));
     setSuccess(null);
     setError(null);
   };
@@ -87,6 +90,27 @@ export function TasksManager() {
       await loadTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete task');
+    }
+  };
+
+  const handleClone = async (task: TaskSpec) => {
+    setError(null);
+    setSuccess(null);
+    setActionLoading(true);
+    try {
+      const clonePayload: TaskInput = {
+        ...toTaskInput(task),
+        name: `${task.name} (copy)`,
+      };
+      const created = await api.createTask(clonePayload);
+      setSuccess('Task cloned successfully.');
+      await loadTasks();
+      setEditingTaskId(created.id);
+      setForm(toTaskInput(created));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clone task');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -165,13 +189,29 @@ export function TasksManager() {
                   <span className="task-name">{task.name}</span>
                   <span className="task-route">{task.route}</span>
                 </button>
-                <button
-                  type="button"
-                  className="danger small"
-                  onClick={() => handleDelete(task.id)}
-                >
-                  Delete
-                </button>
+                <div className="tasks-actions">
+                  <button
+                    type="button"
+                    className="secondary small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClone(task);
+                    }}
+                    disabled={actionLoading}
+                  >
+                    Clone
+                  </button>
+                  <button
+                    type="button"
+                    className="danger small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(task.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -320,7 +360,7 @@ export function TasksManager() {
           </fieldset>
 
           <div className="form-actions">
-            <button type="submit" disabled={loading}>
+            <button type="submit" disabled={loading || actionLoading}>
               {loading ? 'Saving...' : editingTaskId ? 'Update Task' : 'Create Task'}
             </button>
             {editingTaskId && (

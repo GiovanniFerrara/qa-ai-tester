@@ -87,7 +87,7 @@ BASE_URL=https://your-app-to-test.com
 DEFAULT_PROVIDER=openai
 
 # AI model selection
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=computer-use-preview
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 
 # Authentication (optional - see Authentication Setup below)
@@ -247,7 +247,7 @@ curl -X POST http://localhost:3005/api/tasks \
     "description": "Test homepage functionality",
     "route": "/",
     "provider": "openai",
-    "model": "gpt-4"
+    "model": "computer-use-preview"
   }'
 ```
 
@@ -331,8 +331,8 @@ Each run generates comprehensive artifacts in [`backend/artifacts/{runId}/`](bac
 ### AI Model Selection
 
 **OpenAI Models:**
-- `gpt-4` - Most capable, best for complex testing
-- `gpt-4-turbo` - Faster, more cost-effective
+- `computer-use-preview` - Most capable, best for complex testing
+- `computer-use-preview-turbo` - Faster, more cost-effective
 - `o1-mini` - Optimized for reasoning tasks
 
 **Anthropic Models:**

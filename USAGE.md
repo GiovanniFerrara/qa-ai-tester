@@ -52,7 +52,7 @@ BASE_URL=https://your-app-to-test.com
 
 # Settings
 DEFAULT_PROVIDER=openai
-OPENAI_MODEL=gpt-4
+OPENAI_MODEL=computer-use-preview
 CLAUDE_MODEL=claude-3-7-sonnet-20250219
 ```
 
@@ -95,7 +95,7 @@ this.tasks.set('homepage-test', {
   name: 'Homepage QA Test',
   description: 'Test the homepage for bugs and usability issues',
   provider: 'openai',
-  model: 'gpt-4',
+  model: 'computer-use-preview',
 });
 ```
 
@@ -186,8 +186,8 @@ This saves authenticated session to `backend/playwright/.auth/analyst.json`
 ### Choosing AI Models
 
 **OpenAI Options:**
-- `gpt-4` - Most capable, slower, more expensive
-- `gpt-4-turbo` - Faster, cheaper
+- `computer-use-preview` - Most capable, slower, more expensive
+- `computer-use-preview-turbo` - Faster, cheaper
 - `gpt-3.5-turbo` - Fastest, cheapest, less capable
 
 **Anthropic Options:**
