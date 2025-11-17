@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TaskSpec } from "../types";
-import { api } from "../api";
+import { useTasks, useCreateRun } from "../hooks/useApi";
 import {
   Card,
   FormGroup,
@@ -16,7 +15,9 @@ import {
 import { TaskPreview, Hint } from "./RunForm.styled";
 
 export function RunForm() {
-  const [tasks, setTasks] = useState<TaskSpec[]>([]);
+  const navigate = useNavigate();
+  const { data: tasks = [], isLoading: tasksLoading } = useTasks();
+
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
@@ -26,28 +27,22 @@ export function RunForm() {
     }
     return localStorage.getItem("qa-tester-base-url") ?? "";
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const navigate = useNavigate();
+
+  const createRunMutation = useCreateRun({
+    onSuccess: (run) => {
+      setSuccess(`Run ${run.runId} started.`);
+      navigate(`/runs/${run.runId}`);
+    },
+  });
 
   useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const loadTasks = async () => {
-    try {
-      const data = await api.getTasks();
-      setTasks(data);
-      if (data.length > 0) {
-        setSelectedTaskId(data[0].id);
-        setProvider(data[0].provider ?? "");
-        setModel(data[0].model ?? "");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
+    if (tasks.length > 0 && !selectedTaskId) {
+      setSelectedTaskId(tasks[0].id);
+      setProvider(tasks[0].provider ?? "");
+      setModel(tasks[0].model ?? "");
     }
-  };
+  }, [tasks, selectedTaskId]);
 
   const handleTaskChange = (taskId: string) => {
     setSelectedTaskId(taskId);
@@ -58,27 +53,21 @@ export function RunForm() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
     setSuccess(null);
 
-    try {
-      const run = await api.createRun({
-        taskId: selectedTaskId,
-        provider: provider || undefined,
-        model: model || undefined,
-        baseUrl: baseUrl || undefined,
-      });
-      setSuccess(`Run ${run.runId} started.`);
-      navigate(`/runs/${run.runId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create run");
-    } finally {
-      setLoading(false);
-    }
+    createRunMutation.mutate({
+      taskId: selectedTaskId,
+      provider: provider || undefined,
+      model: model || undefined,
+      baseUrl: baseUrl || undefined,
+    });
   };
+
+  if (tasksLoading) {
+    return <Card>Loading tasks...</Card>;
+  }
 
   if (tasks.length === 0) {
     return (
@@ -97,7 +86,9 @@ export function RunForm() {
     <Card>
       <h2>Start New QA Run</h2>
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {createRunMutation.isError && (
+        <ErrorMessage>{createRunMutation.error.message}</ErrorMessage>
+      )}
       {success && <SuccessBanner>{success}</SuccessBanner>}
 
       <form onSubmit={handleSubmit}>
@@ -135,8 +126,8 @@ export function RunForm() {
           </Hint>
         </FormGroup>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? "Starting Run..." : "Start Run"}
+        <Button type="submit" disabled={createRunMutation.isPending}>
+          {createRunMutation.isPending ? "Starting Run..." : "Start Run"}
         </Button>
       </form>
 

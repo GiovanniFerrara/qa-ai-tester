@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../api";
+import { useMemo, useState } from "react";
 import type { TaskInput, TaskSpec } from "../types";
 import { QuickTaskPanel } from "./QuickTaskPanel";
 import {
@@ -9,6 +8,12 @@ import {
   SuccessBanner,
 } from "../styles/shared.styled";
 import * as S from "./TasksManager.styled";
+import {
+  useTasks,
+  useCreateTask,
+  useUpdateTask,
+  useDeleteTask,
+} from "../hooks/useApi";
 
 const defaultBudgets = {
   maxToolCalls: 200,
@@ -31,14 +36,30 @@ const emptyTask: TaskInput = {
 };
 
 export function TasksManager() {
-  const [tasks, setTasks] = useState<TaskSpec[]>([]);
   const [form, setForm] = useState<TaskInput>(emptyTask);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const { data: tasks = [], isLoading, error } = useTasks();
+  const createTask = useCreateTask({
+    onSuccess: () => {
+      setSuccess("Task created successfully.");
+      resetForm();
+    },
+  });
+  const updateTask = useUpdateTask({
+    onSuccess: () => {
+      setSuccess("Task updated successfully.");
+      resetForm();
+    },
+  });
+  const deleteTask = useDeleteTask({
+    onSuccess: () => {
+      setSuccess("Task deleted.");
+      resetForm();
+    },
+  });
 
   const toTaskInput = (task: TaskSpec): TaskInput => ({
     name: task.name,
@@ -59,23 +80,10 @@ export function TasksManager() {
     },
   });
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
   const sortedTasks = useMemo(
     () => [...tasks].sort((a, b) => a.name.localeCompare(b.name)),
     [tasks]
   );
-
-  const loadTasks = async () => {
-    try {
-      const data = await api.getTasks();
-      setTasks(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
-    }
-  };
 
   const resetForm = () => {
     setForm({
@@ -89,48 +97,30 @@ export function TasksManager() {
     setEditingTaskId(task.id);
     setForm(toTaskInput(task));
     setSuccess(null);
-    setError(null);
   };
 
-  const handleDelete = async (taskId: string) => {
+  const handleDelete = (taskId: string) => {
     if (!window.confirm("Delete this task? This action cannot be undone."))
       return;
-    try {
-      await api.deleteTask(taskId);
-      setSuccess("Task deleted.");
-      setError(null);
-      resetForm();
-      await loadTasks();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete task");
-    }
+    deleteTask.mutate(taskId);
   };
 
-  const handleClone = async (task: TaskSpec) => {
-    setError(null);
-    setSuccess(null);
-    setActionLoading(true);
-    try {
-      const clonePayload: TaskInput = {
-        ...toTaskInput(task),
-        name: `${task.name} (copy)`,
-      };
-      const created = await api.createTask(clonePayload);
-      setSuccess("Task cloned successfully.");
-      await loadTasks();
-      setEditingTaskId(created.id);
-      setForm(toTaskInput(created));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to clone task");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleClone = (task: TaskSpec) => {
+    const clonePayload: TaskInput = {
+      ...toTaskInput(task),
+      name: `${task.name} (copy)`,
+    };
+    createTask.mutate(clonePayload, {
+      onSuccess: (created) => {
+        setSuccess("Task cloned successfully.");
+        setEditingTaskId(created.id);
+        setForm(toTaskInput(created));
+      },
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
     setSuccess(null);
 
     const payload: TaskInput = {
@@ -146,20 +136,10 @@ export function TasksManager() {
       },
     };
 
-    try {
-      if (editingTaskId) {
-        await api.updateTask(editingTaskId, payload);
-        setSuccess("Task updated successfully.");
-      } else {
-        await api.createTask(payload);
-        setSuccess("Task created successfully.");
-      }
-      await loadTasks();
-      resetForm();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save task");
-    } finally {
-      setLoading(false);
+    if (editingTaskId) {
+      updateTask.mutate({ taskId: editingTaskId, data: payload });
+    } else {
+      createTask.mutate(payload);
     }
   };
 
@@ -203,11 +183,14 @@ export function TasksManager() {
           draft.budgets?.maxScreenshots ?? defaultBudgets.maxScreenshots,
       },
     });
-    setError(null);
     setSuccess(
       "Task fields populated from quick task draft. Review and save when ready."
     );
   };
+
+  const isActionLoading =
+    createTask.isPending || updateTask.isPending || deleteTask.isPending;
+  const actionError = createTask.error || updateTask.error || deleteTask.error;
 
   return (
     <S.TasksLayout>
@@ -236,7 +219,7 @@ export function TasksManager() {
                       e.stopPropagation();
                       handleClone(task);
                     }}
-                    disabled={actionLoading}
+                    disabled={isActionLoading}
                   >
                     Clone
                   </Button>
@@ -261,7 +244,9 @@ export function TasksManager() {
         <QuickTaskPanel onPrefill={handleQuickPrefill} />
         <h2>{editingTaskId ? "Edit Task" : "Create Task"}</h2>
 
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {(error || actionError) && (
+          <ErrorMessage>{error?.message || actionError?.message}</ErrorMessage>
+        )}
         {success && <SuccessBanner>{success}</SuccessBanner>}
 
         <S.TaskFormGrid onSubmit={handleSubmit}>
@@ -450,8 +435,8 @@ export function TasksManager() {
           </S.AdvancedSettingsSection>
 
           <S.FormActions>
-            <Button type="submit" disabled={loading || actionLoading}>
-              {loading
+            <Button type="submit" disabled={isActionLoading}>
+              {isActionLoading
                 ? "Saving..."
                 : editingTaskId
                   ? "Update Task"

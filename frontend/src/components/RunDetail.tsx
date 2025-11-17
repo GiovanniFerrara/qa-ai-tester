@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
-import type { QAReport, RunEvent, RunState, TaskSpec } from "../types";
+import { useRun, useTasks } from "../hooks/useApi";
+import type { QAReport, RunEvent, RunState } from "../types";
 import {
   Card,
   Button,
@@ -21,12 +22,27 @@ interface ScreenshotEntry {
 export function RunDetail() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
-  const [run, setRun] = useState<RunState | null>(null);
-  const [task, setTask] = useState<TaskSpec | null>(null);
+
+  const {
+    data: run,
+    isLoading: runLoading,
+    error: runError,
+    refetch: refetchRun,
+  } = useRun(runId ?? "", {
+    enabled: !!runId,
+  });
+
+  const { data: tasks = [] } = useTasks({
+    enabled: !!run?.taskId,
+  });
+
+  const task = useMemo(
+    () => tasks.find((t) => t.id === run?.taskId) ?? null,
+    [tasks, run?.taskId]
+  );
+
   const [events, setEvents] = useState<RunEvent[]>([]);
   const [screenshots, setScreenshots] = useState<ScreenshotEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
@@ -42,76 +58,11 @@ export function RunDetail() {
     let isMounted = true;
     let eventSource: EventSource | null = null;
 
-    const refreshRun = async (showLoading: boolean) => {
-      if (showLoading) {
-        setLoading(true);
-      }
-      try {
-        const data = await api.getRun(runId);
-        if (isMounted) {
-          setRun(data);
-          setError(null);
-
-          if (data.taskId && !task) {
-            try {
-              const tasks = await api.getTasks();
-              const foundTask = tasks.find((t) => t.id === data.taskId);
-              if (foundTask) {
-                setTask(foundTask);
-              }
-            } catch {
-              // Task fetch failed, continue without task details
-            }
-          }
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : "Failed to load run");
-        }
-      } finally {
-        if (isMounted && showLoading) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void refreshRun(true);
-
     eventSource = api.subscribeToRunEvents(runId, (incoming) => {
       setEvents((prev) => [...prev.slice(-1000), incoming]);
 
       if (incoming.payload) {
-        const payload = incoming.payload;
-        setRun((prev) => {
-          const payloadReport = payload.report as QAReport | undefined;
-          const payloadStatus = payload.runStatus as
-            | RunState["status"]
-            | undefined;
-          const payloadFinished = payload.finishedAt as string | undefined;
-
-          if (!prev && !payloadReport) {
-            return prev;
-          }
-
-          const placeholder: RunState = {
-            runId,
-            taskId: payloadReport?.taskId ?? "unknown",
-            provider: "unknown",
-            status: payloadStatus ?? "running",
-            startedAt: payloadReport?.startedAt ?? incoming.timestamp,
-          };
-
-          const base = prev ?? placeholder;
-
-          return {
-            ...base,
-            status: payloadStatus ?? base.status,
-            finishedAt:
-              payloadFinished ?? base.finishedAt ?? payloadReport?.finishedAt,
-            taskId: payloadReport?.taskId ?? base.taskId,
-            report: payloadReport ?? base.report,
-          };
-        });
+        void refetchRun();
       }
 
       if (
@@ -144,7 +95,7 @@ export function RunDetail() {
             clearTimeout(completionRefreshTimer.current);
           }
           completionRefreshTimer.current = setTimeout(() => {
-            void refreshRun(false);
+            void refetchRun();
           }, 750);
         }
       }
@@ -201,6 +152,9 @@ export function RunDetail() {
   const getKpiStatusClass = (status: string) => {
     return `kpi-status kpi-status-${status}`;
   };
+
+  const loading = runLoading;
+  const error = runError;
 
   const toArtifactUrl = useCallback((fullPath: string) => {
     if (!fullPath) {
@@ -277,7 +231,7 @@ export function RunDetail() {
   if (error && !run) {
     return (
       <Card>
-        <ErrorMessage>Error: {error}</ErrorMessage>
+        <ErrorMessage>Error: {error.message}</ErrorMessage>
         <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
       </Card>
     );
@@ -313,7 +267,9 @@ export function RunDetail() {
           </span>
         </S.RunTimes>
         {error && run && (
-          <ErrorMessage style={{ marginTop: "1rem" }}>{error}</ErrorMessage>
+          <ErrorMessage style={{ marginTop: "1rem" }}>
+            {error.message}
+          </ErrorMessage>
         )}
         {run?.error && (
           <ErrorMessage style={{ marginTop: "1rem" }}>{run.error}</ErrorMessage>

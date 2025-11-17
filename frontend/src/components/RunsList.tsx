@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { RunState, TaskSpec } from "../types";
-import { api } from "../api";
+import { TaskSpec } from "../types";
+import { useRuns, useTasks, useRunSummary } from "../hooks/useApi";
 import {
   Card,
   Button,
@@ -13,68 +13,41 @@ import {
 import * as S from "./RunsList.styled";
 
 export function RunsList() {
-  const [runs, setRuns] = useState<RunState[]>([]);
-  const [summary, setSummary] = useState<{
-    totals: {
-      total: number;
-      completed: number;
-      running: number;
-      failed: number;
-      passed: number;
-      avgDurationMs: number;
-      findings: number;
-    };
-    severity: Record<string, number>;
-    urgentFindings: Array<{
-      runId: string;
-      assertion: string;
-      severity: string;
-      observed: string;
-    }>;
-    kpiAlerts: Array<{
-      runId: string;
-      label: string;
-      expected: string;
-      observed: string;
-    }>;
-    providerUsage: Record<string, number>;
-  } | null>(null);
-  const [tasks, setTasks] = useState<Map<string, TaskSpec>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const {
+    data: runs = [],
+    isLoading: runsLoading,
+    error: runsError,
+    refetch: refetchRuns,
+  } = useRuns({
+    refetchInterval: 5000,
+  });
 
-  const loadData = async () => {
-    try {
-      setError(null);
-      const [runsData, tasksData, summaryData] = await Promise.all([
-        api.getRuns(),
-        api.getTasks(),
-        api.getRunSummary(),
-      ]);
+  const { data: tasksData = [], isLoading: tasksLoading } = useTasks({
+    refetchInterval: 5000,
+  });
 
-      const tasksMap = new Map(tasksData.map((task) => [task.id, task]));
-      setTasks(tasksMap);
+  const { data: summary, isLoading: summaryLoading } = useRunSummary({
+    refetchInterval: 5000,
+  });
 
-      setRuns(
-        runsData.sort(
-          (a, b) =>
-            new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-        )
-      );
-      setSummary(summaryData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load runs");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const tasks = useMemo(
+    () => new Map(tasksData.map((task) => [task.id, task])),
+    [tasksData]
+  );
+
+  const sortedRuns = useMemo(
+    () =>
+      [...runs].sort(
+        (a, b) =>
+          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
+      ),
+    [runs]
+  );
+
+  const loading = runsLoading || tasksLoading || summaryLoading;
+  const error = runsError;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -84,16 +57,20 @@ export function RunsList() {
     if (summary) {
       return summary;
     }
-    const total = runs.length;
-    const running = runs.filter((run) => run.status === "running").length;
-    const failed = runs.filter((run) => run.status === "failed").length;
-    const completed = runs.filter((run) => run.status === "completed").length;
-    const passed = runs.filter((run) => run.report?.status === "passed").length;
-    const findings = runs.reduce(
+    const total = sortedRuns.length;
+    const running = sortedRuns.filter((run) => run.status === "running").length;
+    const failed = sortedRuns.filter((run) => run.status === "failed").length;
+    const completed = sortedRuns.filter(
+      (run) => run.status === "completed"
+    ).length;
+    const passed = sortedRuns.filter(
+      (run) => run.report?.status === "passed"
+    ).length;
+    const findings = sortedRuns.reduce(
       (acc, run) => acc + (run.report?.findings.length ?? 0),
       0
     );
-    const durations = runs
+    const durations = sortedRuns
       .map((run) => run.report?.costs.durationMs)
       .filter((value): value is number => typeof value === "number");
     const avgDurationMs =
@@ -120,7 +97,7 @@ export function RunsList() {
       observed: string;
     }> = [];
 
-    runs.forEach((run) => {
+    sortedRuns.forEach((run) => {
       run.report?.findings.forEach((finding) => {
         severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
         if (
@@ -159,12 +136,12 @@ export function RunsList() {
       severity,
       urgentFindings: urgent,
       kpiAlerts,
-      providerUsage: runs.reduce<Record<string, number>>((acc, run) => {
+      providerUsage: sortedRuns.reduce<Record<string, number>>((acc, run) => {
         acc[run.provider] = (acc[run.provider] ?? 0) + 1;
         return acc;
       }, {}),
     };
-  }, [summary, runs]);
+  }, [summary, sortedRuns]);
 
   const severityTotals = derivedSummary.severity;
   const urgentFindings = derivedSummary.urgentFindings ?? [];
@@ -185,13 +162,13 @@ export function RunsList() {
   if (error) {
     return (
       <Card>
-        <ErrorMessage>Error: {error}</ErrorMessage>
-        <Button onClick={loadData}>Retry</Button>
+        <ErrorMessage>Error: {error.message}</ErrorMessage>
+        <Button onClick={() => refetchRuns()}>Retry</Button>
       </Card>
     );
   }
 
-  if (runs.length === 0) {
+  if (sortedRuns.length === 0) {
     return (
       <Card>
         <EmptyState>
@@ -355,7 +332,7 @@ export function RunsList() {
       <Card>
         <h2>QA Run History</h2>
         <S.RunsListContainer>
-          {runs.map((run) => {
+          {sortedRuns.map((run) => {
             const task = tasks.get(run.taskId);
             const taskName = task?.name || run.taskId;
             return (

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "../api";
+import { useTranscribeAudio, useContextualizeTask } from "../hooks/useApi";
 import type { TaskInput } from "../types";
 import {
   Button,
@@ -21,11 +21,8 @@ interface QuickTaskPanelProps {
 
 export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
   const [prompt, setPrompt] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [generating, setGenerating] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -33,6 +30,23 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
 
   const recordingSupported =
     typeof window !== "undefined" && "MediaRecorder" in window;
+
+  const transcribeMutation = useTranscribeAudio({
+    onSuccess: (result) => {
+      setPrompt((prev) => {
+        if (!prev) return result.text;
+        return `${prev.trim()}\n${result.text}`;
+      });
+      setStatus("Transcription added to the text area.");
+    },
+  });
+
+  const contextualizeMutation = useContextualizeTask({
+    onSuccess: (draft) => {
+      onPrefill(draft);
+      setStatus("Task form pre-filled. Review and save when ready.");
+    },
+  });
 
   useEffect(() => {
     return () => {
@@ -43,7 +57,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
 
   const handleRecordToggle = async () => {
     if (!recordingSupported) {
-      setError("MediaRecorder is not supported in this browser.");
+      setStatus(null);
       return;
     }
 
@@ -53,8 +67,9 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
     }
 
     try {
-      setError(null);
       setStatus(null);
+      transcribeMutation.reset();
+      contextualizeMutation.reset();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
@@ -67,12 +82,12 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
         }
       };
 
-      recorder.onerror = (event) => {
-        setError(event.error?.message ?? "Recorder error");
+      recorder.onerror = () => {
         setRecording(false);
+        setStatus(null);
       };
 
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         setRecording(false);
         stream.getTracks().forEach((track) => track.stop());
         if (chunksRef.current.length === 0) {
@@ -82,62 +97,30 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
           type: recorder.mimeType || "audio/webm",
         });
         chunksRef.current = [];
-        await handleTranscription(blob);
+        setStatus("Transcribing audio…");
+        transcribeMutation.mutate(blob);
       };
 
       recorder.start();
       setRecording(true);
       setStatus("Recording...");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to access microphone."
-      );
+    } catch {
+      setStatus(null);
     }
   };
 
-  const handleTranscription = async (blob: Blob) => {
-    try {
-      setTranscribing(true);
-      setStatus("Transcribing audio…");
-      const result = await api.transcribeAudio(blob);
-      setPrompt((prev) => {
-        if (!prev) return result.text;
-        return `${prev.trim()}\n${result.text}`;
-      });
-      setStatus("Transcription added to the text area.");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to transcribe audio."
-      );
-    } finally {
-      setTranscribing(false);
-    }
-  };
-
-  const handleContextualize = async () => {
+  const handleContextualize = () => {
     if (!prompt.trim()) {
-      setError("Please provide a short description first.");
       return;
     }
 
-    try {
-      setGenerating(true);
-      setError(null);
-      setStatus("Generating task draft…");
-      const draft = await api.contextualizeTask({ prompt });
-      onPrefill(draft);
-      setStatus("Task form pre-filled. Review and save when ready.");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to contextualize task."
-      );
-      setStatus(null);
-    } finally {
-      setGenerating(false);
-    }
+    setStatus("Generating task draft…");
+    contextualizeMutation.mutate({ prompt });
   };
 
-  const isBusy = transcribing || generating;
+  const isBusy =
+    transcribeMutation.isPending || contextualizeMutation.isPending;
+  const error = transcribeMutation.error || contextualizeMutation.error;
 
   return (
     <QuickTaskPanelWrapper>
@@ -147,7 +130,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
           Record or type a short request and let AI fill out the full task form.
         </p>
       </QuickTaskHeader>
-      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {error && <ErrorMessage>{error.message}</ErrorMessage>}
       {status && !error && <SuccessBanner>{status}</SuccessBanner>}
       <QuickTaskTextarea
         value={prompt}
@@ -168,7 +151,9 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
           </IconButton>
         )}
         <Button type="button" onClick={handleContextualize} disabled={isBusy}>
-          {generating ? "Creating Draft…" : "Create Task Draft"}
+          {contextualizeMutation.isPending
+            ? "Creating Draft…"
+            : "Create Task Draft"}
         </Button>
       </QuickTaskActions>
       {recording && (
@@ -176,12 +161,14 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
           🔴 Recording in progress…
         </QuickTaskStatus>
       )}
-      {!recording && transcribing && (
+      {!recording && transcribeMutation.isPending && (
         <QuickTaskStatus>Transcribing audio…</QuickTaskStatus>
       )}
-      {!recording && !transcribing && generating && (
-        <QuickTaskStatus>Contextualizing task…</QuickTaskStatus>
-      )}
+      {!recording &&
+        !transcribeMutation.isPending &&
+        contextualizeMutation.isPending && (
+          <QuickTaskStatus>Contextualizing task…</QuickTaskStatus>
+        )}
     </QuickTaskPanelWrapper>
   );
 }

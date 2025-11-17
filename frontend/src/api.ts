@@ -1,4 +1,4 @@
-import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent } from './types';
+import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent, ApiError, ApiException } from './types';
 
 const API_BASE = '/api';
 
@@ -17,8 +17,26 @@ async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
 
   if (!response.ok) {
-    const error = await response.text().catch(() => response.statusText);
-    throw new Error(`HTTP ${response.status}: ${error}`);
+    let errorData: ApiError;
+    try {
+      errorData = await response.json();
+    } catch {
+      throw new ApiException(
+        response.status,
+        response.statusText,
+        response.statusText
+      );
+    }
+
+    const message = Array.isArray(errorData.message)
+      ? errorData.message.join(', ')
+      : errorData.message;
+
+    throw new ApiException(
+      errorData.statusCode,
+      message,
+      errorData.error
+    );
   }
 
   return response.json();

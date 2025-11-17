@@ -140,3 +140,20 @@ export interface RunEvent {
   payload?: RunEventPayload;
   timestamp: string;
 }
+
+export interface ApiError {
+  statusCode: number;
+  message: string | string[];
+  error?: string;
+}
+
+export class ApiException extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public error?: string
+  ) {
+    super(message);
+    this.name = 'ApiException';
+  }
+}
