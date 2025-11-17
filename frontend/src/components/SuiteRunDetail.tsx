@@ -163,7 +163,7 @@ export function SuiteRunDetail() {
             >
               <S.TaskRunHeader>
                 <S.TaskRunTitle>
-                  <S.TaskId>Task: {item.taskId}</S.TaskId>
+                  <S.TaskId>{item.taskName}</S.TaskId>
                 </S.TaskRunTitle>
                 <S.TaskRunStatus status={item.status}>
                   {item.status === "completed" && "✓ Completed"}

@@ -134,7 +134,7 @@ export function RunsList() {
         }
       });
       (run.report?.kpiTable ?? []).forEach((kpi) => {
-        if (!kpi.dismissal && kpi.status !== "ok" && kpiAlerts.length < 10) {
+        if (!kpi.dismissal && kpi.status !== "ok" && kpiAlerts.length < 30) {
           kpiAlerts.push({
             runId: run.runId,
             label: kpi.label,

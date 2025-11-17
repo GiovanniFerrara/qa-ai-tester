@@ -292,9 +292,12 @@ export class OrchestratorService {
 
     const startTask = async (taskId: string): Promise<string | null> => {
       try {
+        const task = this.taskRegistry.get(taskId);
+        const taskName = task?.name ?? taskId;
         const runRecord = await this.startRun(taskId, undefined, effectiveBaseUrl);
         record.items.push({
           taskId,
+          taskName,
           runId: runRecord.runId,
           status: runRecord.status,
         });
@@ -302,8 +305,11 @@ export class OrchestratorService {
         this.attachCollectionRunWatcher(collectionRunId, runRecord.runId);
         return runRecord.runId;
       } catch (error) {
+        const task = this.taskRegistry.get(taskId);
+        const taskName = task?.name ?? taskId;
         record.items.push({
           taskId,
+          taskName,
           status: 'failed',
           error: (error as Error).message,
         });

@@ -144,6 +144,7 @@ export class AnthropicActionMapper {
       return null;
     }
     const upper = value.toUpperCase();
+    const upperCompact = upper.replace(/[\s_-]+/g, '');
     const directMap: Record<string, string> = {
       CTRL: 'Control',
       CONTROL: 'Control',
@@ -176,6 +177,10 @@ export class AnthropicActionMapper {
       END: 'End',
       CAPSLOCK: 'CapsLock',
     };
+
+    if (directMap[upperCompact]) {
+      return directMap[upperCompact];
+    }
 
     if (directMap[upper]) {
       return directMap[upper];

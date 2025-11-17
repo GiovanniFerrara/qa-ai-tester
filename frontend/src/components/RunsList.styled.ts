@@ -160,6 +160,8 @@ export const KpiAlerts = styled.ul`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.md};
+  max-height: 400px;
+  overflow-y: auto;
 
   li {
     display: flex;
@@ -191,6 +193,8 @@ export const UrgentList = styled.ul`
   display: flex;
   flex-direction: column;
   gap: ${theme.spacing.md};
+  max-height: 400px;
+  overflow-y: auto;
 
   li {
     display: flex;

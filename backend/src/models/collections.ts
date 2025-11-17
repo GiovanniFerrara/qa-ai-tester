@@ -20,6 +20,7 @@ export type TaskCollection = z.infer<typeof TaskCollectionSchema>;
 
 export interface CollectionRunItem {
   taskId: string;
+  taskName: string;
   runId?: string;
   status: RunStatus;
   error?: string;
