@@ -48,16 +48,16 @@ export const theme = {
       blocker: '#b91c1c',
       critical: '#dc2626',
       major: '#f97316',
-      minor: '#0d9488',
-      info: '#64748b'
+      minor: '#64748b',
+      info: '#0d9488'
     },
     
     findingBg: {
       blocker: '#fee2e2',
       critical: '#fee2e2',
       major: '#fff4e6',
-      minor: '#e6fffa',
-      info: '#f1f5f9'
+      minor: '#f1f5f9',
+      info: '#e6fffa'
     },
     
     badge: {

@@ -93,14 +93,14 @@ export const EventType = styled.span<{ type?: string }>`
   ${props => {
     if (props.type === 'screenshot') {
       return `
-        background: #e3f2fd;
-        color: #1976d2;
+        background: ${theme.colors.event.screenshot.bg};
+        color: ${theme.colors.event.screenshot.text};
       `;
     }
     if (props.type === 'status') {
       return `
-        background: #f3e5f5;
-        color: #7b1fa2;
+        background: ${theme.colors.badge.model.bg};
+        color: ${theme.colors.badge.model.text};
       `;
     }
     return `
@@ -328,17 +328,17 @@ export const SeverityBadge = styled.span<{ severity: string }>`
     switch (severity.toLowerCase()) {
       case 'critical':
       case 'blocker':
-        return '#dc2626';
+        return theme.colors.severity.critical;
       case 'high':
       case 'major':
-        return '#ea580c';
+        return theme.colors.severity.major;
       case 'medium':
-        return '#f59e0b';
+        return theme.colors.severity.major;
       case 'low':
       case 'minor':
-        return '#10b981';
+        return theme.colors.severity.minor;
       case 'info':
-        return '#64748b';
+        return theme.colors.severity.info;
       default:
         return theme.colors.textSecondary;
     }
@@ -428,15 +428,15 @@ export const Finding = styled.div<{ severity?: string }>`
   ${props => {
     switch (props.severity) {
       case 'blocker':
-        return `border-left-color: #b91c1c; background: #fee2e2;`;
+        return `border-left-color: ${theme.colors.severity.blocker}; background: ${theme.colors.findingBg.blocker};`;
       case 'critical':
-        return `border-left-color: #dc2626; background: #fee2e2;`;
+        return `border-left-color: ${theme.colors.severity.critical}; background: ${theme.colors.findingBg.critical};`;
       case 'major':
-        return `border-left-color: #f97316; background: #fff4e6;`;
+        return `border-left-color: ${theme.colors.severity.major}; background: ${theme.colors.findingBg.major};`;
       case 'minor':
-        return `border-left-color: #0d9488; background: #e6fffa;`;
+        return `border-left-color: ${theme.colors.severity.minor}; background: ${theme.colors.findingBg.minor};`;
       case 'info':
-        return `border-left-color: #64748b; background: #f1f5f9;`;
+        return `border-left-color: ${theme.colors.severity.info}; background: ${theme.colors.findingBg.info};`;
       default:
         return `border-left-color: ${theme.colors.border};`;
     }

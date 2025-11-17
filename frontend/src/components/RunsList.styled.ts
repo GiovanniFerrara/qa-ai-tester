@@ -97,28 +97,28 @@ export const SeverityBadge = styled.span<{ severity?: string }>`
     switch (props.severity) {
       case 'blocker':
         return `
-          background: #fee2e2;
-          color: #b91c1c;
+          background: ${theme.colors.findingBg.blocker};
+          color: ${theme.colors.severity.blocker};
         `;
       case 'critical':
         return `
-          background: #fee2e2;
-          color: #dc2626;
+          background: ${theme.colors.findingBg.critical};
+          color: ${theme.colors.severity.critical};
         `;
       case 'major':
         return `
-          background: #fff4e6;
-          color: #f97316;
+          background: ${theme.colors.findingBg.major};
+          color: ${theme.colors.severity.major};
         `;
       case 'minor':
         return `
-          background: #e6fffa;
-          color: #0d9488;
+          background: ${theme.colors.findingBg.minor};
+          color: ${theme.colors.severity.minor};
         `;
       case 'info':
         return `
-          background: #f1f5f9;
-          color: #64748b;
+          background: ${theme.colors.findingBg.info};
+          color: ${theme.colors.severity.info};
         `;
       default:
         return '';
@@ -140,15 +140,15 @@ export const SeverityMeterFill = styled.div<{ severity?: string }>`
   ${props => {
     switch (props.severity) {
       case 'blocker':
-        return `background: #b91c1c;`;
+        return `background: ${theme.colors.severity.blocker};`;
       case 'critical':
-        return `background: #dc2626;`;
+        return `background: ${theme.colors.severity.critical};`;
       case 'major':
-        return `background: #f97316;`;
+        return `background: ${theme.colors.severity.major};`;
       case 'minor':
-        return `background: #0d9488;`;
+        return `background: ${theme.colors.severity.minor};`;
       case 'info':
-        return `background: #64748b;`;
+        return `background: ${theme.colors.severity.info};`;
       default:
         return `background: ${theme.colors.primary};`;
     }
@@ -231,13 +231,13 @@ export const SeverityPill = styled.span<{ severity?: string }>`
     switch (props.severity) {
       case 'blocker':
         return `
-          background: #fee2e2;
-          color: #b91c1c;
+          background: ${theme.colors.findingBg.blocker};
+          color: ${theme.colors.severity.blocker};
         `;
       case 'critical':
         return `
-          background: #fee2e2;
-          color: #dc2626;
+          background: ${theme.colors.findingBg.critical};
+          color: ${theme.colors.severity.critical};
         `;
       default:
         return '';

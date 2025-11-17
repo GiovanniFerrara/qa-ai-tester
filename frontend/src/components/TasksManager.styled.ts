@@ -49,7 +49,7 @@ export const TaskItem = styled.li<{ $isActive?: boolean }>`
 
   ${props => props.$isActive && `
     border-color: ${theme.colors.primary};
-    background: #f5f7ff;
+    background: ${theme.colors.hover};
   `}
 
   button:first-of-type {
@@ -186,7 +186,7 @@ export const AdvancedToggle = styled.button`
   transform: none;
 
   &:hover {
-    color: #5568d3;
+    color: ${theme.colors.primaryDark};
     transform: none;
     box-shadow: none;
   }
@@ -210,9 +210,9 @@ export const AdvancedContent = styled.div`
 export const TaskPreview = styled.div`
   margin-top: 1.5rem;
   padding: 1rem;
-  border: 1px dashed #cbd5f5;
+  border: 1px dashed ${theme.colors.borderLight};
   border-radius: 6px;
-  background: #f8f9ff;
+  background: ${theme.colors.hover};
 
   p {
     margin-bottom: 0.5rem;
