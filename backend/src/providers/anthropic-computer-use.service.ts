@@ -106,7 +106,7 @@ export class AnthropicComputerUseService {
     const events: ComputerUseEvent[] = [];
     const responsesSummary: Array<Record<string, unknown>> = [];
     const findingsFromTool: Finding[] = [];
-    const maxIterations = task.budgets?.maxToolCalls ?? 200;
+    const maxIterations = task.budgets?.maxToolCalls ?? 500;
 
     let totalToolCalls = 0;
     let iterations = 0;
@@ -230,7 +230,7 @@ export class AnthropicComputerUseService {
         lastTextResponse = textBlocks.map((block) => block.text).join('\n');
         emitEvent({
           type: 'log',
-          message: lastTextResponse.slice(0, 200),
+          message: lastTextResponse.slice(0, 500),
         });
       }
 
@@ -505,7 +505,7 @@ export class AnthropicComputerUseService {
         if (typeof input.combo !== 'string') return null;
         return { action: 'hotkey', hotkey: input.combo };
       case 'scroll': {
-        const amount = Number(input.amount ?? 200);
+        const amount = Number(input.amount ?? 500);
         const direction = String(input.direction ?? 'down');
         const deltaMap: Record<string, { deltaX: number; deltaY: number }> = {
           up: { deltaX: 0, deltaY: -amount },
