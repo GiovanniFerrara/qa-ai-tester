@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import type { TaskInput, TaskSpec } from "../types";
 import { QuickTaskPanel } from "./QuickTaskPanel";
+import {
+  Card,
+  Button,
+  ErrorMessage,
+  SuccessBanner,
+} from "../styles/shared.styled";
+import * as S from "./TasksManager.styled";
 
 const defaultBudgets = {
   maxToolCalls: 200,
@@ -203,31 +210,28 @@ export function TasksManager() {
   };
 
   return (
-    <div className="tasks-layout">
-      <div className="tasks-sidebar card">
-        <div className="tasks-header">
+    <S.TasksLayout>
+      <Card as={S.TasksSidebar}>
+        <S.TasksHeader>
           <h2>Tasks</h2>
-          <button className="secondary" onClick={resetForm}>
+          <Button variant="secondary" onClick={resetForm}>
             + New Task
-          </button>
-        </div>
+          </Button>
+        </S.TasksHeader>
         {sortedTasks.length === 0 ? (
           <p>No tasks registered yet.</p>
         ) : (
-          <ul className="tasks-list">
+          <S.TasksList>
             {sortedTasks.map((task) => (
-              <li
-                key={task.id}
-                className={task.id === editingTaskId ? "active" : ""}
-              >
+              <S.TaskItem key={task.id} $isActive={task.id === editingTaskId}>
                 <button type="button" onClick={() => handleEdit(task)}>
-                  <span className="task-name">{task.name}</span>
-                  <span className="task-route">{task.route}</span>
+                  <S.TaskName>{task.name}</S.TaskName>
+                  <S.TaskRoute>{task.route}</S.TaskRoute>
                 </button>
-                <div className="tasks-actions">
-                  <button
-                    type="button"
-                    className="secondary small"
+                <S.TasksActions>
+                  <Button
+                    variant="secondary"
+                    size="small"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleClone(task);
@@ -235,32 +239,32 @@ export function TasksManager() {
                     disabled={actionLoading}
                   >
                     Clone
-                  </button>
-                  <button
-                    type="button"
-                    className="danger small"
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="small"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete(task.id);
                     }}
                   >
                     Delete
-                  </button>
-                </div>
-              </li>
+                  </Button>
+                </S.TasksActions>
+              </S.TaskItem>
             ))}
-          </ul>
+          </S.TasksList>
         )}
-      </div>
+      </Card>
 
-      <div className="card tasks-form">
+      <Card as={S.TasksForm}>
         <QuickTaskPanel onPrefill={handleQuickPrefill} />
         <h2>{editingTaskId ? "Edit Task" : "Create Task"}</h2>
 
-        {error && <div className="error">{error}</div>}
-        {success && <div className="success-banner">{success}</div>}
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {success && <SuccessBanner>{success}</SuccessBanner>}
 
-        <form onSubmit={handleSubmit} className="task-form-grid">
+        <S.TaskFormGrid onSubmit={handleSubmit}>
           <label>
             Name
             <input
@@ -301,7 +305,7 @@ export function TasksManager() {
             />
           </label>
 
-          <div className="form-grid">
+          <S.FormGrid>
             <label>
               Start Route or URL
               <input
@@ -320,20 +324,19 @@ export function TasksManager() {
                 onChange={(e) => handleInputChange("role", e.target.value)}
               />
             </label>
-          </div>
+          </S.FormGrid>
 
-          <div className="advanced-settings-section">
-            <button
+          <S.AdvancedSettingsSection>
+            <S.AdvancedToggle
               type="button"
-              className="advanced-toggle"
               onClick={() => setShowAdvanced(!showAdvanced)}
             >
               {showAdvanced ? "▼" : "▶"} Advanced Settings
-            </button>
+            </S.AdvancedToggle>
 
             {showAdvanced && (
-              <div className="advanced-content">
-                <div className="form-grid">
+              <S.AdvancedContent>
+                <S.FormGrid>
                   <label>
                     Provider
                     <select
@@ -358,9 +361,9 @@ export function TasksManager() {
                       placeholder="e.g., computer-use-preview"
                     />
                   </label>
-                </div>
+                </S.FormGrid>
 
-                <label className="checkbox">
+                <S.Checkbox>
                   <input
                     type="checkbox"
                     checked={form.requireFindings}
@@ -369,8 +372,8 @@ export function TasksManager() {
                     }
                   />
                   Require at least one finding in reports
-                </label>
-                <label className="checkbox">
+                </S.Checkbox>
+                <S.Checkbox>
                   <input
                     type="checkbox"
                     checked={form.autoAuthEnabled ?? false}
@@ -379,17 +382,17 @@ export function TasksManager() {
                     }
                   />
                   Use automated login before each run
-                </label>
-                <p className="field-hint">
+                </S.Checkbox>
+                <S.FieldHint>
                   When enabled, the worker signs in with the stored credentials
                   before starting this task. Leave disabled if your auth state
                   is already persisted or login is unnecessary. More info here:
                   <code> backend/tests/auth.setup.ts </code>
-                </p>
+                </S.FieldHint>
 
-                <fieldset className="budgets-fieldset">
+                <S.BudgetsFieldset>
                   <legend>Budgets</legend>
-                  <div className="form-grid">
+                  <S.FormGrid>
                     <label>
                       Max Tool Calls
                       <input
@@ -440,30 +443,30 @@ export function TasksManager() {
                         }
                       />
                     </label>
-                  </div>
-                </fieldset>
-              </div>
+                  </S.FormGrid>
+                </S.BudgetsFieldset>
+              </S.AdvancedContent>
             )}
-          </div>
+          </S.AdvancedSettingsSection>
 
-          <div className="form-actions">
-            <button type="submit" disabled={loading || actionLoading}>
+          <S.FormActions>
+            <Button type="submit" disabled={loading || actionLoading}>
               {loading
                 ? "Saving..."
                 : editingTaskId
                   ? "Update Task"
                   : "Create Task"}
-            </button>
+            </Button>
             {editingTaskId && (
-              <button type="button" className="secondary" onClick={resetForm}>
+              <Button variant="secondary" onClick={resetForm}>
                 Cancel
-              </button>
+              </Button>
             )}
-          </div>
-        </form>
+          </S.FormActions>
+        </S.TaskFormGrid>
 
         {selectedTask && (
-          <div className="task-preview">
+          <S.TaskPreview>
             <h3>Current Task Preview</h3>
             <p>
               <strong>Name:</strong> {selectedTask.name}
@@ -483,9 +486,9 @@ export function TasksManager() {
                 <strong>Instructions:</strong> {selectedTask.instructions}
               </p>
             )}
-          </div>
+          </S.TaskPreview>
         )}
-      </div>
-    </div>
+      </Card>
+    </S.TasksLayout>
   );
 }

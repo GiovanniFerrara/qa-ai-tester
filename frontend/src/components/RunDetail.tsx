@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import type { QAReport, RunEvent, RunState, TaskSpec } from "../types";
+import {
+  Card,
+  Button,
+  Loading,
+  ErrorMessage,
+  StatusBadge,
+} from "../styles/shared.styled";
+import * as S from "./RunDetail.styled";
 
 interface ScreenshotEntry {
   image: string;
@@ -255,42 +263,42 @@ export function RunDetail() {
 
   if (!runId) {
     return (
-      <div className="card">
-        <div className="error">No run selected.</div>
-        <button onClick={() => navigate("/runs")}>Back to Runs</button>
-      </div>
+      <Card>
+        <ErrorMessage>No run selected.</ErrorMessage>
+        <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+      </Card>
     );
   }
 
   if (loading && !run) {
-    return <div className="loading">Loading run details...</div>;
+    return <Loading>Loading run details...</Loading>;
   }
 
   if (error && !run) {
     return (
-      <div className="card">
-        <div className="error">Error: {error}</div>
-        <button onClick={() => navigate("/runs")}>Back to Runs</button>
-      </div>
+      <Card>
+        <ErrorMessage>Error: {error}</ErrorMessage>
+        <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+      </Card>
     );
   }
 
   return (
-    <div className="run-detail">
-      <div className="card">
-        <div className="run-detail-header">
+    <S.RunDetailContainer>
+      <Card>
+        <S.RunDetailHeader>
           <div>
             <h2>{task?.name || run?.taskId || "Unknown Task"}</h2>
             <p>Run ID: {runId.slice(0, 8)}</p>
           </div>
-          <div className="run-detail-meta">
-            <span className={getStatusClass(run?.status ?? "running")}>
+          <S.RunDetailMeta>
+            <StatusBadge status={run?.status ?? "running"}>
               {(run?.status ?? "running").toUpperCase()}
-            </span>
-            <button onClick={() => navigate("/runs")}>← Back to Runs</button>
-          </div>
-        </div>
-        <div className="run-times">
+            </StatusBadge>
+            <Button onClick={() => navigate("/runs")}>← Back to Runs</Button>
+          </S.RunDetailMeta>
+        </S.RunDetailHeader>
+        <S.RunTimes>
           <span>
             Started: <strong>{formatDate(run?.startedAt)}</strong>
           </span>
@@ -303,23 +311,19 @@ export function RunDetail() {
           <span>
             Provider: <strong>{run?.provider ?? "N/A"}</strong>
           </span>
-        </div>
+        </S.RunTimes>
         {error && run && (
-          <div className="error" style={{ marginTop: "1rem" }}>
-            {error}
-          </div>
+          <ErrorMessage style={{ marginTop: "1rem" }}>{error}</ErrorMessage>
         )}
         {run?.error && (
-          <div className="error" style={{ marginTop: "1rem" }}>
-            {run.error}
-          </div>
+          <ErrorMessage style={{ marginTop: "1rem" }}>{run.error}</ErrorMessage>
         )}
-      </div>
+      </Card>
 
-      <div className="run-live-grid">
-        <div className="card">
+      <S.RunLiveGrid>
+        <Card>
           <h2>Live Feed</h2>
-          <div className="events-feed">
+          <S.EventsFeed>
             {events.length === 0 ? (
               <p>No events yet. Waiting for activity…</p>
             ) : (
@@ -327,50 +331,42 @@ export function RunDetail() {
                 .slice()
                 .reverse()
                 .map((event) => (
-                  <div
-                    key={`${event.timestamp}-${event.type}`}
-                    className="event-item"
-                  >
-                    <div className="event-meta">
-                      <span className="event-time">
-                        {formatTime(event.timestamp)}
-                      </span>
-                      <span className={`event-type event-${event.type}`}>
-                        {event.type}
-                      </span>
-                    </div>
+                  <S.EventItem key={`${event.timestamp}-${event.type}`}>
+                    <S.EventMeta>
+                      <S.EventTime>{formatTime(event.timestamp)}</S.EventTime>
+                      <S.EventType type={event.type}>{event.type}</S.EventType>
+                    </S.EventMeta>
                     {event.message && (
-                      <div className="event-message">{event.message}</div>
+                      <S.EventMessage>{event.message}</S.EventMessage>
                     )}
                     {event.payload && event.type !== "screenshot" && (
-                      <pre className="event-payload">
+                      <S.EventPayload>
                         {JSON.stringify(event.payload, null, 2)}
-                      </pre>
+                      </S.EventPayload>
                     )}
-                  </div>
+                  </S.EventItem>
                 ))
             )}
-          </div>
-        </div>
+          </S.EventsFeed>
+        </Card>
 
-        <div className="card">
+        <Card>
           <h2>Live Activity</h2>
           {screenshots.length === 0 ? (
             <p>No screenshots captured yet.</p>
           ) : (
             <>
-              <div className="screenshot-frame">
-                {/* eslint-disable-next-line jsx-a11y/img-redundant-alt */}
+              <S.ScreenshotFrame>
                 <img src={screenshots[0].image} alt="Latest run screenshot" />
-              </div>
-              <div className="screenshot-meta">
+              </S.ScreenshotFrame>
+              <S.ScreenshotMeta>
                 <span>{formatTime(screenshots[0].timestamp)}</span>
                 {screenshots[0].message && (
                   <span>{screenshots[0].message}</span>
                 )}
-              </div>
+              </S.ScreenshotMeta>
               {screenshots.length > 1 && (
-                <div className="screenshot-strip">
+                <S.ScreenshotStrip>
                   {screenshots.slice(1, 5).map((shot) => (
                     <img
                       key={shot.timestamp}
@@ -378,41 +374,34 @@ export function RunDetail() {
                       alt="Screenshot thumbnail"
                     />
                   ))}
-                </div>
+                </S.ScreenshotStrip>
               )}
             </>
           )}
-        </div>
-      </div>
+        </Card>
+      </S.RunLiveGrid>
 
       {allScreenshots.length > 0 && (
-        <div className="card">
+        <Card>
           <h2>Screenshots Timeline ({allScreenshots.length} total)</h2>
-          <div className="slideshow-container">
-            <div className="slideshow-controls">
-              <button onClick={handlePrevSlide} className="slideshow-btn">
-                ←
-              </button>
-              <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="slideshow-btn"
-              >
+          <S.SlideshowContainer>
+            <S.SlideshowControls>
+              <S.SlideshowBtn onClick={handlePrevSlide}>←</S.SlideshowBtn>
+              <S.SlideshowBtn onClick={() => setIsPlaying(!isPlaying)}>
                 {isPlaying ? "⏸" : "▶"}
-              </button>
-              <button onClick={handleNextSlide} className="slideshow-btn">
-                →
-              </button>
-              <span className="slideshow-counter">
+              </S.SlideshowBtn>
+              <S.SlideshowBtn onClick={handleNextSlide}>→</S.SlideshowBtn>
+              <S.SlideshowCounter>
                 {slideshowIndex + 1} / {allScreenshots.length}
-              </span>
-            </div>
-            <div className="slideshow-frame">
+              </S.SlideshowCounter>
+            </S.SlideshowControls>
+            <S.SlideshowFrame>
               <img
                 src={allScreenshots[slideshowIndex].path}
                 alt={`Screenshot ${slideshowIndex + 1}`}
               />
-            </div>
-            <div className="slideshow-thumbnails">
+            </S.SlideshowFrame>
+            <S.SlideshowThumbnails>
               {allScreenshots.map((screenshot, idx) => (
                 <img
                   key={screenshot.filename}
@@ -422,22 +411,22 @@ export function RunDetail() {
                   onClick={() => setSlideshowIndex(idx)}
                 />
               ))}
-            </div>
-          </div>
-        </div>
+            </S.SlideshowThumbnails>
+          </S.SlideshowContainer>
+        </Card>
       )}
 
       {run?.report && (
         <>
-          <div className="card">
-            <div className="report-summary">
+          <Card>
+            <S.ReportSummary>
               <div>
                 <h2>QA Report Summary</h2>
                 <p>
                   <strong>Status:</strong>{" "}
-                  <span className={getStatusClass(run.report.status)}>
+                  <StatusBadge status={run.report.status}>
                     {run.report.status.toUpperCase()}
-                  </span>
+                  </StatusBadge>
                 </p>
               </div>
               <div>
@@ -449,100 +438,95 @@ export function RunDetail() {
                   <strong>Tool Calls:</strong> {run.report.costs.toolCalls}
                 </p>
               </div>
-            </div>
+            </S.ReportSummary>
 
-            <div className="summary-grid">
-              <div className="summary-card">
-                <div className="summary-value">
-                  {run.report.findings.length}
-                </div>
-                <div className="summary-label">Total Findings</div>
-              </div>
-              <div className="summary-card">
-                <div className="summary-value">
+            <S.SummaryGrid>
+              <S.SummaryCard>
+                <S.SummaryValue>{run.report.findings.length}</S.SummaryValue>
+                <S.SummaryLabel>Total Findings</S.SummaryLabel>
+              </S.SummaryCard>
+              <S.SummaryCard>
+                <S.SummaryValue>
                   {
                     run.report.kpiTable.filter((item) => item.status === "ok")
                       .length
                   }
-                </div>
-                <div className="summary-label">KPI Passed</div>
-              </div>
-              <div className="summary-card">
-                <div className="summary-value">
+                </S.SummaryValue>
+                <S.SummaryLabel>KPI Passed</S.SummaryLabel>
+              </S.SummaryCard>
+              <S.SummaryCard>
+                <S.SummaryValue>
                   ${run.report.costs.priceUsd.toFixed(4)}
-                </div>
-                <div className="summary-label">Cost (USD)</div>
-              </div>
-            </div>
+                </S.SummaryValue>
+                <S.SummaryLabel>Cost (USD)</S.SummaryLabel>
+              </S.SummaryCard>
+            </S.SummaryGrid>
 
-            <div className="report-summary-text">
+            <S.ReportSummaryText>
               <strong>Summary:</strong> {run.report.summary}
-            </div>
+            </S.ReportSummaryText>
 
             {Object.keys(severityCounts).length > 0 && (
-              <div className="severity-breakdown">
+              <S.SeverityBreakdown>
                 <h3>Findings by Severity</h3>
-                <div className="severity-list">
+                <div>
                   {Object.entries(severityCounts).map(([severity, count]) => (
-                    <div key={severity} className="severity-item">
-                      <span className={getSeverityClass(severity)}>
+                    <S.SeverityItem key={severity}>
+                      <S.SeverityBadge severity={severity}>
                         {severity}
-                      </span>
+                      </S.SeverityBadge>
                       <span>{count}</span>
-                    </div>
+                    </S.SeverityItem>
                   ))}
                 </div>
-              </div>
+              </S.SeverityBreakdown>
             )}
-          </div>
+          </Card>
 
           {run.report.kpiTable.length > 0 && (
-            <div className="card">
+            <Card>
               <h2>KPI Assessment</h2>
-              <div className="kpi-table">
-                <div className="kpi-table-header">
+              <S.KpiTable>
+                <S.KpiTableHeader>
                   <div>Label</div>
                   <div>Expected</div>
                   <div>Observed</div>
                   <div>Status</div>
-                </div>
+                </S.KpiTableHeader>
                 {run.report.kpiTable.map((kpi, idx) => (
-                  <div key={idx} className="kpi-table-row">
-                    <div className="kpi-label">{kpi.label}</div>
-                    <div className="kpi-expected">{kpi.expected}</div>
-                    <div className="kpi-observed">{kpi.observed}</div>
+                  <S.KpiTableRow key={idx}>
+                    <S.KpiLabel>{kpi.label}</S.KpiLabel>
+                    <S.KpiExpected>{kpi.expected}</S.KpiExpected>
+                    <S.KpiObserved>{kpi.observed}</S.KpiObserved>
                     <div>
-                      <span className={getKpiStatusClass(kpi.status)}>
+                      <S.KpiStatus status={kpi.status}>
                         {kpi.status === "ok"
                           ? "✓ OK"
                           : kpi.status === "mismatch"
                             ? "✗ Mismatch"
                             : "? Missing"}
-                      </span>
+                      </S.KpiStatus>
                     </div>
-                  </div>
+                  </S.KpiTableRow>
                 ))}
-              </div>
-            </div>
+              </S.KpiTable>
+            </Card>
           )}
 
-          <div className="card">
+          <Card>
             <h2>Findings</h2>
             {run.report.findings.length === 0 ? (
               <p>No findings reported.</p>
             ) : (
               run.report.findings.map((finding) => (
-                <div
-                  key={finding.id}
-                  className={getFindingClass(finding.severity)}
-                >
-                  <div className="finding-header">
-                    <div className="finding-title">{finding.assertion}</div>
-                    <span className={getSeverityClass(finding.severity)}>
+                <S.Finding key={finding.id} severity={finding.severity}>
+                  <S.FindingHeader>
+                    <S.FindingTitle>{finding.assertion}</S.FindingTitle>
+                    <S.SeverityBadge severity={finding.severity}>
                       {finding.severity}
-                    </span>
-                  </div>
-                  <div className="finding-body">
+                    </S.SeverityBadge>
+                  </S.FindingHeader>
+                  <S.FindingBody>
                     <p>
                       <strong>Expected:</strong> {finding.expected}
                     </p>
@@ -554,11 +538,11 @@ export function RunDetail() {
                         <strong>Suggested Fix:</strong> {finding.suggestedFix}
                       </p>
                     )}
-                  </div>
+                  </S.FindingBody>
                   {finding.evidence.length > 0 && (
-                    <div className="finding-evidence">
+                    <S.FindingEvidence>
                       <strong>Evidence:</strong>
-                      <div className="evidence-gallery">
+                      <S.EvidenceGallery>
                         {finding.evidence.map((evidence, idx) => {
                           const evidenceFilename = extractFilename(
                             evidence.screenshotRef
@@ -574,9 +558,8 @@ export function RunDetail() {
                             return null;
                           }
                           return (
-                            <div
+                            <S.EvidenceItem
                               key={idx}
-                              className="evidence-item"
                               onClick={() =>
                                 setSelectedEvidence(
                                   selectedEvidence === screenshot.path
@@ -590,16 +573,16 @@ export function RunDetail() {
                                 alt={`Evidence ${idx + 1}`}
                                 data-debug-original={screenshot.originalPath}
                               />
-                              <div className="evidence-info">
+                              <S.EvidenceInfo>
                                 <span>{evidence.time}</span>
-                              </div>
-                            </div>
+                              </S.EvidenceInfo>
+                            </S.EvidenceItem>
                           );
                         })}
-                      </div>
-                    </div>
+                      </S.EvidenceGallery>
+                    </S.FindingEvidence>
                   )}
-                  <div className="finding-meta">
+                  <S.FindingMeta>
                     <span>Category: {finding.category}</span>
                     <span>
                       Confidence: {(finding.confidence * 100).toFixed(0)}%
@@ -607,30 +590,24 @@ export function RunDetail() {
                     {finding.evidence.length > 0 && (
                       <span>📸 {finding.evidence.length} Evidence Item(s)</span>
                     )}
-                  </div>
-                </div>
+                  </S.FindingMeta>
+                </S.Finding>
               ))
             )}
-          </div>
+          </Card>
         </>
       )}
 
       {selectedEvidence && (
-        <div
-          className="evidence-modal"
-          onClick={() => setSelectedEvidence(null)}
-        >
-          <div className="evidence-modal-content">
-            <button
-              className="evidence-modal-close"
-              onClick={() => setSelectedEvidence(null)}
-            >
+        <S.EvidenceModal onClick={() => setSelectedEvidence(null)}>
+          <S.EvidenceModalContent>
+            <S.EvidenceModalClose onClick={() => setSelectedEvidence(null)}>
               ×
-            </button>
+            </S.EvidenceModalClose>
             <img src={selectedEvidence} alt="Evidence full size" />
-          </div>
-        </div>
+          </S.EvidenceModalContent>
+        </S.EvidenceModal>
       )}
-    </div>
+    </S.RunDetailContainer>
   );
 }

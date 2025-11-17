@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-
 import { api } from "../api";
 import type { TaskInput } from "../types";
+import {
+  Button,
+  ErrorMessage,
+  SuccessBanner,
+  IconButton,
+} from "../styles/shared.styled";
+import {
+  QuickTaskPanelWrapper,
+  QuickTaskHeader,
+  QuickTaskTextarea,
+  QuickTaskActions,
+  QuickTaskStatus,
+} from "./QuickTaskPanel.styled";
 
 interface QuickTaskPanelProps {
   onPrefill: (draft: TaskInput) => void;
@@ -128,48 +140,48 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
   const isBusy = transcribing || generating;
 
   return (
-    <div className="quick-task-panel">
-      <div className="quick-task-header">
+    <QuickTaskPanelWrapper>
+      <QuickTaskHeader>
         <h3>Quick Task Builder</h3>
         <p>
           Record or type a short request and let AI fill out the full task form.
         </p>
-      </div>
-      {error && <div className="error">{error}</div>}
-      {status && !error && <div className="success-banner">{status}</div>}
-      <textarea
+      </QuickTaskHeader>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {status && !error && <SuccessBanner>{status}</SuccessBanner>}
+      <QuickTaskTextarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe what you want the QA agent to validate..."
         rows={4}
       />
-      <div className="quick-task-actions">
+      <QuickTaskActions>
         {recordingSupported && (
-          <button
+          <IconButton
             type="button"
-            className={`icon-button ${recording ? "danger recording" : "secondary"}`}
+            $recording={recording}
             onClick={handleRecordToggle}
             disabled={isBusy}
             title={recording ? "Stop Recording" : "Record Voice"}
           >
             🎤
-          </button>
+          </IconButton>
         )}
-        <button type="button" onClick={handleContextualize} disabled={isBusy}>
+        <Button type="button" onClick={handleContextualize} disabled={isBusy}>
           {generating ? "Creating Draft…" : "Create Task Draft"}
-        </button>
-      </div>
+        </Button>
+      </QuickTaskActions>
       {recording && (
-        <div className="quick-task-status recording-indicator">
+        <QuickTaskStatus $isRecording={true}>
           🔴 Recording in progress…
-        </div>
+        </QuickTaskStatus>
       )}
       {!recording && transcribing && (
-        <div className="quick-task-status">Transcribing audio…</div>
+        <QuickTaskStatus>Transcribing audio…</QuickTaskStatus>
       )}
       {!recording && !transcribing && generating && (
-        <div className="quick-task-status">Contextualizing task…</div>
+        <QuickTaskStatus>Contextualizing task…</QuickTaskStatus>
       )}
-    </div>
+    </QuickTaskPanelWrapper>
   );
 }

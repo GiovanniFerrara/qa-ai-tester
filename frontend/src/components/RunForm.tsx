@@ -2,6 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TaskSpec } from "../types";
 import { api } from "../api";
+import {
+  Card,
+  FormGroup,
+  Label,
+  Select,
+  Input,
+  Button,
+  ErrorMessage,
+  SuccessBanner,
+  EmptyState,
+} from "../styles/shared.styled";
+import { TaskPreview, Hint } from "./RunForm.styled";
 
 export function RunForm() {
   const [tasks, setTasks] = useState<TaskSpec[]>([]);
@@ -70,40 +82,28 @@ export function RunForm() {
 
   if (tasks.length === 0) {
     return (
-      <div className="card">
-        <div className="empty-state">
+      <Card>
+        <EmptyState>
           <h3>No Tasks Available</h3>
           <p>Please register tasks before creating runs.</p>
-        </div>
-      </div>
+        </EmptyState>
+      </Card>
     );
   }
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId);
 
   return (
-    <div className="card">
+    <Card>
       <h2>Start New QA Run</h2>
 
-      {error && <div className="error">{error}</div>}
-      {success && (
-        <div
-          style={{
-            background: "#d1e7dd",
-            color: "#0f5132",
-            padding: "1rem",
-            borderRadius: "6px",
-            marginBottom: "1rem",
-          }}
-        >
-          {success}
-        </div>
-      )}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      {success && <SuccessBanner>{success}</SuccessBanner>}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="task">Select Task</label>
-          <select
+        <FormGroup>
+          <Label htmlFor="task">Select Task</Label>
+          <Select
             id="task"
             value={selectedTaskId}
             onChange={(e) => handleTaskChange(e.target.value)}
@@ -114,12 +114,12 @@ export function RunForm() {
                 {task.name}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </FormGroup>
 
-        <div className="form-group">
-          <label htmlFor="base-url">Application Base URL</label>
-          <input
+        <FormGroup>
+          <Label htmlFor="base-url">Application Base URL</Label>
+          <Input
             id="base-url"
             type="url"
             placeholder="http://localhost:3000"
@@ -129,19 +129,19 @@ export function RunForm() {
               localStorage.setItem("qa-tester-base-url", e.target.value);
             }}
           />
-          <small className="hint">
+          <Hint>
             This value overrides the server BASE_URL for this run and is stored
             locally for convenience.
-          </small>
-        </div>
+          </Hint>
+        </FormGroup>
 
-        <button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading}>
           {loading ? "Starting Run..." : "Start Run"}
-        </button>
+        </Button>
       </form>
 
       {selectedTask && (
-        <div className="task-preview">
+        <TaskPreview>
           <h3>{selectedTask.name}</h3>
           {selectedTask.description && <p>{selectedTask.description}</p>}
           <p>
@@ -159,8 +159,8 @@ export function RunForm() {
               <strong>Instructions:</strong> {selectedTask.instructions}
             </p>
           )}
-        </div>
+        </TaskPreview>
       )}
-    </div>
+    </Card>
   );
 }

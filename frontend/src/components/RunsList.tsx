@@ -2,6 +2,15 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { RunState, TaskSpec } from "../types";
 import { api } from "../api";
+import {
+  Card,
+  Button,
+  Loading,
+  EmptyState,
+  ErrorMessage,
+  StatusBadge,
+} from "../styles/shared.styled";
+import * as S from "./RunsList.styled";
 
 export function RunsList() {
   const [runs, setRuns] = useState<RunState[]>([]);
@@ -69,10 +78,6 @@ export function RunsList() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
-  };
-
-  const getStatusClass = (status: string) => {
-    return `status status-${status}`;
   };
 
   const derivedSummary = useMemo(() => {
@@ -174,50 +179,50 @@ export function RunsList() {
   };
 
   if (loading) {
-    return <div className="loading">Loading runs...</div>;
+    return <Loading>Loading runs...</Loading>;
   }
 
   if (error) {
     return (
-      <div className="card">
-        <div className="error">Error: {error}</div>
-        <button onClick={loadData}>Retry</button>
-      </div>
+      <Card>
+        <ErrorMessage>Error: {error}</ErrorMessage>
+        <Button onClick={loadData}>Retry</Button>
+      </Card>
     );
   }
 
   if (runs.length === 0) {
     return (
-      <div className="card">
-        <div className="empty-state">
+      <Card>
+        <EmptyState>
           <h3>No Runs Yet</h3>
           <p>Start your first QA run to see results here.</p>
-        </div>
-      </div>
+        </EmptyState>
+      </Card>
     );
   }
 
   return (
     <>
-      <div className="runs-dashboard">
-        <div className="summary-grid">
-          <div className="summary-card">
+      <S.RunsDashboard>
+        <S.SummaryGrid>
+          <S.SummaryCard>
             <span>Total Runs</span>
             <strong>{derivedSummary.totals.total}</strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Completed</span>
             <strong>{derivedSummary.totals.completed}</strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Running</span>
             <strong>{derivedSummary.totals.running}</strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Failed</span>
             <strong>{derivedSummary.totals.failed}</strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Pass Rate</span>
             <strong>
               {derivedSummary.totals.completed
@@ -228,50 +233,50 @@ export function RunsList() {
                   )}%`
                 : "—"}
             </strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Avg Duration</span>
             <strong>
               {formatDuration(derivedSummary.totals.avgDurationMs)}
             </strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Total Findings</span>
             <strong>{derivedSummary.totals.findings}</strong>
-          </div>
-          <div className="summary-card">
+          </S.SummaryCard>
+          <S.SummaryCard>
             <span>Provider Usage</span>
             {providerUsage.length === 0 ? (
               <p className="muted">No provider data yet.</p>
             ) : (
-              <ul className="provider-list">
+              <S.ProviderList>
                 {providerUsage.map(([provider, count]) => (
                   <li key={provider}>
                     <strong>{provider}</strong>
                     <strong>{count}</strong>
                   </li>
                 ))}
-              </ul>
+              </S.ProviderList>
             )}
-          </div>
-        </div>
+          </S.SummaryCard>
+        </S.SummaryGrid>
 
-        <div className="dashboard-columns">
-          <div className="card">
+        <S.DashboardColumns>
+          <Card>
             <h3>Severity Overview</h3>
             {derivedSummary.totals.findings === 0 ? (
-              <p className="muted">No findings logged yet.</p>
+              <S.Muted>No findings logged yet.</S.Muted>
             ) : (
-              <div className="severity-list">
+              <S.SeverityList>
                 {["blocker", "critical", "major", "minor", "info"].map(
                   (severity) => (
-                    <div className="severity-row" key={severity}>
-                      <span className={`severity-badge severity-${severity}`}>
+                    <S.SeverityRow key={severity}>
+                      <S.SeverityBadge severity={severity}>
                         {severity}
-                      </span>
-                      <div className="severity-meter">
-                        <div
-                          className={`severity-meter-fill severity-${severity}`}
+                      </S.SeverityBadge>
+                      <S.SeverityMeter>
+                        <S.SeverityMeterFill
+                          severity={severity}
                           style={{
                             width: `${
                               Math.round(
@@ -282,21 +287,21 @@ export function RunsList() {
                             }%`,
                           }}
                         />
-                      </div>
+                      </S.SeverityMeter>
                       <span>{severityTotals[severity] ?? 0}</span>
-                    </div>
+                    </S.SeverityRow>
                   )
                 )}
-              </div>
+              </S.SeverityList>
             )}
-          </div>
+          </Card>
 
-          <div className="card">
+          <Card>
             <h3>KPI Alerts</h3>
             {kpiAlerts.length === 0 ? (
-              <p className="muted">No KPI mismatches detected.</p>
+              <S.Muted>No KPI mismatches detected.</S.Muted>
             ) : (
-              <ul className="kpi-alerts">
+              <S.KpiAlerts>
                 {kpiAlerts.map((alert) => (
                   <li key={`${alert.runId}-${alert.label}`}>
                     <div>
@@ -306,73 +311,70 @@ export function RunsList() {
                         Expected: {alert.expected} • Observed: {alert.observed}
                       </span>
                     </div>
-                    <button
+                    <S.LinkButton
                       type="button"
-                      className="link-button"
                       onClick={() => navigate(`/runs/${alert.runId}`)}
                     >
                       View
-                    </button>
+                    </S.LinkButton>
                   </li>
                 ))}
-              </ul>
+              </S.KpiAlerts>
             )}
-          </div>
+          </Card>
 
-          <div className="card">
+          <Card>
             <h3>Urgent Findings</h3>
             {urgentFindings.length === 0 ? (
-              <p className="muted">No blocker or critical findings.</p>
+              <S.Muted>No blocker or critical findings.</S.Muted>
             ) : (
-              <ul className="urgent-list">
+              <S.UrgentList>
                 {urgentFindings.map((item) => (
                   <li key={`${item.runId}-${item.assertion}`}>
-                    <span className={`severity-pill severity-${item.severity}`}>
+                    <S.SeverityPill severity={item.severity}>
                       {item.severity}
-                    </span>
+                    </S.SeverityPill>
                     <div>
                       <strong>{item.assertion}</strong>
                       <p>{item.observed}</p>
                     </div>
-                    <button
+                    <S.LinkButton
                       type="button"
-                      className="link-button"
                       onClick={() => navigate(`/runs/${item.runId}`)}
                     >
                       Open
-                    </button>
+                    </S.LinkButton>
                   </li>
                 ))}
-              </ul>
+              </S.UrgentList>
             )}
-          </div>
-        </div>
-      </div>
+          </Card>
+        </S.DashboardColumns>
+      </S.RunsDashboard>
 
-      <div className="card">
+      <Card>
         <h2>QA Run History</h2>
-        <div className="runs-list">
+        <S.RunsListContainer>
           {runs.map((run) => {
             const task = tasks.get(run.taskId);
             const taskName = task?.name || run.taskId;
             return (
-              <div
+              <S.RunItem
                 key={run.runId}
-                className="run-item"
                 onClick={() => navigate(`/runs/${run.runId}`)}
               >
-                <div className="run-header">
-                  <span className="run-id">{taskName}</span>
-                  <span className={getStatusClass(run.status)}>
+                <S.RunHeader>
+                  <S.RunId>{taskName}</S.RunId>
+                  <StatusBadge status={run.status}>
                     {run.status.toUpperCase()}
-                  </span>
-                </div>
-                <div className="run-info">
+                  </StatusBadge>
+                </S.RunHeader>
+                <S.RunInfo>
                   <span>Run ID: {run.runId.slice(0, 8)}</span>
                   <span>Provider: {run.provider}</span>
                   <span>Started: {formatDate(run.startedAt)}</span>
-                </div>
-                <div className="run-info" style={{ marginTop: "0.5rem" }}>
+                </S.RunInfo>
+                <S.RunInfo style={{ marginTop: "0.5rem" }}>
                   {run.status === "completed" && run.report ? (
                     <>
                       <span>Findings: {run.report.findings.length}</span>
@@ -387,12 +389,12 @@ export function RunsList() {
                   ) : (
                     <span>In progress…</span>
                   )}
-                </div>
-              </div>
+                </S.RunInfo>
+              </S.RunItem>
             );
           })}
-        </div>
-      </div>
+        </S.RunsListContainer>
+      </Card>
     </>
   );
 }
