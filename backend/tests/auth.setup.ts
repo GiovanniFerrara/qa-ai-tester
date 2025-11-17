@@ -22,8 +22,8 @@ setup('create authenticated storage state', async ({ page }) => {
   } catch (error) {
     console.warn(`Unable to read base URL override: ${(error as Error).message}`);
   }
-  const username = process.env.LOGIN_USERNAME ?? 'demo@jurny.com';
-  const password = process.env.LOGIN_PASSWORD ?? 'demo@jurny.com';
+  const username = process.env.LOGIN_USERNAME ?? 'example@test.com';
+  const password = process.env.LOGIN_PASSWORD ?? 'example@test.com';
 
   await performAnalystLogin(page, baseUrl, { username, password }, (message) =>
     console.log(message),
