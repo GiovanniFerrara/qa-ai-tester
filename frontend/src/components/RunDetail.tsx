@@ -330,42 +330,40 @@ export function RunDetail() {
         )}
       </Card>
 
-      <S.RunLiveGrid>
-        <Card>
-          <h2>Live Feed</h2>
-          <S.EventsFeed>
-            {events.length === 0 ? (
-              <p>No events yet. Waiting for activity…</p>
-            ) : (
-              events
-                .slice()
-                .reverse()
-                .map((event) => (
-                  <S.EventItem key={`${event.timestamp}-${event.type}`}>
-                    <S.EventMeta>
-                      <S.EventTime>{formatTime(event.timestamp)}</S.EventTime>
-                      <S.EventType type={event.type}>{event.type}</S.EventType>
-                    </S.EventMeta>
-                    {event.message && (
-                      <S.EventMessage>{event.message}</S.EventMessage>
-                    )}
-                    {event.payload && event.type !== "screenshot" && (
-                      <S.EventPayload>
-                        {JSON.stringify(event.payload, null, 2)}
-                      </S.EventPayload>
-                    )}
-                  </S.EventItem>
-                ))
-            )}
-          </S.EventsFeed>
-        </Card>
+      {(events.length > 0 || screenshots.length > 0) && (
+        <S.RunLiveGrid>
+          {events.length > 0 && (
+            <Card>
+              <h2>Live Feed</h2>
+              <S.EventsFeed>
+                {events
+                  .slice()
+                  .reverse()
+                  .map((event) => (
+                    <S.EventItem key={`${event.timestamp}-${event.type}`}>
+                      <S.EventMeta>
+                        <S.EventTime>{formatTime(event.timestamp)}</S.EventTime>
+                        <S.EventType type={event.type}>
+                          {event.type}
+                        </S.EventType>
+                      </S.EventMeta>
+                      {event.message && (
+                        <S.EventMessage>{event.message}</S.EventMessage>
+                      )}
+                      {event.payload && event.type !== "screenshot" && (
+                        <S.EventPayload>
+                          {JSON.stringify(event.payload, null, 2)}
+                        </S.EventPayload>
+                      )}
+                    </S.EventItem>
+                  ))}
+              </S.EventsFeed>
+            </Card>
+          )}
 
-        <Card>
-          <h2>Live Activity</h2>
-          {screenshots.length === 0 ? (
-            <p>No screenshots captured yet.</p>
-          ) : (
-            <>
+          {screenshots.length > 0 && (
+            <Card>
+              <h2>Live Activity</h2>
               <S.ScreenshotFrame>
                 <img src={screenshots[0].image} alt="Latest run screenshot" />
               </S.ScreenshotFrame>
@@ -386,10 +384,10 @@ export function RunDetail() {
                   ))}
                 </S.ScreenshotStrip>
               )}
-            </>
+            </Card>
           )}
-        </Card>
-      </S.RunLiveGrid>
+        </S.RunLiveGrid>
+      )}
 
       {allScreenshots.length > 0 && (
         <Card>
@@ -413,11 +411,11 @@ export function RunDetail() {
             </S.SlideshowFrame>
             <S.SlideshowThumbnails>
               {allScreenshots.map((screenshot, idx) => (
-                <img
+                <S.ThumbnailImage
                   key={screenshot.filename}
                   src={screenshot.path}
                   alt={`Thumbnail ${idx + 1}`}
-                  className={idx === slideshowIndex ? "active" : ""}
+                  active={idx === slideshowIndex}
                   onClick={() => setSlideshowIndex(idx)}
                 />
               ))}
@@ -537,7 +535,7 @@ export function RunDetail() {
                               {dismissingItem === kpi.label ? "..." : "Restore"}
                             </S.RestoreButton>
                           </>
-                        ) : (
+                        ) : kpi.status !== "ok" ? (
                           <S.DismissMenu>
                             <S.DismissButton
                               onClick={() =>
@@ -579,7 +577,7 @@ export function RunDetail() {
                               </S.DismissDropdown>
                             )}
                           </S.DismissMenu>
-                        )}
+                        ) : null}
                       </S.DismissActions>
                     </RowComponent>
                   );
@@ -630,7 +628,7 @@ export function RunDetail() {
                                 : "Restore"}
                             </S.RestoreButton>
                           </>
-                        ) : (
+                        ) : finding.severity !== "info" ? (
                           <S.DismissMenu>
                             <S.DismissButton
                               onClick={() =>
@@ -672,7 +670,7 @@ export function RunDetail() {
                               </S.DismissDropdown>
                             )}
                           </S.DismissMenu>
-                        )}
+                        ) : null}
                       </div>
                     </S.FindingHeader>
                     <S.FindingBody>

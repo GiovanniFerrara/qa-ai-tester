@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { TaskSpec } from '../types';
-import { api } from '../api';
+import { useState, useEffect } from "react";
+import { TaskSpec } from "../types";
+import { api } from "../api";
+import * as S from "./TaskList.styled";
 
 interface TaskListProps {
   onSelectTask: (taskId: string) => void;
@@ -23,7 +24,7 @@ export function TaskList({ onSelectTask }: TaskListProps) {
       const data = await api.getTasks();
       setTasks(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tasks');
+      setError(err instanceof Error ? err.message : "Failed to load tasks");
     } finally {
       setLoading(false);
     }
@@ -35,53 +36,55 @@ export function TaskList({ onSelectTask }: TaskListProps) {
   };
 
   if (loading) {
-    return <div className="loading">Loading tasks...</div>;
+    return <S.Loading>Loading tasks...</S.Loading>;
   }
 
   if (error) {
     return (
-      <div className="card">
-        <div className="error">Error: {error}</div>
-        <button onClick={loadTasks}>Retry</button>
-      </div>
+      <S.ErrorContainer>
+        <S.ErrorMessage>Error: {error}</S.ErrorMessage>
+        <S.RetryButton onClick={loadTasks}>Retry</S.RetryButton>
+      </S.ErrorContainer>
     );
   }
 
   if (tasks.length === 0) {
     return (
-      <div className="card">
-        <div className="empty-state">
-          <h3>No Tasks Available</h3>
+      <S.Container>
+        <S.EmptyState>
+          <h3>No Test Cases Available</h3>
           <p>No QA tasks have been registered yet.</p>
-        </div>
-      </div>
+        </S.EmptyState>
+      </S.Container>
     );
   }
 
   return (
-    <div className="card">
-      <h2>Available QA Tasks</h2>
-      <div className="task-grid">
+    <S.Container>
+      <S.Header>Available QA Test Cases</S.Header>
+      <S.TaskGrid>
         {tasks.map((task) => (
-          <div
+          <S.TaskCard
             key={task.id}
-            className={`task-card ${selectedTaskId === task.id ? 'selected' : ''}`}
+            selected={selectedTaskId === task.id}
             onClick={() => handleSelectTask(task.id)}
           >
             <h3>{task.name}</h3>
             <p>{task.description}</p>
-            <div className="task-meta">
-              {task.provider && <span className="badge badge-provider">{task.provider}</span>}
-              {task.model && <span className="badge badge-model">{task.model}</span>}
-              {task.autoAuthEnabled && (
-                <span className="badge badge-auth" title="Automated login enabled">
-                  Auto Auth
-                </span>
+            <S.TaskMeta>
+              {task.provider && (
+                <S.Badge variant="provider">{task.provider}</S.Badge>
               )}
-            </div>
-          </div>
+              {task.model && <S.Badge variant="model">{task.model}</S.Badge>}
+              {task.autoAuthEnabled && (
+                <S.Badge variant="auth" title="Automated login enabled">
+                  Auto Auth
+                </S.Badge>
+              )}
+            </S.TaskMeta>
+          </S.TaskCard>
         ))}
-      </div>
-    </div>
+      </S.TaskGrid>
+    </S.Container>
   );
 }

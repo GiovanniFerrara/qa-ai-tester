@@ -21,6 +21,8 @@ describe('KpiOracleService', () => {
       BASE_URL: 'https://qa.example',
       TASKS_DB_PATH: '',
       RUNS_DB_PATH: '',
+      TASK_COLLECTIONS_DB_PATH: '',
+      COLLECTION_RUNS_DB_PATH: '',
       KPI_BASE_URL: 'https://api.example',
       STORAGE_STATE_PATH: 'state.json',
       ARTIFACT_DIR: 'artifacts',

@@ -73,7 +73,7 @@ export function RunForm() {
     return (
       <Card>
         <EmptyState>
-          <h3>No Tasks Available</h3>
+          <h3>No Test Cases Available</h3>
           <p>Please register tasks before creating runs.</p>
         </EmptyState>
       </Card>

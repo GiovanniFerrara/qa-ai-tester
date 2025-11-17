@@ -1,4 +1,4 @@
-import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent, ApiError, ApiException, DismissReason } from './types';
+import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent, ApiError, ApiException, DismissReason, TaskCollection, TaskCollectionInput, CollectionRunRecord, ExecutionMode } from './types';
 
 const API_BASE = '/api';
 
@@ -148,4 +148,41 @@ export const api = {
     fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/kpi/${encodeURIComponent(kpiLabel)}/restore`, {
       method: 'POST',
     }),
+
+  getCollections: () => fetchJSON<TaskCollection[]>(`${API_BASE}/collections`),
+  
+  getCollection: (collectionId: string) =>
+    fetchJSON<TaskCollection>(`${API_BASE}/collections/${collectionId}`),
+
+  createCollection: (data: TaskCollectionInput) =>
+    fetchJSON<TaskCollection>(`${API_BASE}/collections`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCollection: (collectionId: string, data: Partial<TaskCollectionInput>) =>
+    fetchJSON<TaskCollection>(`${API_BASE}/collections/${collectionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteCollection: (collectionId: string) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/collections/${collectionId}`, {
+      method: 'DELETE',
+    }),
+
+  startCollectionRun: (
+    collectionId: string,
+    payload?: { executionMode?: ExecutionMode; baseUrl?: string | null }
+  ) =>
+    fetchJSON<CollectionRunRecord>(`${API_BASE}/collections/${collectionId}/runs`, {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
+
+  getCollectionRuns: (collectionId: string) =>
+    fetchJSON<CollectionRunRecord[]>(`${API_BASE}/collections/${collectionId}/runs`),
+
+  getCollectionRun: (collectionId: string, runId: string) =>
+    fetchJSON<CollectionRunRecord>(`${API_BASE}/collections/${collectionId}/runs/${runId}`),
 };

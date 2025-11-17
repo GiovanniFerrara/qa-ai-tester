@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { api } from '../api';
-import type { TaskSpec, RunState, CreateRunRequest, TaskInput, ApiException } from '../types';
+import type { TaskSpec, RunState, CreateRunRequest, TaskInput, ApiException, TaskCollection, TaskCollectionInput, CollectionRunRecord, ExecutionMode } from '../types';
 
 export const QUERY_KEYS = {
   tasks: ['tasks'] as const,
@@ -8,6 +8,10 @@ export const QUERY_KEYS = {
   runs: ['runs'] as const,
   run: (id: string) => ['runs', id] as const,
   runSummary: ['runs', 'summary'] as const,
+  collections: ['collections'] as const,
+  collection: (id: string) => ['collections', id] as const,
+  collectionRuns: (collectionId: string) => ['collections', collectionId, 'runs'] as const,
+  collectionRun: (collectionId: string, runId: string) => ['collections', collectionId, 'runs', runId] as const,
 };
 
 export const useTasks = (options?: Omit<UseQueryOptions<TaskSpec[], ApiException>, 'queryKey' | 'queryFn'>) => {
@@ -104,6 +108,99 @@ export const useRun = (runId: string, options?: Omit<UseQueryOptions<RunState, A
     queryKey: QUERY_KEYS.run(runId),
     queryFn: () => api.getRun(runId),
     enabled: !!runId,
+    ...options,
+  });
+};
+
+export const useCollections = (options?: Omit<UseQueryOptions<TaskCollection[], ApiException>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.collections,
+    queryFn: api.getCollections,
+    ...options,
+  });
+};
+
+export const useCollection = (collectionId: string, options?: Omit<UseQueryOptions<TaskCollection, ApiException>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.collection(collectionId),
+    queryFn: () => api.getCollection(collectionId),
+    enabled: !!collectionId,
+    ...options,
+  });
+};
+
+export const useCreateCollection = (options?: UseMutationOptions<TaskCollection, ApiException, TaskCollectionInput>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: api.createCollection,
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collections });
+      options?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useUpdateCollection = (options?: UseMutationOptions<TaskCollection, ApiException, { collectionId: string; data: Partial<TaskCollectionInput> }>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: ({ collectionId, data }) => api.updateCollection(collectionId, data),
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collections });
+      options?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useDeleteCollection = (options?: UseMutationOptions<{ success: boolean }, ApiException, string>) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: api.deleteCollection,
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collections });
+      options?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useStartCollectionRun = (
+  options?: UseMutationOptions<
+    CollectionRunRecord,
+    ApiException,
+    { collectionId: string; executionMode?: ExecutionMode; baseUrl?: string | null }
+  >,
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: ({ collectionId, executionMode, baseUrl }) =>
+      api.startCollectionRun(collectionId, { executionMode, baseUrl }),
+    onSuccess: (...args) => {
+      const collectionId = args[1].collectionId;
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.collectionRuns(collectionId) });
+      options?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useCollectionRuns = (collectionId: string, options?: Omit<UseQueryOptions<CollectionRunRecord[], ApiException>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.collectionRuns(collectionId),
+    queryFn: () => api.getCollectionRuns(collectionId),
+    enabled: !!collectionId,
+    refetchInterval: 5000,
+    ...options,
+  });
+};
+
+export const useCollectionRun = (collectionId: string, runId: string, options?: Omit<UseQueryOptions<CollectionRunRecord, ApiException>, 'queryKey' | 'queryFn'>) => {
+  return useQuery({
+    queryKey: QUERY_KEYS.collectionRun(collectionId, runId),
+    queryFn: () => api.getCollectionRun(collectionId, runId),
+    enabled: !!collectionId && !!runId,
+    refetchInterval: 5000,
     ...options,
   });
 };

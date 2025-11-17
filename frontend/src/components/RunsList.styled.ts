@@ -305,10 +305,10 @@ export const RunInfo = styled.div`
   color: ${theme.colors.textSecondary};
   font-size: ${theme.fontSizes.base};
   flex-wrap: wrap;
+`;
 
-  .error-text {
-    color: ${theme.colors.error.text};
-  }
+export const ErrorText = styled.span`
+  color: ${theme.colors.error.text};
 `;
 
 export const Muted = styled.p`

@@ -3,6 +3,10 @@ import { RunForm } from "./components/RunForm";
 import { RunsList } from "./components/RunsList";
 import { RunDetail } from "./components/RunDetail";
 import { TasksManager } from "./components/TasksManager";
+import { TestSuites } from "./components/TestSuites";
+import { TestSuiteForm } from "./components/TestSuiteForm";
+import { SuiteRunsList } from "./components/SuiteRunsList";
+import { SuiteRunDetail } from "./components/SuiteRunDetail";
 import {
   Header,
   HeaderContainer,
@@ -30,10 +34,13 @@ function Navigation() {
             Start Run
           </NavLink>
           <NavLink to="/runs" $isActive={isActive("/runs")}>
-            Run History
+            Test Reports
           </NavLink>
           <NavLink to="/tasks" $isActive={isActive("/tasks")}>
-            Tasks
+            Test Cases
+          </NavLink>
+          <NavLink to="/test-suites" $isActive={isActive("/test-suites")}>
+            Test Suites
           </NavLink>
         </Nav>
       </HeaderContainer>
@@ -74,6 +81,46 @@ function App() {
         <Route path="/runs" element={<Runs />} />
         <Route path="/runs/:runId" element={<RunDetailPage />} />
         <Route path="/tasks" element={<TasksManager />} />
+        <Route
+          path="/test-suites"
+          element={
+            <Container>
+              <TestSuites />
+            </Container>
+          }
+        />
+        <Route
+          path="/test-suites/new"
+          element={
+            <Container>
+              <TestSuiteForm />
+            </Container>
+          }
+        />
+        <Route
+          path="/test-suites/:collectionId/edit"
+          element={
+            <Container>
+              <TestSuiteForm />
+            </Container>
+          }
+        />
+        <Route
+          path="/test-suites/:collectionId/runs"
+          element={
+            <Container>
+              <SuiteRunsList />
+            </Container>
+          }
+        />
+        <Route
+          path="/test-suites/:collectionId/runs/:runId"
+          element={
+            <Container>
+              <SuiteRunDetail />
+            </Container>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

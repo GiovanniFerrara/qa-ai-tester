@@ -10,11 +10,25 @@ import { RunEventsController } from './run-events.controller';
 import { OrchestratorService } from './orchestrator.service';
 import { RunExecutionService } from './run-execution.service';
 import { RunsController } from './runs.controller';
+import { CollectionsController } from './collections.controller';
+import { CollectionRunsController } from './collection-runs.controller';
+import { CollectionRunStorageService } from './collection-run-storage.service';
 
 @Module({
   imports: [ProvidersModule, TasksModule, WorkerModule, RunEventsModule],
-  controllers: [RunsController, ArtifactsController, RunEventsController],
-  providers: [RunStorageService, OrchestratorService, RunExecutionService],
+  controllers: [
+    RunsController,
+    ArtifactsController,
+    RunEventsController,
+    CollectionsController,
+    CollectionRunsController,
+  ],
+  providers: [
+    RunStorageService,
+    CollectionRunStorageService,
+    OrchestratorService,
+    RunExecutionService,
+  ],
   exports: [OrchestratorService],
 })
 export class OrchestratorModule {}

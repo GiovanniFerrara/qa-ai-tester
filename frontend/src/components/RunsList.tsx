@@ -255,7 +255,7 @@ export function RunsList() {
           <S.SummaryCard>
             <span>Provider Usage</span>
             {providerUsage.length === 0 ? (
-              <p className="muted">No provider data yet.</p>
+              <S.Muted>No provider data yet.</S.Muted>
             ) : (
               <S.ProviderList>
                 {providerUsage.map(([provider, count]) => (
@@ -361,7 +361,7 @@ export function RunsList() {
       </S.RunsDashboard>
 
       <Card>
-        <h2>QA Run History</h2>
+        <h2>QA Test Reports</h2>
         <S.RunsListContainer>
           {sortedRuns.map((run) => {
             const task = tasks.get(run.taskId);
@@ -409,9 +409,9 @@ export function RunsList() {
                       </span>
                     </>
                   ) : run.status === "failed" ? (
-                    <span className="error-text">
+                    <S.ErrorText>
                       Failed{run.error ? `: ${run.error}` : ""}
-                    </span>
+                    </S.ErrorText>
                   ) : (
                     <span>In progress…</span>
                   )}

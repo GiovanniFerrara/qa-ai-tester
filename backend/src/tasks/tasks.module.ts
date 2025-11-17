@@ -8,6 +8,8 @@ import { TaskStorageService } from './task-storage.service';
 import { TaskTranscriptionService } from './task-transcription.service';
 import { TasksController } from './tasks.controller';
 import { QuickTasksController } from './quick-tasks.controller';
+import { TaskCollectionStorageService } from './task-collection-storage.service';
+import { TaskCollectionsService } from './task-collections.service';
 
 @Module({
   imports: [ConfigModule, ProvidersModule],
@@ -16,8 +18,10 @@ import { QuickTasksController } from './quick-tasks.controller';
     TaskRegistryService,
     TaskContextualizerService,
     TaskTranscriptionService,
+    TaskCollectionStorageService,
+    TaskCollectionsService,
   ],
   controllers: [TasksController, QuickTasksController],
-  exports: [TaskRegistryService],
+  exports: [TaskRegistryService, TaskCollectionsService],
 })
 export class TasksModule {}

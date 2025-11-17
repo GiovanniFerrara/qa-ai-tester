@@ -219,24 +219,19 @@ export const SlideshowThumbnails = styled.div`
   gap: ${theme.spacing.sm};
   overflow-x: auto;
   padding: ${theme.spacing.sm} 0;
+`;
 
-  img {
-    width: 120px;
-    height: auto;
-    border-radius: ${theme.borderRadius.sm};
-    cursor: pointer;
-    opacity: 0.6;
-    transition: ${theme.transitions.normal};
-    border: 2px solid transparent;
+export const ThumbnailImage = styled.img<{ active: boolean }>`
+  width: 120px;
+  height: auto;
+  border-radius: ${theme.borderRadius.sm};
+  cursor: pointer;
+  opacity: ${props => props.active ? 1 : 0.6};
+  transition: ${theme.transitions.normal};
+  border: 2px solid ${props => props.active ? theme.colors.primary : 'transparent'};
 
-    &:hover {
-      opacity: 0.8;
-    }
-
-    &.active {
-      opacity: 1;
-      border-color: ${theme.colors.primary};
-    }
+  &:hover {
+    opacity: 0.8;
   }
 `;
 
@@ -352,7 +347,7 @@ export const KpiTable = styled.div`
 
 export const KpiTableHeader = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px;
+  grid-template-columns: 2fr 1fr 1fr 120px 180px;
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
   background: ${theme.colors.primary};
@@ -363,7 +358,7 @@ export const KpiTableHeader = styled.div`
 
 export const KpiTableRow = styled.div`
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px;
+  grid-template-columns: 2fr 1fr 1fr 120px 180px;
   gap: ${theme.spacing.md};
   padding: ${theme.spacing.md};
   border-bottom: 1px solid ${theme.colors.border};

@@ -272,7 +272,7 @@ The frontend communicates with the backend API through [`src/api.ts`](src/api.ts
 
 ### API Client Functions
 
-**Tasks:**
+**Test Cases:**
 ```typescript
 // Get all tasks
 const tasks = await fetchTasks();
@@ -386,8 +386,8 @@ interface Finding {
 import { Link } from 'react-router-dom';
 
 <Link to="/">Start Run</Link>
-<Link to="/runs">Run History</Link>
-<Link to="/tasks">Tasks Manager</Link>
+<Link to="/runs">Test Reports</Link>
+<Link to="/tasks">Test Cases Manager</Link>
 ```
 
 ## Styling

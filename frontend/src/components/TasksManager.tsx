@@ -196,7 +196,7 @@ export function TasksManager() {
     <S.TasksLayout>
       <Card as={S.TasksSidebar}>
         <S.TasksHeader>
-          <h2>Tasks</h2>
+          <h2>Test Cases</h2>
           <Button variant="secondary" onClick={resetForm}>
             + New Task
           </Button>

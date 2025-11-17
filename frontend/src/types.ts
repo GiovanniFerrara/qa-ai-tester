@@ -167,3 +167,42 @@ export class ApiException extends Error {
     this.name = 'ApiException';
   }
 }
+
+export type ExecutionMode = 'parallel' | 'sequential';
+
+export interface TaskCollection {
+  id: string;
+  name: string;
+  description: string;
+  taskIds: string[];
+  executionMode: ExecutionMode;
+  baseUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskCollectionInput {
+  name: string;
+  description?: string;
+  taskIds: string[];
+  executionMode?: ExecutionMode;
+  baseUrl?: string | null;
+}
+
+export interface CollectionRunItem {
+  taskId: string;
+  runId?: string;
+  status: RunStatus;
+  error?: string;
+}
+
+export interface CollectionRunRecord {
+  id: string;
+  collectionId: string;
+  executionMode: ExecutionMode;
+  status: 'running' | 'completed';
+  startedAt: string;
+  finishedAt?: string;
+  baseUrl?: string | null;
+  items: CollectionRunItem[];
+}

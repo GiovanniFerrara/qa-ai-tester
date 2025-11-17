@@ -7,25 +7,34 @@ import { v4 as uuidv4 } from 'uuid';
 import type { AppEnvironment } from '../config/environment';
 import type { QaReport, DismissReason } from '../models/contracts';
 import type { AiProvider, RunResult, StoredRunRecord } from '../models/run';
+import type { CollectionRunRecord, ExecutionMode } from '../models/collections';
 import { TaskRegistryService } from '../tasks/task-registry.service';
+import { TaskCollectionsService } from '../tasks/task-collections.service';
 import { RunExecutionService } from './run-execution.service';
 import { RunStorageService } from './run-storage.service';
+import { CollectionRunStorageService } from './collection-run-storage.service';
 
 @Injectable()
 export class OrchestratorService {
   private readonly logger = new Logger(OrchestratorService.name);
   private readonly runs = new Map<string, StoredRunRecord>();
+  private readonly collectionRuns = new Map<string, CollectionRunRecord>();
+  private readonly runCompletionPromises = new Map<string, Promise<void>>();
   private readonly lastBaseUrlPath: string;
 
   constructor(
     private readonly configService: ConfigService<AppEnvironment, true>,
     private readonly taskRegistry: TaskRegistryService,
+    private readonly taskCollections: TaskCollectionsService,
     private readonly runExecutionService: RunExecutionService,
     private readonly runStorage: RunStorageService,
+    private readonly collectionRunStorage: CollectionRunStorageService,
   ) {
     this.lastBaseUrlPath = path.resolve(process.cwd(), 'data', 'last-base-url.txt');
     const storedRuns = this.runStorage.loadRuns();
     storedRuns.forEach((run) => this.runs.set(run.runId, run));
+    const storedCollectionRuns = this.collectionRunStorage.loadRuns();
+    storedCollectionRuns.forEach((run) => this.collectionRuns.set(run.id, run));
   }
 
   async startRun(taskId: string, providerOverride?: AiProvider, baseUrlOverride?: string): Promise<StoredRunRecord> {
@@ -55,7 +64,7 @@ export class OrchestratorService {
     this.runs.set(runId, pendingRecord);
     this.persistRuns();
 
-    void this.runExecutionService
+    const executionPromise = this.runExecutionService
       .execute(runId, task, provider, baseUrlOverride)
       .then((result: RunResult) => {
         const finishedAt = new Date();
@@ -69,6 +78,7 @@ export class OrchestratorService {
         };
         this.runs.set(runId, completedRecord);
         this.persistRuns();
+        return result;
       })
       .catch((error) => {
         const finishedAt = new Date();
@@ -84,7 +94,17 @@ export class OrchestratorService {
         };
         this.runs.set(runId, failedRecord);
         this.persistRuns();
+        throw error;
+      })
+      .finally(() => {
+        this.runCompletionPromises.delete(runId);
       });
+    this.runCompletionPromises.set(
+      runId,
+      executionPromise.then(() => undefined).catch(() => undefined),
+    );
+
+    void executionPromise;
 
     return pendingRecord;
   }
@@ -218,6 +238,96 @@ export class OrchestratorService {
     };
   }
 
+  listCollectionRuns(): CollectionRunRecord[] {
+    return [...this.collectionRuns.values()];
+  }
+
+  listCollectionRunsForCollection(collectionId: string): CollectionRunRecord[] {
+    return this.listCollectionRuns().filter((run) => run.collectionId === collectionId);
+  }
+
+  getCollectionRun(collectionRunId: string): CollectionRunRecord {
+    const record = this.collectionRuns.get(collectionRunId);
+    if (!record) {
+      throw new NotFoundException(`Collection run ${collectionRunId} not found`);
+    }
+    return record;
+  }
+
+  getCollectionRunForCollection(
+    collectionId: string,
+    collectionRunId: string,
+  ): CollectionRunRecord {
+    const record = this.getCollectionRun(collectionRunId);
+    if (record.collectionId !== collectionId) {
+      throw new NotFoundException(
+        `Collection run ${collectionRunId} not found for collection ${collectionId}`,
+      );
+    }
+    return record;
+  }
+
+  async startCollectionRun(
+    collectionId: string,
+    options?: { executionMode?: ExecutionMode; baseUrl?: string | null },
+  ): Promise<CollectionRunRecord> {
+    const collection = this.taskCollections.get(collectionId);
+    if (!collection) {
+      throw new NotFoundException(`Collection ${collectionId} not found`);
+    }
+    const executionMode = options?.executionMode ?? collection.executionMode ?? 'parallel';
+    const effectiveBaseUrl = this.normalizeBaseUrl(options?.baseUrl ?? collection.baseUrl);
+    const collectionRunId = uuidv4();
+    const record: CollectionRunRecord = {
+      id: collectionRunId,
+      collectionId,
+      executionMode,
+      status: 'running',
+      startedAt: new Date().toISOString(),
+      baseUrl: effectiveBaseUrl,
+      items: [],
+    };
+    this.collectionRuns.set(collectionRunId, record);
+    this.persistCollectionRuns();
+
+    const startTask = async (taskId: string): Promise<string | null> => {
+      try {
+        const runRecord = await this.startRun(taskId, undefined, effectiveBaseUrl);
+        record.items.push({
+          taskId,
+          runId: runRecord.runId,
+          status: runRecord.status,
+        });
+        this.persistCollectionRuns();
+        this.attachCollectionRunWatcher(collectionRunId, runRecord.runId);
+        return runRecord.runId;
+      } catch (error) {
+        record.items.push({
+          taskId,
+          status: 'failed',
+          error: (error as Error).message,
+        });
+        this.persistCollectionRuns();
+        return null;
+      }
+    };
+
+    if (executionMode === 'sequential') {
+      for (const taskId of collection.taskIds) {
+        const runId = await startTask(taskId);
+        if (runId) {
+          await this.waitForRunCompletion(runId);
+        }
+      }
+    } else {
+      await Promise.all(collection.taskIds.map((taskId) => startTask(taskId)));
+    }
+
+    this.evaluateCollectionRunCompletion(record);
+    this.persistCollectionRuns();
+    return record;
+  }
+
   dismissFinding(
     runId: string,
     findingId: string,
@@ -314,6 +424,70 @@ export class OrchestratorService {
 
   private persistRuns(): void {
     this.runStorage.saveRuns([...this.runs.values()]);
+  }
+
+  private waitForRunCompletion(runId: string): Promise<void> {
+    const inFlight = this.runCompletionPromises.get(runId);
+    if (inFlight) {
+      return inFlight;
+    }
+    const run = this.runs.get(runId);
+    if (!run || run.status !== 'running') {
+      return Promise.resolve();
+    }
+    return Promise.resolve();
+  }
+
+  private attachCollectionRunWatcher(collectionRunId: string, runId: string): void {
+    this.waitForRunCompletion(runId)
+      .catch(() => undefined)
+      .then(() => {
+        this.updateCollectionRunItemFromRun(collectionRunId, runId);
+      });
+  }
+
+  private updateCollectionRunItemFromRun(collectionRunId: string, runId: string): void {
+    const record = this.collectionRuns.get(collectionRunId);
+    if (!record) {
+      return;
+    }
+    const item = record.items.find((entry) => entry.runId === runId);
+    if (!item) {
+      return;
+    }
+    const run = this.runs.get(runId);
+    if (run) {
+      item.status = run.status;
+      item.error = run.error;
+    } else {
+      item.status = 'failed';
+      item.error = item.error ?? 'Run data unavailable';
+    }
+    this.evaluateCollectionRunCompletion(record);
+    this.persistCollectionRuns();
+  }
+
+  private evaluateCollectionRunCompletion(record: CollectionRunRecord): void {
+    if (!record.items.length) {
+      return;
+    }
+    const hasRunning = record.items.some((item) => item.status === 'running');
+    if (!hasRunning) {
+      record.status = 'completed';
+      record.finishedAt = record.finishedAt ?? new Date().toISOString();
+    }
+  }
+
+  private persistCollectionRuns(): void {
+    this.collectionRunStorage.saveRuns([...this.collectionRuns.values()]);
+  }
+
+  private normalizeBaseUrl(value?: string | null): string | undefined {
+    if (value === null) {
+      return undefined;
+    }
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
   }
 
   private getActiveFindings(report?: QaReport): QaReport['findings'] {
