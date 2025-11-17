@@ -1,15 +1,15 @@
 # QA AI Tester
 
-AI-powered automated quality assurance system that uses AI models (OpenAI GPT or Anthropic Claude) to test web applications through browser automation. The system combines a NestJS control plane with Playwright browser workers, multi-provider AI adapters, and strongly typed QA artifacts to deliver comprehensive, AI-driven testing.
+QA AI Tester turns state-of-the-art AI models into hands-on QA copilots. It spins up a Playwright-driven browser, lets GPT or Claude explore your product like a real tester, and returns structured findings with screenshots, traces, and remediation hints—no brittle scripts required.
 
 ## Overview
 
 **QA AI Tester** orchestrates AI agents to automatically test web applications by:
-- Controlling a real browser through Playwright
-- Using AI to interact with your application (clicking, typing, navigating)
-- Analyzing UI, functionality, accessibility, and performance
-- Capturing evidence (screenshots, DOM snapshots, traces)
-- Generating structured QA reports with categorized findings
+- Driving a real browser session powered by Playwright
+- Using AI to explore flows, click, type, and validate UI behavior
+- Spotting visual, functional, accessibility, and performance regressions
+- Capturing evidence such as screenshots, DOM snapshots, and traces
+- Packaging runs into structured QA reports that teams can act on quickly
 
 ## Demo
 
@@ -23,11 +23,10 @@ Watch QA AI Tester in action:
 - 🌐 **Real Browser Automation** - Playwright-based browser control for accurate testing
 - 🔧 **Computer-Use Loop** - Fully implemented AI-driven interaction loop with tool calls
 - 📊 **Structured Reports** - Detailed QA reports with severity-categorized findings
-- 🎯 **Task Management** - Web UI for creating, managing, and running QA tasks
+- 🎯 **Task Management** - Web UI for creating, managing, and running QA tasks with overrides
 - 📸 **Visual Evidence** - Screenshots, DOM snapshots, and Playwright traces
 - 🔄 **Real-Time Updates** - Event streaming for live run monitoring
 - 🔐 **Authentication Support** - Persistent login state for protected applications
-- 📈 **KPI Monitoring** - Optional integration with backend metrics endpoints
 
 ## Feature Overview
 
@@ -35,33 +34,18 @@ Watch QA AI Tester in action:
 | --- | --- |
 | **NestJS Backend** | Orchestrates runs, manages tasks and runs database, streams events, and exposes a REST API for UI/CLI usage. |
 | **Worker Gateway (Playwright)** | Maintains authenticated browser contexts, executes AI-generated actions, captures screenshots/DOM snapshots, and gathers artifacts for each run. |
-| **AI Providers** | Pluggable adapters for OpenAI GPT and Anthropic Claude with configurable models, tool-calling support, and KPI oracle access. |
+| **AI Providers** | Pluggable adapters for OpenAI GPT and Anthropic Claude with configurable models and tool-calling support. |
 | **Frontend (React + Vite)** | Dashboard for authoring tasks, launching runs, live-monitoring executions, and browsing reports/artifacts. |
 | **Artifact Store** | Structured per-run folders with screenshots, traces, model responses, and the final QA report JSON. |
 | **CLI & API** | Workspace scripts and REST endpoints for automating runs, integrating CI, or scripting custom workflows. |
 
 ## Project Structure
 
-```
-qa-ai-tester/
-├── backend/                    # NestJS backend API
-│   ├── src/
-│   │   ├── orchestrator/      # Run management and execution pipeline
-│   │   ├── providers/         # OpenAI & Anthropic integrations
-│   │   ├── worker/            # Playwright browser gateway
-│   │   ├── tasks/             # Task registry and storage
-│   │   ├── models/            # Zod schemas and TypeScript contracts
-│   │   └── services/          # KPI oracle and utilities
-│   ├── tests/
-│   │   └── auth.setup.ts      # Playwright authentication setup
-│   ├── schemas/               # Generated JSON schemas
-│   └── .env                   # Configuration (create from .env.example)
-├── frontend/                   # React + Vite web UI
-│   └── src/
-│       ├── components/        # UI components
-│       └── api.ts            # API client
-└── package.json              # Workspace scripts
-```
+- `backend/` – NestJS control plane, AI orchestration services, and the Playwright worker gateway.
+- `frontend/` – React + Vite dashboard for managing tasks, runs, and reports.
+- `node_modules/` – Workspace dependencies installed via npm workspaces.
+- `package.json` – Shared scripts for installing, building, and running the stack.
+- `USAGE.md`, `README.md` – Documentation for hands-on usage and reference.
 
 ## Prerequisites
 
@@ -84,14 +68,12 @@ qa-ai-tester/
 ### 1. Install Dependencies
 
 ```bash
-# Install root dependencies
 npm install
-
-Run `npm run install:all` from the repo root to execute the three install commands above in sequence.
-
-# Install Playwright browsers
+npm run install:all
 cd backend && npx playwright install
 ```
+
+`npm run install:all` is a workspace helper that installs dependencies for the root, backend, and frontend in one go.
 
 
 ### 2. Configure API Keys
@@ -118,11 +100,6 @@ STORAGE_STATE_PATH=playwright/.auth/analyst.json
 
 # Artifacts storage
 ARTIFACT_DIR=artifacts
-
-# KPI monitoring (optional)
-KPI_BASE_URL=https://your-api-host.example
-KPI_ENDPOINT=/api/kpi
-KPI_TOLERANCE_PERCENT=1
 
 # Task storage
 TASKS_DB_PATH=data/tasks.json
@@ -256,43 +233,6 @@ Access at: http://localhost:3005
      - 🔵 Low - Minor problems
      - ⚪ Info - Observations and suggestions
 
-### Via API
-
-**List Available Tasks:**
-```bash
-curl http://localhost:3005/api/tasks
-```
-
-**Create a New Task:**
-```bash
-curl -X POST http://localhost:3005/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Homepage Test",
-    "description": "Test homepage functionality",
-    "route": "/",
-    "provider": "openai",
-    "model": "computer-use-preview"
-  }'
-```
-
-**Start a QA Run:**
-```bash
-curl -X POST http://localhost:3005/api/runs \
-  -H "Content-Type: application/json" \
-  -d '{"taskId": "your-task-id"}'
-```
-
-**Get Run History:**
-```bash
-curl http://localhost:3005/api/runs
-```
-
-**Get Run Report:**
-```bash
-curl http://localhost:3005/api/runs/{runId}
-```
-
 ## How It Works
 
 ### Computer-Use Orchestration
@@ -310,7 +250,6 @@ The system implements a complete AI-driven computer-use loop:
    - Executes tool calls:
      - `computer_action` - Click, type, scroll, navigate
      - `dom_snapshot` - Capture page structure
-     - `kpi_oracle` - Query backend metrics
      - `assert` - Verify conditions
    - Captures results and feeds back to AI
    - Repeats until task completion
@@ -331,62 +270,12 @@ Each run generates comprehensive artifacts in [`backend/artifacts/{runId}/`](bac
 - **`trace.zip`** - Full Playwright trace for debugging
 - **`screenshots/`** - Screenshots at each step
 
-## Available Scripts
+## Common Scripts
 
-### Root Scripts
-- `npm run dev` - Start both backend and frontend in development mode
-- `npm run build` - Build both backend and frontend
-- `npm start` - Start production server (backend serves frontend)
-
-### Backend Scripts
-- `npm run start:dev` - Start backend with hot reload
-- `npm run worker` - Manual worker test (captures screenshot)
-- `npm run generate:schema` - Generate JSON schemas from Zod models
-- `npm run playwright:test` - Run auth setup
-- `npm run lint` - Lint TypeScript code
-- `npm run test` - Run tests
-
-### Frontend Scripts
-- `npm run dev` - Start Vite dev server with HMR
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-
-## Advanced Configuration
-
-### AI Model Selection
-
-**OpenAI Models:**
-- `computer-use-preview` - Most capable, best for complex testing
-- `computer-use-preview-turbo` - Faster, more cost-effective
-- `o1-mini` - Optimized for reasoning tasks
-
-**Anthropic Models:**
-- `claude-3-opus-20240229` - Highest capability
-- `claude-3-sonnet-20240229` - Balanced performance
-- `claude-sonnet-4-5-sonnet-20250219` - Latest, improved reasoning
-
-### KPI Monitoring
-
-Enable backend metric validation:
-
-```env
-KPI_BASE_URL=https://api.your-app.com
-KPI_ENDPOINT=/api/metrics
-KPI_TOLERANCE_PERCENT=5
-```
-
-The AI will:
-1. Fetch metrics from your API endpoint
-2. Compare actual vs expected values
-3. Report deviations outside tolerance threshold
-
-### Custom Task Configuration
-
-Tasks support extensive customization:
-- Target route and application URL
-- Provider and model selection
-- Custom instructions for the AI
-- Specific areas to focus on
+- `npm run dev` – Launch backend and frontend together for local development.
+- `npm run build` – Produce production builds for both apps.
+- `npm start` – Serve the compiled backend (which also hosts the frontend).
+- `npm run install:all` – Convenience script that installs dependencies across the workspace.
 
 ## Troubleshooting
 
@@ -444,20 +333,6 @@ npx playwright install
 - Zod for schema definition and validation
 - Server-Sent Events (SSE) for real-time updates
 
-## API Endpoints
-
-| Method | Path                    | Description                                  |
-|--------|-------------------------|----------------------------------------------|
-| GET    | `/api/tasks`            | List all registered tasks                    |
-| POST   | `/api/tasks`            | Create a new task                            |
-| PUT    | `/api/tasks/:id`        | Update an existing task                      |
-| DELETE | `/api/tasks/:id`        | Delete a task                                |
-| POST   | `/api/runs`             | Start a new QA run                           |
-| GET    | `/api/runs`             | List all runs with status                    |
-| GET    | `/api/runs/:id`         | Get detailed report for specific run         |
-| GET    | `/api/runs/:id/events`  | Stream real-time events for a run (SSE)      |
-| GET    | `/api/artifacts/:path*` | Access run artifacts (screenshots, traces)   |
-
 ## Production Deployment
 
 1. **Build the application:**
@@ -486,17 +361,11 @@ npx playwright install
 
 ## Contributing
 
-Contributions are welcome! Areas for improvement:
-- Additional AI provider integrations
-- Enhanced reporting visualizations
-- Improved error handling and recovery
-- Performance optimizations
-- Additional tool implementations
-- Test coverage expansion
+Contributions are welcome! Feel free to open an issue or PR to discuss ideas.
 
 ## License
 
-See LICENSE file for details.
+Distributed under the Apache License 2.0. See [`LICENSE`](LICENSE) for details.
 
 ## Support
 
