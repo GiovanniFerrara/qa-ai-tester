@@ -110,6 +110,8 @@ export class OrchestratorService {
       passed: number;
       avgDurationMs: number;
       findings: number;
+      totalCostUsd: number;
+      monthCostUsd: number;
     };
     severity: Record<string, number>;
     urgentFindings: Array<{
@@ -127,6 +129,20 @@ export class OrchestratorService {
     providerUsage: Record<string, number>;
   } {
     const runs = [...this.runs.values()];
+    const totalCostUsd = runs.reduce(
+      (acc, run) => acc + (run.report?.costs.priceUsd ?? 0),
+      0,
+    );
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthCostUsd = runs
+      .filter((run) => {
+        const runDate = new Date(run.startedAt);
+        return runDate.getMonth() === currentMonth && runDate.getFullYear() === currentYear;
+      })
+      .reduce((acc, run) => acc + (run.report?.costs.priceUsd ?? 0), 0);
+
     const totals = {
       total: runs.length,
       completed: runs.filter((run) => run.status === 'completed').length,
@@ -138,6 +154,8 @@ export class OrchestratorService {
         (acc, run) => acc + this.getActiveFindings(run.report).length,
         0,
       ),
+      totalCostUsd,
+      monthCostUsd,
     };
     const durations = runs
       .map((run) => run.report?.costs.durationMs)

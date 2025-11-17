@@ -85,6 +85,8 @@ export const api = {
         passed: number;
         avgDurationMs: number;
         findings: number;
+        totalCostUsd: number;
+        monthCostUsd: number;
       };
       severity: Record<string, number>;
       urgentFindings: Array<{

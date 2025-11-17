@@ -77,6 +77,24 @@ export function RunsList() {
       durations.length > 0
         ? durations.reduce((a, b) => a + b, 0) / durations.length
         : 0;
+
+    const totalCostUsd = sortedRuns.reduce(
+      (acc, run) => acc + (run.report?.costs.priceUsd ?? 0),
+      0
+    );
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const monthCostUsd = sortedRuns
+      .filter((run) => {
+        const runDate = new Date(run.startedAt);
+        return (
+          runDate.getMonth() === currentMonth &&
+          runDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((acc, run) => acc + (run.report?.costs.priceUsd ?? 0), 0);
+
     const severity: Record<string, number> = {
       blocker: 0,
       critical: 0,
@@ -135,6 +153,8 @@ export function RunsList() {
         passed,
         findings,
         avgDurationMs,
+        totalCostUsd,
+        monthCostUsd,
       },
       severity,
       urgentFindings: urgent,
@@ -199,7 +219,7 @@ export function RunsList() {
             <strong>{derivedSummary.totals.running}</strong>
           </S.SummaryCard>
           <S.SummaryCard>
-            <span>Failed</span>
+            <span>System Errors</span>
             <strong>{derivedSummary.totals.failed}</strong>
           </S.SummaryCard>
           <S.SummaryCard>
@@ -223,6 +243,14 @@ export function RunsList() {
           <S.SummaryCard>
             <span>Total Findings</span>
             <strong>{derivedSummary.totals.findings}</strong>
+          </S.SummaryCard>
+          <S.SummaryCard>
+            <span>This Month Cost</span>
+            <strong>${derivedSummary.totals.monthCostUsd.toFixed(2)}</strong>
+          </S.SummaryCard>
+          <S.SummaryCard>
+            <span>Total Cost</span>
+            <strong>${derivedSummary.totals.totalCostUsd.toFixed(2)}</strong>
           </S.SummaryCard>
           <S.SummaryCard>
             <span>Provider Usage</span>
