@@ -273,7 +273,7 @@ export function RunDetail() {
     return (
       <Card>
         <ErrorMessage>No run selected.</ErrorMessage>
-        <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+        <Button onClick={() => navigate("/runs")}>Back to Test Cases</Button>
       </Card>
     );
   }
@@ -286,7 +286,7 @@ export function RunDetail() {
     return (
       <Card>
         <ErrorMessage>Error: {error.message}</ErrorMessage>
-        <Button onClick={() => navigate("/runs")}>Back to Runs</Button>
+        <Button onClick={() => navigate("/runs")}>Back to Test Cases</Button>
       </Card>
     );
   }
@@ -303,7 +303,9 @@ export function RunDetail() {
             <StatusBadge status={run?.status ?? "running"}>
               {(run?.status ?? "running").toUpperCase()}
             </StatusBadge>
-            <Button onClick={() => navigate("/runs")}>← Back to Runs</Button>
+            <Button onClick={() => navigate("/runs")}>
+              ← Back to Test Cases
+            </Button>
           </S.RunDetailMeta>
         </S.RunDetailHeader>
         <S.RunTimes>

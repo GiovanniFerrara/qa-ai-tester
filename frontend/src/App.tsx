@@ -31,7 +31,7 @@ function Navigation() {
         <Subtitle>AI-powered automated quality assurance testing</Subtitle>
         <Nav>
           <NavLink to="/" $isActive={isActive("/")}>
-            Start Run
+            Start Test
           </NavLink>
           <NavLink to="/runs" $isActive={isActive("/runs")}>
             Test Reports

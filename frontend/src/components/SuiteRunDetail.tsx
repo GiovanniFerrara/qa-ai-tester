@@ -45,7 +45,7 @@ export function SuiteRunDetail() {
       <S.Container>
         <S.ErrorState>
           <p>Error loading run: {error.message}</p>
-          <button onClick={handleBack}>Back to Runs</button>
+          <button onClick={handleBack}>Back to Test Cases</button>
         </S.ErrorState>
       </S.Container>
     );
@@ -56,7 +56,7 @@ export function SuiteRunDetail() {
       <S.Container>
         <S.ErrorState>
           <p>Run not found</p>
-          <button onClick={handleBack}>Back to Runs</button>
+          <button onClick={handleBack}>Back to Test Cases</button>
         </S.ErrorState>
       </S.Container>
     );
@@ -75,7 +75,7 @@ export function SuiteRunDetail() {
     <S.Container>
       <S.Header>
         <S.HeaderContent>
-          <S.BackButton onClick={handleBack}>← Back to Runs</S.BackButton>
+          <S.BackButton onClick={handleBack}>← Back to Test Cases</S.BackButton>
           <S.TitleRow>
             <S.Title>Suite Run #{run.id.substring(0, 8)}</S.Title>
             <S.StatusBadge status={run.status}>
@@ -146,7 +146,7 @@ export function SuiteRunDetail() {
         )}
       </S.MetaCard>
 
-      <S.SectionTitle>Task Runs</S.SectionTitle>
+      <S.SectionTitle>Test Cases</S.SectionTitle>
 
       {run.items.length === 0 ? (
         <S.EmptyState>

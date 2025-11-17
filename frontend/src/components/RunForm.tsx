@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTasks, useCreateRun } from "../hooks/useApi";
 import {
   Card,
@@ -13,6 +13,7 @@ import {
   EmptyState,
 } from "../styles/shared.styled";
 import { TaskPreview, Hint } from "./RunForm.styled";
+import { theme } from "../styles/theme";
 
 export function RunForm() {
   const navigate = useNavigate();
@@ -84,7 +85,20 @@ export function RunForm() {
 
   return (
     <Card>
-      <h2>Start New QA Run</h2>
+      <h2>Start Individual Test Case</h2>
+      <Hint style={{ marginTop: "8px", marginBottom: "16px" }}>
+        Running a single test case, or want to run multiple tests?{" "}
+        <Link
+          to="/test-suites"
+          style={{
+            color: theme.colors.primary,
+            textDecoration: "none",
+            fontWeight: 500,
+          }}
+        >
+          Create a Test Suite →
+        </Link>
+      </Hint>
 
       {createRunMutation.isError && (
         <ErrorMessage>{createRunMutation.error.message}</ErrorMessage>
@@ -127,7 +141,9 @@ export function RunForm() {
         </FormGroup>
 
         <Button type="submit" disabled={createRunMutation.isPending}>
-          {createRunMutation.isPending ? "Starting Run..." : "Start Run"}
+          {createRunMutation.isPending
+            ? "Starting Test Case..."
+            : "Start Test Case"}
         </Button>
       </form>
 

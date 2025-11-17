@@ -195,7 +195,7 @@ export function RunsList() {
     return (
       <Card>
         <EmptyState>
-          <h3>No Runs Yet</h3>
+          <h3>No Test Cases Yet</h3>
           <p>Start your first QA run to see results here.</p>
         </EmptyState>
       </Card>
@@ -207,7 +207,7 @@ export function RunsList() {
       <S.RunsDashboard>
         <S.SummaryGrid>
           <S.SummaryCard>
-            <span>Total Runs</span>
+            <span>Total Test Cases</span>
             <strong>{derivedSummary.totals.total}</strong>
           </S.SummaryCard>
           <S.SummaryCard>

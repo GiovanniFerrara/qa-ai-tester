@@ -293,7 +293,7 @@ await updateTask(taskId, { name: "New Name" });
 await deleteTask(taskId);
 ```
 
-**Runs:**
+**Test Cases:**
 ```typescript
 // Start a run
 const run = await startRun({
@@ -385,7 +385,7 @@ interface Finding {
 ```tsx
 import { Link } from 'react-router-dom';
 
-<Link to="/">Start Run</Link>
+<Link to="/">Start Test</Link>
 <Link to="/runs">Test Reports</Link>
 <Link to="/tasks">Test Cases Manager</Link>
 ```

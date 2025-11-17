@@ -68,7 +68,7 @@ export function SuiteRunsList() {
           <S.BackButton onClick={handleBack}>
             ← Back to Test Suites
           </S.BackButton>
-          <S.Title>{collection.name} - Runs</S.Title>
+          <S.Title>{collection.name} - Test Cases</S.Title>
           {collection.description && (
             <S.Subtitle>{collection.description}</S.Subtitle>
           )}
@@ -84,7 +84,7 @@ export function SuiteRunsList() {
       {!runs || runs.length === 0 ? (
         <S.Card>
           <S.EmptyState>
-            <h3>No Runs Yet</h3>
+            <h3>No Test Cases Yet</h3>
             <p>This test suite hasn't been executed yet.</p>
           </S.EmptyState>
         </S.Card>
