@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+export const DismissReasonSchema = z.enum(['false_positive', 'fixed']);
+
+export const DismissalSchema = z.object({
+  reason: DismissReasonSchema,
+  dismissedAt: z.string(),
+  dismissedBy: z.string().optional(),
+});
+
+export type DismissReason = z.infer<typeof DismissReasonSchema>;
+export type DismissalRecord = z.infer<typeof DismissalSchema>;
+
 export const EvidenceRefSchema = z.object({
   screenshotRef: z.string(),
   selector: z.string().nullable(),
@@ -30,6 +41,7 @@ export const FindingSchema = z.object({
   evidence: z.array(EvidenceRefSchema),
   suggestedFix: z.string(),
   confidence: z.number().min(0).max(1),
+  dismissal: DismissalSchema.optional(),
 });
 
 export type Finding = z.infer<typeof FindingSchema>;
@@ -80,6 +92,7 @@ export const KpiTableRowSchema = z.object({
   expected: z.string(),
   observed: z.string(),
   status: z.enum(['ok', 'mismatch', 'missing']),
+  dismissal: DismissalSchema.optional(),
 });
 
 export type KpiTableRow = z.infer<typeof KpiTableRowSchema>;

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { AppEnvironment } from '../config/environment';
-import type { QaReport } from '../models/contracts';
+import type { QaReport, DismissReason } from '../models/contracts';
 import type { AiProvider, RunResult, StoredRunRecord } from '../models/run';
 import { TaskRegistryService } from '../tasks/task-registry.service';
 import { RunExecutionService } from './run-execution.service';
@@ -65,6 +65,7 @@ export class OrchestratorService {
           finishedAt: finishedAt.toISOString(),
           report: result.report,
           artifacts: result.artifacts,
+          summary: this.buildRunSummarySnapshot(result.report),
         };
         this.runs.set(runId, completedRecord);
         this.persistRuns();
@@ -133,7 +134,10 @@ export class OrchestratorService {
       failed: runs.filter((run) => run.status === 'failed').length,
       passed: runs.filter((run) => run.report?.status === 'passed').length,
       avgDurationMs: 0,
-      findings: runs.reduce((acc, run) => acc + (run.report?.findings.length ?? 0), 0),
+      findings: runs.reduce(
+        (acc, run) => acc + this.getActiveFindings(run.report).length,
+        0,
+      ),
     };
     const durations = runs
       .map((run) => run.report?.costs.durationMs)
@@ -152,14 +156,14 @@ export class OrchestratorService {
       info: 0,
     };
     runs.forEach((run) => {
-      run.report?.findings.forEach((finding) => {
+      this.getActiveFindings(run.report).forEach((finding) => {
         severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
       });
     });
 
     const urgentFindings = runs
       .flatMap((run) =>
-        (run.report?.findings ?? []).map((finding) => ({ finding, run })),
+        this.getActiveFindings(run.report).map((finding) => ({ finding, run })),
       )
       .filter(({ finding }) => ['blocker', 'critical'].includes(finding.severity))
       .slice(0, 10)
@@ -172,9 +176,7 @@ export class OrchestratorService {
 
     const kpiAlerts = runs
       .flatMap((run) =>
-        (run.report?.kpiTable ?? [])
-          .filter((kpi) => kpi.status !== 'ok')
-          .map((kpi) => ({ kpi, run })),
+        this.getActiveKpiAlerts(run.report).map((kpi) => ({ kpi, run })),
       )
       .slice(0, 10)
       .map(({ kpi, run }) => ({
@@ -198,8 +200,151 @@ export class OrchestratorService {
     };
   }
 
+  dismissFinding(
+    runId: string,
+    findingId: string,
+    reason: DismissReason,
+    dismissedBy?: string,
+  ): StoredRunRecord {
+    return this.updateRunReport(runId, (report) => {
+      const index = report.findings.findIndex((finding) => finding.id === findingId);
+      if (index === -1) {
+        throw new NotFoundException(`Finding ${findingId} not found in run ${runId}`);
+      }
+      const dismissedAt = new Date().toISOString();
+      const actor = dismissedBy?.trim() || 'manual';
+      const updatedFindings = [...report.findings];
+      updatedFindings[index] = {
+        ...updatedFindings[index],
+        dismissal: {
+          reason,
+          dismissedAt,
+          dismissedBy: actor,
+        },
+      };
+      return {
+        ...report,
+        findings: updatedFindings,
+      };
+    });
+  }
+
+  restoreFinding(runId: string, findingId: string): StoredRunRecord {
+    return this.updateRunReport(runId, (report) => {
+      const index = report.findings.findIndex((finding) => finding.id === findingId);
+      if (index === -1) {
+        throw new NotFoundException(`Finding ${findingId} not found in run ${runId}`);
+      }
+      const updatedFindings = [...report.findings];
+      updatedFindings[index] = {
+        ...updatedFindings[index],
+        dismissal: undefined,
+      };
+      return {
+        ...report,
+        findings: updatedFindings,
+      };
+    });
+  }
+
+  dismissKpi(
+    runId: string,
+    label: string,
+    reason: DismissReason,
+    dismissedBy?: string,
+  ): StoredRunRecord {
+    return this.updateRunReport(runId, (report) => {
+      const index = report.kpiTable.findIndex((row) => row.label === label);
+      if (index === -1) {
+        throw new NotFoundException(`KPI "${label}" not found in run ${runId}`);
+      }
+      const dismissedAt = new Date().toISOString();
+      const actor = dismissedBy?.trim() || 'manual';
+      const updatedTable = [...report.kpiTable];
+      updatedTable[index] = {
+        ...updatedTable[index],
+        dismissal: {
+          reason,
+          dismissedAt,
+          dismissedBy: actor,
+        },
+      };
+      return {
+        ...report,
+        kpiTable: updatedTable,
+      };
+    });
+  }
+
+  restoreKpi(runId: string, label: string): StoredRunRecord {
+    return this.updateRunReport(runId, (report) => {
+      const index = report.kpiTable.findIndex((row) => row.label === label);
+      if (index === -1) {
+        throw new NotFoundException(`KPI "${label}" not found in run ${runId}`);
+      }
+      const updatedTable = [...report.kpiTable];
+      updatedTable[index] = {
+        ...updatedTable[index],
+        dismissal: undefined,
+      };
+      return {
+        ...report,
+        kpiTable: updatedTable,
+      };
+    });
+  }
+
   private persistRuns(): void {
     this.runStorage.saveRuns([...this.runs.values()]);
+  }
+
+  private getActiveFindings(report?: QaReport): QaReport['findings'] {
+    return (report?.findings ?? []).filter((finding) => !finding.dismissal);
+  }
+
+  private getActiveKpiAlerts(report?: QaReport): QaReport['kpiTable'] {
+    return (report?.kpiTable ?? []).filter(
+      (kpi) => kpi.status !== 'ok' && !kpi.dismissal,
+    );
+  }
+
+  private buildRunSummarySnapshot(report: QaReport): StoredRunRecord['summary'] {
+    const activeFindings = this.getActiveFindings(report);
+    const severityCounts: Record<string, number> = {
+      blocker: 0,
+      critical: 0,
+      major: 0,
+      minor: 0,
+      info: 0,
+    };
+    activeFindings.forEach((finding) => {
+      severityCounts[finding.severity] = (severityCounts[finding.severity] ?? 0) + 1;
+    });
+    const activeKpiAlerts = this.getActiveKpiAlerts(report).length;
+    return {
+      findings: activeFindings.length,
+      severityCounts,
+      kpiAlerts: activeKpiAlerts,
+    };
+  }
+
+  private updateRunReport(
+    runId: string,
+    mutator: (report: QaReport) => QaReport,
+  ): StoredRunRecord {
+    const existing = this.getRun(runId);
+    if (!existing.report) {
+      throw new NotFoundException(`Run ${runId} does not have a QA report yet`);
+    }
+    const updatedReport = mutator(existing.report);
+    const updatedRecord: StoredRunRecord = {
+      ...existing,
+      report: updatedReport,
+      summary: this.buildRunSummarySnapshot(updatedReport),
+    };
+    this.runs.set(runId, updatedRecord);
+    this.persistRuns();
+    return updatedRecord;
   }
 
   private async persistLastBaseUrl(baseUrl: string): Promise<void> {

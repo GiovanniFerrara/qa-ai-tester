@@ -578,3 +578,146 @@ export const EvidenceModalClose = styled.button`
     transform: scale(1.1);
   }
 `;
+
+export const DismissActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+  margin-left: auto;
+`;
+
+export const DismissButton = styled.button`
+  background: ${theme.colors.borderLight};
+  color: ${theme.colors.textSecondary};
+  border: 1px solid ${theme.colors.border};
+  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.sm};
+  cursor: pointer;
+  transition: ${theme.transitions.normal};
+  font-weight: 500;
+
+  &:hover {
+    background: ${theme.colors.primary};
+    color: white;
+    border-color: ${theme.colors.primary};
+  }
+`;
+
+export const DismissMenu = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+export const DismissDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: ${theme.spacing.xs};
+  background: white;
+  border: 1px solid ${theme.colors.border};
+  border-radius: ${theme.borderRadius.md};
+  box-shadow: ${theme.shadows.lg};
+  z-index: 100;
+  min-width: 200px;
+  overflow: hidden;
+`;
+
+export const DismissOption = styled.button`
+  width: 100%;
+  padding: ${theme.spacing.md};
+  border: none;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  transition: ${theme.transitions.fast};
+  font-size: ${theme.fontSizes.sm};
+  color: ${theme.colors.text};
+  display: flex;
+  flex-direction: column;
+  gap: ${theme.spacing.xs};
+
+  &:hover {
+    background: ${theme.colors.background};
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid ${theme.colors.borderLight};
+  }
+
+  strong {
+    font-weight: 600;
+    color: ${theme.colors.primary};
+  }
+
+  span {
+    font-size: ${theme.fontSizes.xs};
+    color: ${theme.colors.textSecondary};
+  }
+`;
+
+export const DismissedBadge = styled.div<{ reason: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+  padding: ${theme.spacing.sm} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.sm};
+  font-weight: 600;
+  background: ${props => props.reason === 'fixed' 
+    ? theme.colors.success.bg 
+    : theme.colors.borderLight};
+  color: ${props => props.reason === 'fixed'
+    ? theme.colors.success.text
+    : theme.colors.textSecondary};
+`;
+
+export const RestoreButton = styled.button`
+  background: transparent;
+  color: ${theme.colors.primary};
+  border: 1px solid ${theme.colors.primary};
+  padding: ${theme.spacing.xs} ${theme.spacing.md};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.sm};
+  cursor: pointer;
+  transition: ${theme.transitions.normal};
+  font-weight: 500;
+
+  &:hover {
+    background: ${theme.colors.primary};
+    color: white;
+  }
+`;
+
+export const DismissedFinding = styled(Finding)<{ severity?: string }>`
+  opacity: 0.7;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.5) 10px,
+      rgba(255, 255, 255, 0.5) 20px
+    );
+    pointer-events: none;
+  }
+`;
+
+export const DismissedKpiRow = styled(KpiTableRow)`
+  opacity: 0.7;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 0, 0, 0.02) 10px,
+    rgba(0, 0, 0, 0.02) 20px
+  );
+`;

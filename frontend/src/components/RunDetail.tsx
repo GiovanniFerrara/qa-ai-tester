@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { useRun, useTasks } from "../hooks/useApi";
-import type { QAReport, RunEvent, RunState } from "../types";
+import type { RunEvent, DismissReason } from "../types";
 import {
   Card,
   Button,
@@ -46,6 +46,8 @@ export function RunDetail() {
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<string | null>(null);
+  const [openDismissMenu, setOpenDismissMenu] = useState<string | null>(null);
+  const [dismissingItem, setDismissingItem] = useState<string | null>(null);
   const completionRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -55,7 +57,6 @@ export function RunDetail() {
       return;
     }
 
-    let isMounted = true;
     let eventSource: EventSource | null = null;
 
     eventSource = api.subscribeToRunEvents(runId, (incoming) => {
@@ -102,7 +103,6 @@ export function RunDetail() {
     });
 
     return () => {
-      isMounted = false;
       if (completionRefreshTimer.current) {
         clearTimeout(completionRefreshTimer.current);
         completionRefreshTimer.current = null;
@@ -137,21 +137,75 @@ export function RunDetail() {
     return new Date(value).toLocaleTimeString();
   };
 
-  const getSeverityClass = (severity: string) => {
-    return `severity-badge severity-${severity}`;
-  };
+  const handleDismissFinding = useCallback(
+    async (findingId: string, reason: DismissReason) => {
+      if (!runId) return;
+      setDismissingItem(findingId);
+      setOpenDismissMenu(null);
 
-  const getFindingClass = (severity: string) => {
-    return `finding finding-${severity}`;
-  };
+      try {
+        await api.dismissFinding(runId, findingId, reason);
+        await refetchRun();
+      } catch (error) {
+        console.error("Failed to dismiss finding:", error);
+      } finally {
+        setDismissingItem(null);
+      }
+    },
+    [runId, refetchRun]
+  );
 
-  const getStatusClass = (status: string) => {
-    return `status status-${status}`;
-  };
+  const handleRestoreFinding = useCallback(
+    async (findingId: string) => {
+      if (!runId) return;
+      setDismissingItem(findingId);
 
-  const getKpiStatusClass = (status: string) => {
-    return `kpi-status kpi-status-${status}`;
-  };
+      try {
+        await api.restoreFinding(runId, findingId);
+        await refetchRun();
+      } catch (error) {
+        console.error("Failed to restore finding:", error);
+      } finally {
+        setDismissingItem(null);
+      }
+    },
+    [runId, refetchRun]
+  );
+
+  const handleDismissKpi = useCallback(
+    async (kpiLabel: string, reason: DismissReason) => {
+      if (!runId) return;
+      setDismissingItem(kpiLabel);
+      setOpenDismissMenu(null);
+
+      try {
+        await api.dismissKpi(runId, kpiLabel, reason);
+        await refetchRun();
+      } catch (error) {
+        console.error("Failed to dismiss KPI:", error);
+      } finally {
+        setDismissingItem(null);
+      }
+    },
+    [runId, refetchRun]
+  );
+
+  const handleRestoreKpi = useCallback(
+    async (kpiLabel: string) => {
+      if (!runId) return;
+      setDismissingItem(kpiLabel);
+
+      try {
+        await api.restoreKpi(runId, kpiLabel);
+        await refetchRun();
+      } catch (error) {
+        console.error("Failed to restore KPI:", error);
+      } finally {
+        setDismissingItem(null);
+      }
+    },
+    [runId, refetchRun]
+  );
 
   const loading = runLoading;
   const error = runError;
@@ -448,23 +502,88 @@ export function RunDetail() {
                   <div>Expected</div>
                   <div>Observed</div>
                   <div>Status</div>
+                  <div>Actions</div>
                 </S.KpiTableHeader>
-                {run.report.kpiTable.map((kpi, idx) => (
-                  <S.KpiTableRow key={idx}>
-                    <S.KpiLabel>{kpi.label}</S.KpiLabel>
-                    <S.KpiExpected>{kpi.expected}</S.KpiExpected>
-                    <S.KpiObserved>{kpi.observed}</S.KpiObserved>
-                    <div>
-                      <S.KpiStatus status={kpi.status}>
-                        {kpi.status === "ok"
-                          ? "✓ OK"
-                          : kpi.status === "mismatch"
-                            ? "✗ Mismatch"
-                            : "? Missing"}
-                      </S.KpiStatus>
-                    </div>
-                  </S.KpiTableRow>
-                ))}
+                {run.report.kpiTable.map((kpi, idx) => {
+                  const RowComponent = kpi.dismissal
+                    ? S.DismissedKpiRow
+                    : S.KpiTableRow;
+                  return (
+                    <RowComponent key={idx}>
+                      <S.KpiLabel>{kpi.label}</S.KpiLabel>
+                      <S.KpiExpected>{kpi.expected}</S.KpiExpected>
+                      <S.KpiObserved>{kpi.observed}</S.KpiObserved>
+                      <div>
+                        <S.KpiStatus status={kpi.status}>
+                          {kpi.status === "ok"
+                            ? "✓ OK"
+                            : kpi.status === "mismatch"
+                              ? "✗ Mismatch"
+                              : "? Missing"}
+                        </S.KpiStatus>
+                      </div>
+                      <S.DismissActions>
+                        {kpi.dismissal ? (
+                          <>
+                            <S.DismissedBadge reason={kpi.dismissal.reason}>
+                              {kpi.dismissal.reason === "fixed"
+                                ? "✓ Fixed"
+                                : "⚠ False Positive"}
+                            </S.DismissedBadge>
+                            <S.RestoreButton
+                              onClick={() => handleRestoreKpi(kpi.label)}
+                              disabled={dismissingItem === kpi.label}
+                            >
+                              {dismissingItem === kpi.label ? "..." : "Restore"}
+                            </S.RestoreButton>
+                          </>
+                        ) : (
+                          <S.DismissMenu>
+                            <S.DismissButton
+                              onClick={() =>
+                                setOpenDismissMenu(
+                                  openDismissMenu === kpi.label
+                                    ? null
+                                    : kpi.label
+                                )
+                              }
+                              disabled={dismissingItem === kpi.label}
+                            >
+                              {dismissingItem === kpi.label
+                                ? "Dismissing..."
+                                : "Dismiss"}
+                            </S.DismissButton>
+                            {openDismissMenu === kpi.label && (
+                              <S.DismissDropdown>
+                                <S.DismissOption
+                                  onClick={() =>
+                                    handleDismissKpi(
+                                      kpi.label,
+                                      "false_positive"
+                                    )
+                                  }
+                                >
+                                  <strong>False Positive</strong>
+                                  <span>
+                                    This alert is incorrect or not applicable
+                                  </span>
+                                </S.DismissOption>
+                                <S.DismissOption
+                                  onClick={() =>
+                                    handleDismissKpi(kpi.label, "fixed")
+                                  }
+                                >
+                                  <strong>Fixed</strong>
+                                  <span>This issue has been resolved</span>
+                                </S.DismissOption>
+                              </S.DismissDropdown>
+                            )}
+                          </S.DismissMenu>
+                        )}
+                      </S.DismissActions>
+                    </RowComponent>
+                  );
+                })}
               </S.KpiTable>
             </Card>
           )}
@@ -474,81 +593,158 @@ export function RunDetail() {
             {run.report.findings.length === 0 ? (
               <p>No findings reported.</p>
             ) : (
-              run.report.findings.map((finding) => (
-                <S.Finding key={finding.id} severity={finding.severity}>
-                  <S.FindingHeader>
-                    <S.FindingTitle>{finding.assertion}</S.FindingTitle>
-                    <S.SeverityBadge severity={finding.severity}>
-                      {finding.severity}
-                    </S.SeverityBadge>
-                  </S.FindingHeader>
-                  <S.FindingBody>
-                    <p>
-                      <strong>Expected:</strong> {finding.expected}
-                    </p>
-                    <p>
-                      <strong>Observed:</strong> {finding.observed}
-                    </p>
-                    {finding.suggestedFix && (
-                      <p>
-                        <strong>Suggested Fix:</strong> {finding.suggestedFix}
-                      </p>
-                    )}
-                  </S.FindingBody>
-                  {finding.evidence.length > 0 && (
-                    <S.FindingEvidence>
-                      <strong>Evidence:</strong>
-                      <S.EvidenceGallery>
-                        {finding.evidence.map((evidence, idx) => {
-                          const evidenceFilename = extractFilename(
-                            evidence.screenshotRef
-                          );
-                          const screenshot =
-                            allScreenshots.find(
-                              (s) =>
-                                s.filename === evidenceFilename ||
-                                evidence.screenshotRef.includes(s.filename)
-                            ) ?? null;
-
-                          if (!screenshot) {
-                            return null;
-                          }
-                          return (
-                            <S.EvidenceItem
-                              key={idx}
+              run.report.findings.map((finding) => {
+                const FindingComponent = finding.dismissal
+                  ? S.DismissedFinding
+                  : S.Finding;
+                return (
+                  <FindingComponent
+                    key={finding.id}
+                    severity={finding.severity}
+                  >
+                    <S.FindingHeader>
+                      <S.FindingTitle>{finding.assertion}</S.FindingTitle>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.5rem",
+                          alignItems: "center",
+                        }}
+                      >
+                        <S.SeverityBadge severity={finding.severity}>
+                          {finding.severity}
+                        </S.SeverityBadge>
+                        {finding.dismissal ? (
+                          <>
+                            <S.DismissedBadge reason={finding.dismissal.reason}>
+                              {finding.dismissal.reason === "fixed"
+                                ? "✓ Fixed"
+                                : "⚠ False Positive"}
+                            </S.DismissedBadge>
+                            <S.RestoreButton
+                              onClick={() => handleRestoreFinding(finding.id)}
+                              disabled={dismissingItem === finding.id}
+                            >
+                              {dismissingItem === finding.id
+                                ? "..."
+                                : "Restore"}
+                            </S.RestoreButton>
+                          </>
+                        ) : (
+                          <S.DismissMenu>
+                            <S.DismissButton
                               onClick={() =>
-                                setSelectedEvidence(
-                                  selectedEvidence === screenshot.path
+                                setOpenDismissMenu(
+                                  openDismissMenu === finding.id
                                     ? null
-                                    : screenshot.path
+                                    : finding.id
                                 )
                               }
+                              disabled={dismissingItem === finding.id}
                             >
-                              <img
-                                src={screenshot.path}
-                                alt={`Evidence ${idx + 1}`}
-                                data-debug-original={screenshot.originalPath}
-                              />
-                              <S.EvidenceInfo>
-                                <span>{evidence.time}</span>
-                              </S.EvidenceInfo>
-                            </S.EvidenceItem>
-                          );
-                        })}
-                      </S.EvidenceGallery>
-                    </S.FindingEvidence>
-                  )}
-                  <S.FindingMeta>
-                    <span>Category: {finding.category}</span>
-                    <span>
-                      Confidence: {(finding.confidence * 100).toFixed(0)}%
-                    </span>
+                              {dismissingItem === finding.id
+                                ? "Dismissing..."
+                                : "Dismiss"}
+                            </S.DismissButton>
+                            {openDismissMenu === finding.id && (
+                              <S.DismissDropdown>
+                                <S.DismissOption
+                                  onClick={() =>
+                                    handleDismissFinding(
+                                      finding.id,
+                                      "false_positive"
+                                    )
+                                  }
+                                >
+                                  <strong>False Positive</strong>
+                                  <span>
+                                    This finding is incorrect or not applicable
+                                  </span>
+                                </S.DismissOption>
+                                <S.DismissOption
+                                  onClick={() =>
+                                    handleDismissFinding(finding.id, "fixed")
+                                  }
+                                >
+                                  <strong>Fixed</strong>
+                                  <span>This issue has been resolved</span>
+                                </S.DismissOption>
+                              </S.DismissDropdown>
+                            )}
+                          </S.DismissMenu>
+                        )}
+                      </div>
+                    </S.FindingHeader>
+                    <S.FindingBody>
+                      <p>
+                        <strong>Expected:</strong> {finding.expected}
+                      </p>
+                      <p>
+                        <strong>Observed:</strong> {finding.observed}
+                      </p>
+                      {finding.suggestedFix && (
+                        <p>
+                          <strong>Suggested Fix:</strong> {finding.suggestedFix}
+                        </p>
+                      )}
+                    </S.FindingBody>
                     {finding.evidence.length > 0 && (
-                      <span>📸 {finding.evidence.length} Evidence Item(s)</span>
+                      <S.FindingEvidence>
+                        <strong>Evidence:</strong>
+                        <S.EvidenceGallery>
+                          {finding.evidence.map((evidence, idx) => {
+                            const evidenceFilename = extractFilename(
+                              evidence.screenshotRef
+                            );
+                            const screenshot =
+                              allScreenshots.find(
+                                (s) =>
+                                  s.filename === evidenceFilename ||
+                                  evidence.screenshotRef.includes(s.filename)
+                              ) ?? null;
+
+                            if (!screenshot) {
+                              return null;
+                            }
+                            return (
+                              <S.EvidenceItem
+                                key={idx}
+                                onClick={() =>
+                                  setSelectedEvidence(
+                                    selectedEvidence === screenshot.path
+                                      ? null
+                                      : screenshot.path
+                                  )
+                                }
+                              >
+                                <img
+                                  src={screenshot.path}
+                                  alt={`Evidence ${idx + 1}`}
+                                  data-debug-original={screenshot.originalPath}
+                                />
+                                <S.EvidenceInfo>
+                                  <span>{evidence.time}</span>
+                                </S.EvidenceInfo>
+                              </S.EvidenceItem>
+                            );
+                          })}
+                        </S.EvidenceGallery>
+                      </S.FindingEvidence>
                     )}
-                  </S.FindingMeta>
-                </S.Finding>
-              ))
+                    <S.FindingMeta>
+                      <span>Category: {finding.category}</span>
+                      <span>
+                        Confidence: {(finding.confidence * 100).toFixed(0)}%
+                      </span>
+                      {finding.evidence.length > 0 && (
+                        <span>
+                          📸 {finding.evidence.length} Evidence Item(s)
+                        </span>
+                      )}
+                    </S.FindingMeta>
+                  </FindingComponent>
+                );
+              })
             )}
           </Card>
         </>

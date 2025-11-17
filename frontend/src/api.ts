@@ -1,4 +1,4 @@
-import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent, ApiError, ApiException } from './types';
+import { TaskSpec, RunState, CreateRunRequest, TaskInput, RunEvent, ApiError, ApiException, DismissReason } from './types';
 
 const API_BASE = '/api';
 
@@ -124,4 +124,26 @@ export const api = {
     };
     return source;
   },
+
+  dismissFinding: (runId: string, findingId: string, reason: DismissReason) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/findings/${findingId}/dismiss`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  restoreFinding: (runId: string, findingId: string) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/findings/${findingId}/restore`, {
+      method: 'POST',
+    }),
+
+  dismissKpi: (runId: string, kpiLabel: string, reason: DismissReason) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/kpi/${encodeURIComponent(kpiLabel)}/dismiss`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  restoreKpi: (runId: string, kpiLabel: string) =>
+    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/kpi/${encodeURIComponent(kpiLabel)}/restore`, {
+      method: 'POST',
+    }),
 };

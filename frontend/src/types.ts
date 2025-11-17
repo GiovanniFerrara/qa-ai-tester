@@ -42,6 +42,14 @@ export interface TaskInput {
   };
 }
 
+export type DismissReason = 'false_positive' | 'fixed';
+
+export interface FindingDismissal {
+  reason: DismissReason;
+  dismissedAt: string;
+  dismissedBy?: string;
+}
+
 export interface Finding {
   id: string;
   severity: 'blocker' | 'critical' | 'major' | 'minor' | 'info';
@@ -58,6 +66,7 @@ export interface Finding {
   }>;
   suggestedFix: string;
   confidence: number;
+  dismissal?: FindingDismissal;
 }
 
 export interface QAReport {
@@ -74,6 +83,7 @@ export interface QAReport {
     expected: string;
     observed: string;
     status: 'ok' | 'mismatch' | 'missing';
+    dismissal?: FindingDismissal;
   }>;
   links: {
     traceUrl: string;

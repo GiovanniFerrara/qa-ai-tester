@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { TaskSpec } from "../types";
 import { useRuns, useTasks, useRunSummary } from "../hooks/useApi";
 import {
   Card,
@@ -67,7 +66,8 @@ export function RunsList() {
       (run) => run.report?.status === "passed"
     ).length;
     const findings = sortedRuns.reduce(
-      (acc, run) => acc + (run.report?.findings.length ?? 0),
+      (acc, run) =>
+        acc + (run.report?.findings.filter((f) => !f.dismissal).length ?? 0),
       0
     );
     const durations = sortedRuns
@@ -99,8 +99,11 @@ export function RunsList() {
 
     sortedRuns.forEach((run) => {
       run.report?.findings.forEach((finding) => {
-        severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
+        if (!finding.dismissal) {
+          severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
+        }
         if (
+          !finding.dismissal &&
           ["blocker", "critical"].includes(finding.severity) &&
           urgent.length < 10
         ) {
@@ -113,7 +116,7 @@ export function RunsList() {
         }
       });
       (run.report?.kpiTable ?? []).forEach((kpi) => {
-        if (kpi.status !== "ok" && kpiAlerts.length < 10) {
+        if (!kpi.dismissal && kpi.status !== "ok" && kpiAlerts.length < 10) {
           kpiAlerts.push({
             runId: run.runId,
             label: kpi.label,
@@ -342,9 +345,27 @@ export function RunsList() {
               >
                 <S.RunHeader>
                   <S.RunId>{taskName}</S.RunId>
-                  <StatusBadge status={run.status}>
-                    {run.status.toUpperCase()}
-                  </StatusBadge>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                    }}
+                  >
+                    {run.status === "completed" && run.report ? (
+                      <S.PassFailBadge passed={run.report.status === "passed"}>
+                        {run.report.status === "passed" ? "PASSED" : "FAILED"}
+                      </S.PassFailBadge>
+                    ) : run.status === "failed" ? (
+                      <StatusBadge status="failed">ERROR</StatusBadge>
+                    ) : (
+                      <StatusBadge status={run.status}>
+                        {run.status === "running"
+                          ? "RUNNING"
+                          : run.status.toUpperCase()}
+                      </StatusBadge>
+                    )}
+                  </div>
                 </S.RunHeader>
                 <S.RunInfo>
                   <span>Run ID: {run.runId.slice(0, 8)}</span>

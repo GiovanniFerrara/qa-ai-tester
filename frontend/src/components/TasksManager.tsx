@@ -41,7 +41,7 @@ export function TasksManager() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const { data: tasks = [], isLoading, error } = useTasks();
+  const { data: tasks = [], error } = useTasks();
   const createTask = useCreateTask({
     onSuccess: () => {
       setSuccess("Task created successfully.");

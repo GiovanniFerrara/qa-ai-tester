@@ -315,3 +315,26 @@ export const Muted = styled.p`
   color: ${theme.colors.textMuted};
   font-style: italic;
 `;
+
+export const PassFailBadge = styled.div<{ passed: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+  padding: ${theme.spacing.xs} ${theme.spacing.sm};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.sm};
+  font-weight: 600;
+  
+  ${props => props.passed ? `
+    background: ${theme.colors.success.bg};
+    color: ${theme.colors.success.text};
+  ` : `
+    background: ${theme.colors.error.bg};
+    color: ${theme.colors.error.text};
+  `}
+
+  &::before {
+    content: '${props => props.passed ? '✓' : '✗'}';
+    font-size: ${theme.fontSizes.lg};
+  }
+`;
