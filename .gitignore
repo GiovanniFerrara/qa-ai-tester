@@ -2,6 +2,7 @@ node_modules
 *.log
 .env
 .env.local
+*.tsbuildinfo
 backend/node_modules
 backend/dist
 backend/playwright-report
