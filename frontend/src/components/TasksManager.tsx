@@ -286,7 +286,7 @@ export function TasksManager() {
               onChange={(e) =>
                 handleInputChange("instructions", e.target.value)
               }
-              rows={3}
+              rows={8}
             />
           </label>
 

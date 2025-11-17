@@ -14,8 +14,6 @@ import {
   AssertToolRequestSchema,
   DomSnapshotRequestSchema,
   KpiOracleResponseSchema,
-  QaReportSchema,
-  type ComputerAction,
   type QaReport,
   type Finding,
 } from '../models/contracts';
@@ -26,6 +24,15 @@ import { AnthropicProviderService } from './anthropic-provider.service';
 import type { ComputerUseSessionResult } from './openai-computer-use.service';
 import { KpiOracleService } from '../services/kpi-oracle.service';
 import type { RunEvent, RunEventsService } from '../orchestrator/run-events.service';
+import {
+  AnthropicActionMapper,
+  type ComputerToolInput,
+} from './anthropic/action-mapper.service';
+import {
+  AnthropicQaReportService,
+  type QaReportContext,
+} from './anthropic/qa-report.service';
+import { safeStringify } from './anthropic/utils';
 
 export interface AnthropicComputerUseOptions {
   runId: string;
@@ -46,8 +53,6 @@ interface ComputerUseEvent {
   timestamp: string;
 }
 
-type ComputerToolInput = Record<string, unknown>;
-
 @Injectable()
 export class AnthropicComputerUseService {
   private readonly logger = new Logger(AnthropicComputerUseService.name);
@@ -56,6 +61,8 @@ export class AnthropicComputerUseService {
     private readonly provider: AnthropicProviderService,
     private readonly workerGateway: WorkerGatewayService,
     private readonly kpiOracleService: KpiOracleService,
+    private readonly actionMapper: AnthropicActionMapper,
+    private readonly qaReportService: AnthropicQaReportService,
   ) {}
 
   async run(options: AnthropicComputerUseOptions): Promise<ComputerUseSessionResult> {
@@ -106,6 +113,7 @@ export class AnthropicComputerUseService {
     const events: ComputerUseEvent[] = [];
     const responsesSummary: Array<Record<string, unknown>> = [];
     const findingsFromTool: Finding[] = [];
+    const reportContext = this.buildQaReportContext(options);
     const maxIterations = task.budgets?.maxToolCalls ?? 500;
 
     let totalToolCalls = 0;
@@ -186,11 +194,11 @@ export class AnthropicComputerUseService {
             break;
           }
           case 'qa_report_submit': {
-            const maybeReport = this.handleQaReportSubmit({
+            const maybeReport = this.qaReportService.parseToolSubmit({
               toolUse,
-              task,
               findingsFromTool,
-              options,
+              context: reportContext,
+              emitEvent,
             });
             if (maybeReport) {
               finalReport = maybeReport;
@@ -252,7 +260,11 @@ export class AnthropicComputerUseService {
       }
 
       if (!toolUses.length) {
-        const parsed = this.tryExtractReportFromText(lastTextResponse, findingsFromTool, options);
+        const parsed = this.qaReportService.tryParseFromText(
+          lastTextResponse,
+          findingsFromTool,
+          reportContext,
+        );
         if (parsed) {
           finalReport = parsed;
           break;
@@ -308,8 +320,21 @@ export class AnthropicComputerUseService {
     emitEvent: (event: RunEvent) => void;
   }): Promise<ToolResultBlockParam> {
     const { toolUse, handle, events, emitEvent } = params;
-    const action = this.mapComputerActionInput(toolUse.input as ComputerToolInput);
+    const action = this.actionMapper.toComputerAction(toolUse.input as ComputerToolInput);
     if (!action) {
+      const rawInput = safeStringify(toolUse.input);
+      this.logger.warn(
+        `Unsupported computer action payload for tool_use ${toolUse.id}: ${rawInput}`,
+      );
+      emitEvent({
+        type: 'log',
+        message: 'Unsupported computer action payload.',
+        payload: {
+          toolUseId: toolUse.id,
+          rawInput,
+        },
+        timestamp: new Date().toISOString(),
+      });
       return {
         type: 'tool_result',
         tool_use_id: toolUse.id,
@@ -447,170 +472,11 @@ export class AnthropicComputerUseService {
     };
   }
 
-  private handleQaReportSubmit(params: {
-    toolUse: ToolUseBlock;
-    task: TaskSpec;
-    findingsFromTool: Finding[];
-    options: AnthropicComputerUseOptions;
-  }): QaReport | null {
-    const { toolUse, task, findingsFromTool, options } = params;
-    const parsed = QaReportSchema.safeParse(toolUse.input ?? {});
-    if (!parsed.success) {
-      this.logger.warn(
-        `Invalid QA report payload received: ${parsed.error.message}`,
-      );
-      return null;
-    }
-
-    const report = parsed.data;
-    if (!report.findings.length && findingsFromTool.length) {
-      report.findings = findingsFromTool;
-    }
-    if (task.requireFindings && report.findings.length === 0) {
-      report.findings = [
-        this.buildDefaultFinding(
-          options,
-          'No explicit findings reported by the AI session.',
-        ),
-      ];
-    }
-    return report;
-  }
-
-  private mapComputerActionInput(input: ComputerToolInput): ComputerAction | null {
-    const actionType = String(input.action ?? '').toLowerCase();
-    const coordinate = this.extractCoordinate(input.coordinate);
-    switch (actionType) {
-      case 'screenshot':
-        return { action: 'screenshot' };
-      case 'left_click':
-      case 'click':
-        return coordinate
-          ? { action: 'click', coords: coordinate }
-          : null;
-      case 'double_click':
-        return coordinate
-          ? { action: 'double_click', coords: coordinate }
-          : null;
-      case 'right_click':
-        return coordinate
-          ? { action: 'right_click', coords: coordinate }
-          : null;
-      case 'mouse_move':
-        return coordinate ? { action: 'move', coords: coordinate } : null;
-      case 'type':
-        if (typeof input.text !== 'string') return null;
-        return { action: 'type', text: input.text };
-      case 'key':
-        if (typeof input.combo !== 'string') return null;
-        return { action: 'hotkey', hotkey: input.combo };
-      case 'scroll': {
-        const amount = Number(input.amount ?? 500);
-        const direction = String(input.direction ?? 'down');
-        const deltaMap: Record<string, { deltaX: number; deltaY: number }> = {
-          up: { deltaX: 0, deltaY: -amount },
-          down: { deltaX: 0, deltaY: amount },
-          left: { deltaX: -amount, deltaY: 0 },
-          right: { deltaX: amount, deltaY: 0 },
-        };
-        const deltas = deltaMap[direction] ?? deltaMap.down;
-        return {
-          action: 'scroll',
-          coords: coordinate ?? { x: 0, y: 0 },
-          scroll: { deltaX: deltas.deltaX, deltaY: deltas.deltaY },
-        };
-      }
-      case 'left_click_drag': {
-        const from = this.extractCoordinate(input.from);
-        const to = this.extractCoordinate(input.to);
-        if (!from || !to) return null;
-        return {
-          action: 'drag',
-          path: [from, to],
-        };
-      }
-      case 'wait':
-        return {
-          action: 'wait',
-          wait: {
-            type: 'ms',
-            value: Number(input.ms ?? 1000),
-          },
-        };
-      default:
-        return null;
-    }
-  }
-
-  private extractCoordinate(value: unknown): { x: number; y: number } | null {
-    if (Array.isArray(value) && value.length >= 2) {
-      const [x, y] = value;
-      if (typeof x === 'number' && typeof y === 'number') {
-        return { x: Math.round(x), y: Math.round(y) };
-      }
-    }
-    if (typeof value === 'object' && value !== null) {
-      const maybeX = (value as Record<string, unknown>).x;
-      const maybeY = (value as Record<string, unknown>).y;
-      if (typeof maybeX === 'number' && typeof maybeY === 'number') {
-        return { x: Math.round(maybeX), y: Math.round(maybeY) };
-      }
-    }
-    return null;
-  }
-
-  private tryExtractReportFromText(
-    text: string,
-    findings: Finding[],
-    options: AnthropicComputerUseOptions,
-  ): QaReport | null {
-    if (!text?.includes('{')) {
-      return null;
-    }
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      return null;
-    }
-    try {
-      const parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
-      const reportCandidate = QaReportSchema.parse(parsed);
-      if (!reportCandidate.findings.length && findings.length) {
-        reportCandidate.findings = findings;
-      }
-      if (options.task.requireFindings && reportCandidate.findings.length === 0) {
-        reportCandidate.findings = [
-          this.buildDefaultFinding(
-            options,
-            'No explicit findings recorded before session completion.',
-          ),
-        ];
-      }
-      return reportCandidate;
-    } catch {
-      return null;
-    }
-  }
-
-  private buildDefaultFinding(options: AnthropicComputerUseOptions, message: string): Finding {
+  private buildQaReportContext(options: AnthropicComputerUseOptions): QaReportContext {
     return {
-      id: uuidv4(),
-      severity: 'info',
-      category: 'functional',
-      assertion: 'AI session summary',
-      expected: 'At least one finding should summarize the session outcome.',
-      observed: message,
-      tolerance: null,
-      evidence: [
-        {
-          screenshotRef: options.initialScreenshotPath,
-          selector: null,
-          time: options.startedAt.toISOString(),
-          networkRequestId: null,
-        },
-      ],
-      suggestedFix: 'Review the run transcript for context.',
-      confidence: 0.5,
+      task: options.task,
+      initialScreenshotPath: options.initialScreenshotPath,
+      startedAt: options.startedAt,
     };
   }
 
