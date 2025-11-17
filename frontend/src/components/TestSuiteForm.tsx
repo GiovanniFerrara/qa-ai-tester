@@ -1,12 +1,29 @@
 import { useState, useEffect, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   useTasks,
   useCollection,
   useCreateCollection,
   useUpdateCollection,
 } from "../hooks/useApi";
-import { ExecutionMode, TaskCollectionInput } from "../types";
+import { ExecutionMode, TaskCollectionInput, TaskSpec } from "../types";
 import * as S from "./TestSuiteForm.styled";
 
 export function TestSuiteForm() {
@@ -33,6 +50,7 @@ export function TestSuiteForm() {
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taskFilter, setTaskFilter] = useState("");
 
   useEffect(() => {
     if (collection && isEditMode) {
@@ -83,6 +101,41 @@ export function TestSuiteForm() {
       : [...formData.taskIds, taskId];
 
     setFormData({ ...formData, taskIds: newTaskIds });
+    setValidationError(null);
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = formData.taskIds.indexOf(active.id as string);
+      const newIndex = formData.taskIds.indexOf(over.id as string);
+
+      const newTaskIds = arrayMove(formData.taskIds, oldIndex, newIndex);
+      setFormData({ ...formData, taskIds: newTaskIds });
+    }
+  };
+
+  const handleSequentialTaskToggle = (taskId: string) => {
+    const isSelected = formData.taskIds.includes(taskId);
+    if (isSelected) {
+      setFormData({
+        ...formData,
+        taskIds: formData.taskIds.filter((id) => id !== taskId),
+      });
+    } else {
+      setFormData({
+        ...formData,
+        taskIds: [...formData.taskIds, taskId],
+      });
+    }
     setValidationError(null);
   };
 
@@ -245,32 +298,88 @@ export function TestSuiteForm() {
 
         <S.FormSection>
           <S.Label>Select Test Cases *</S.Label>
-          <S.TaskSelector>
-            {!tasks || tasks.length === 0 ? (
+          {!tasks || tasks.length === 0 ? (
+            <S.TaskSelector>
               <S.EmptyTaskList>
                 No tasks available. Create some tasks first.
               </S.EmptyTaskList>
-            ) : (
-              tasks.map((task) => (
-                <S.TaskOption
-                  key={task.id}
-                  selected={formData.taskIds.includes(task.id)}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.taskIds.includes(task.id)}
-                    onChange={() => handleTaskToggle(task.id)}
-                  />
-                  <S.TaskInfo>
-                    <S.TaskName>{task.name}</S.TaskName>
-                    {task.description && (
-                      <S.TaskDescription>{task.description}</S.TaskDescription>
-                    )}
-                  </S.TaskInfo>
-                </S.TaskOption>
-              ))
-            )}
-          </S.TaskSelector>
+            </S.TaskSelector>
+          ) : (
+            <>
+              <S.Input
+                type="text"
+                placeholder="Filter tasks by name..."
+                value={taskFilter}
+                onChange={(e) => setTaskFilter(e.target.value)}
+                style={{ marginBottom: "12px" }}
+              />
+              <S.TaskSelector>
+                {tasks
+                  .filter((task) =>
+                    task.name.toLowerCase().includes(taskFilter.toLowerCase())
+                  )
+                  .map((task) => (
+                    <S.TaskOption
+                      key={task.id}
+                      selected={formData.taskIds.includes(task.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.taskIds.includes(task.id)}
+                        onChange={() => handleTaskToggle(task.id)}
+                      />
+                      <S.TaskInfo>
+                        <S.TaskName>{task.name}</S.TaskName>
+                        {task.description && (
+                          <S.TaskDescription>
+                            {task.description}
+                          </S.TaskDescription>
+                        )}
+                      </S.TaskInfo>
+                    </S.TaskOption>
+                  ))}
+              </S.TaskSelector>
+
+              {formData.executionMode === "sequential" &&
+                formData.taskIds.length > 0 && (
+                  <>
+                    <S.Label
+                      style={{
+                        fontSize: "14px",
+                        marginTop: "16px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      Execution Order (Drag to reorder)
+                    </S.Label>
+                    <S.TaskSelector>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={formData.taskIds}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {formData.taskIds.map((taskId, index) => {
+                            const task = tasks.find((t) => t.id === taskId);
+                            return task ? (
+                              <SortableTaskItem
+                                key={task.id}
+                                task={task}
+                                index={index}
+                                onRemove={handleTaskToggle}
+                              />
+                            ) : null;
+                          })}
+                        </SortableContext>
+                      </DndContext>
+                    </S.TaskSelector>
+                  </>
+                )}
+            </>
+          )}
           <S.SelectedCount>
             {formData.taskIds.length} task
             {formData.taskIds.length !== 1 ? "s" : ""} selected
@@ -296,4 +405,72 @@ export function TestSuiteForm() {
       </S.Form>
     </S.Container>
   );
+
+  interface SortableTaskItemProps {
+    task: TaskSpec;
+    index: number;
+    onRemove: (taskId: string) => void;
+  }
+
+  function SortableTaskItem({ task, index, onRemove }: SortableTaskItemProps) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: task.id });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+      cursor: "move",
+    };
+
+    return (
+      <S.TaskOption ref={setNodeRef} style={style} selected={true}>
+        <div
+          style={{ flex: 1, display: "flex", alignItems: "center" }}
+          {...attributes}
+          {...listeners}
+        >
+          <S.TaskInfo style={{ flex: 1 }}>
+            <S.TaskName>
+              {index + 1}. {task.name}
+            </S.TaskName>
+            {task.description && (
+              <S.TaskDescription>{task.description}</S.TaskDescription>
+            )}
+          </S.TaskInfo>
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove(task.id);
+          }}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#999",
+            cursor: "pointer",
+            fontSize: "20px",
+            padding: "4px 8px",
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "#f44336";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "#999";
+          }}
+        >
+          ×
+        </button>
+      </S.TaskOption>
+    );
+  }
 }
