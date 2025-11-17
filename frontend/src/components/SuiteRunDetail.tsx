@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCollectionRun } from "../hooks/useApi";
+import { useCollection, useCollectionRun, useTasks } from "../hooks/useApi";
 import type { CollectionRunItem } from "../types";
 import * as S from "./SuiteRunDetail.styled";
 
@@ -27,6 +28,18 @@ export function SuiteRunDetail() {
     isLoading,
     error,
   } = useCollectionRun(collectionId || "", runId || "");
+  const { data: collection } = useCollection(collectionId || "", {
+    enabled: !!collectionId,
+  });
+  const { data: tasks = [] } = useTasks();
+
+  const taskMap = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task])),
+    [tasks]
+  );
+
+  const getTaskName = (taskId: string) =>
+    taskMap.get(taskId)?.name ?? taskId;
 
   const handleBack = () => {
     navigate(`/test-suites/${collectionId}/runs`);
@@ -75,9 +88,14 @@ export function SuiteRunDetail() {
     <S.Container>
       <S.Header>
         <S.HeaderContent>
-          <S.BackButton onClick={handleBack}>← Back to Test Cases</S.BackButton>
+          <S.BackButton onClick={handleBack}>← Back to Test Suites</S.BackButton>
           <S.TitleRow>
-            <S.Title>Suite Run #{run.id.substring(0, 8)}</S.Title>
+            <div>
+              <S.Title>{collection?.name ?? "Suite Run"}</S.Title>
+              <S.RunSubtitle>
+                Started {new Date(run.startedAt).toLocaleString()}
+              </S.RunSubtitle>
+            </div>
             <S.StatusBadge status={run.status}>
               {run.status === "running" ? "🔄 Running" : "✓ Completed"}
             </S.StatusBadge>
@@ -163,7 +181,7 @@ export function SuiteRunDetail() {
             >
               <S.TaskRunHeader>
                 <S.TaskRunTitle>
-                  <S.TaskId>{item.taskName}</S.TaskId>
+                  <S.TaskId>{getTaskName(item.taskId)}</S.TaskId>
                 </S.TaskRunTitle>
                 <S.TaskRunStatus status={item.status}>
                   {item.status === "completed" && "✓ Completed"}
@@ -174,7 +192,7 @@ export function SuiteRunDetail() {
 
               <S.TaskRunMeta>
                 {item.runId ? (
-                  <span>Run ID: {item.runId.substring(0, 8)}</span>
+                  <span>Tap to open detailed report</span>
                 ) : (
                   <span>Not started yet</span>
                 )}

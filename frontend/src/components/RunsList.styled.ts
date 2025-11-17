@@ -223,6 +223,13 @@ export const UrgentList = styled.ul`
   }
 `;
 
+export const UrgentContext = styled.span`
+  display: block;
+  font-size: ${theme.fontSizes.sm};
+  color: ${theme.colors.textSecondary};
+  margin-top: ${theme.spacing.xs};
+`;
+
 export const SeverityPill = styled.span<{ severity?: string }>`
   padding: ${theme.spacing.xs} ${theme.spacing.sm};
   border-radius: ${theme.borderRadius.md};

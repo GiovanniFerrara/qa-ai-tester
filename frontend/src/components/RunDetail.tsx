@@ -22,6 +22,16 @@ interface ScreenshotEntry {
 export function RunDetail() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
+  const formatBaseUrl = useCallback((value?: string | null) => {
+    if (!value) {
+      return "Default BASE_URL";
+    }
+    try {
+      return new URL(value).origin;
+    } catch {
+      return value;
+    }
+  }, []);
 
   const {
     data: run,
@@ -296,8 +306,8 @@ export function RunDetail() {
       <Card>
         <S.RunDetailHeader>
           <div>
-            <h2>{task?.name || run?.taskId || "Unknown Task"}</h2>
-            <p>Run ID: {runId.slice(0, 8)}</p>
+            <h2>{task?.name || run?.taskId || "Unknown Test Case"}</h2>
+            {task?.description && <p>{task.description}</p>}
           </div>
           <S.RunDetailMeta>
             <StatusBadge status={run?.status ?? "running"}>
@@ -320,6 +330,10 @@ export function RunDetail() {
           </span>
           <span>
             Provider: <strong>{run?.provider ?? "N/A"}</strong>
+          </span>
+          <span>
+            Environment:{" "}
+            <strong>{formatBaseUrl(run?.baseUrlOverride ?? null)}</strong>
           </span>
         </S.RunTimes>
         {error && run && (

@@ -50,6 +50,12 @@ export const Title = styled.h1`
   margin: 0;
 `;
 
+export const RunSubtitle = styled.p`
+  margin: ${theme.spacing.xs} 0 0 0;
+  color: ${theme.colors.textSecondary};
+  font-size: ${theme.fontSizes.base};
+`;
+
 export const StatusBadge = styled.div<{ status: string }>`
   display: inline-flex;
   align-items: center;

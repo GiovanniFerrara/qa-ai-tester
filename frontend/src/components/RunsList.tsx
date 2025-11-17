@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRuns, useTasks, useRunSummary } from "../hooks/useApi";
 import {
@@ -13,6 +13,16 @@ import * as S from "./RunsList.styled";
 
 export function RunsList() {
   const navigate = useNavigate();
+  const formatBaseUrl = useCallback((value?: string | null) => {
+    if (!value) {
+      return "Default BASE_URL";
+    }
+    try {
+      return new URL(value).origin;
+    } catch {
+      return value;
+    }
+  }, []);
 
   const {
     data: runs = [],
@@ -51,6 +61,23 @@ export function RunsList() {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
+
+  const runMap = useMemo(
+    () => new Map(sortedRuns.map((run) => [run.runId, run])),
+    [sortedRuns]
+  );
+
+  const getRunDisplayName = useCallback(
+    (runId: string) => {
+      const run = runMap.get(runId);
+      if (!run) {
+        return "QA Test Case";
+      }
+      const task = tasks.get(run.taskId);
+      return task?.name ?? run.taskId;
+    },
+    [runMap, tasks]
+  );
 
   const derivedSummary = useMemo(() => {
     if (summary) {
@@ -310,23 +337,28 @@ export function RunsList() {
               <S.Muted>No KPI mismatches detected.</S.Muted>
             ) : (
               <S.KpiAlerts>
-                {kpiAlerts.map((alert) => (
-                  <li key={`${alert.runId}-${alert.label}`}>
-                    <div>
-                      <strong>{alert.label}</strong>
-                      <br />
-                      <span>
-                        Expected: {alert.expected} • Observed: {alert.observed}
-                      </span>
-                    </div>
-                    <S.LinkButton
-                      type="button"
-                      onClick={() => navigate(`/runs/${alert.runId}`)}
-                    >
-                      View
-                    </S.LinkButton>
-                  </li>
-                ))}
+                {kpiAlerts.map((alert) => {
+                  const runName = getRunDisplayName(alert.runId);
+                  return (
+                    <li key={`${alert.runId}-${alert.label}`}>
+                      <div>
+                        <strong>{alert.label}</strong>
+                        <br />
+                        <span>Test: {runName}</span>
+                        <br />
+                        <span>
+                          Expected: {alert.expected} • Observed: {alert.observed}
+                        </span>
+                      </div>
+                      <S.LinkButton
+                        type="button"
+                        onClick={() => navigate(`/runs/${alert.runId}`)}
+                      >
+                        View
+                      </S.LinkButton>
+                    </li>
+                  );
+                })}
               </S.KpiAlerts>
             )}
           </Card>
@@ -337,23 +369,27 @@ export function RunsList() {
               <S.Muted>No blocker or critical findings.</S.Muted>
             ) : (
               <S.UrgentList>
-                {urgentFindings.map((item) => (
-                  <li key={`${item.runId}-${item.assertion}`}>
-                    <S.SeverityPill severity={item.severity}>
-                      {item.severity}
-                    </S.SeverityPill>
-                    <div>
-                      <strong>{item.assertion}</strong>
-                      <p>{item.observed}</p>
-                    </div>
-                    <S.LinkButton
-                      type="button"
-                      onClick={() => navigate(`/runs/${item.runId}`)}
-                    >
-                      Open
-                    </S.LinkButton>
-                  </li>
-                ))}
+                {urgentFindings.map((item) => {
+                  const runName = getRunDisplayName(item.runId);
+                  return (
+                    <li key={`${item.runId}-${item.assertion}`}>
+                      <S.SeverityPill severity={item.severity}>
+                        {item.severity}
+                      </S.SeverityPill>
+                      <div>
+                        <strong>{item.assertion}</strong>
+                        <p>{item.observed}</p>
+                        <S.UrgentContext>Test: {runName}</S.UrgentContext>
+                      </div>
+                      <S.LinkButton
+                        type="button"
+                        onClick={() => navigate(`/runs/${item.runId}`)}
+                      >
+                        Open
+                      </S.LinkButton>
+                    </li>
+                  );
+                })}
               </S.UrgentList>
             )}
           </Card>
@@ -396,7 +432,10 @@ export function RunsList() {
                   </div>
                 </S.RunHeader>
                 <S.RunInfo>
-                  <span>Run ID: {run.runId.slice(0, 8)}</span>
+                  <span>Route: {task?.route ?? "—"}</span>
+                  <span>
+                    Environment: {formatBaseUrl(run.baseUrlOverride ?? null)}
+                  </span>
                   <span>Provider: {run.provider}</span>
                   <span>Started: {formatDate(run.startedAt)}</span>
                 </S.RunInfo>

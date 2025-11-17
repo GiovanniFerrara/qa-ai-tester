@@ -68,7 +68,7 @@ export function SuiteRunsList() {
           <S.BackButton onClick={handleBack}>
             ← Back to Test Suites
           </S.BackButton>
-          <S.Title>{collection.name} - Test Cases</S.Title>
+          <S.Title>{collection.name} - Runs</S.Title>
           {collection.description && (
             <S.Subtitle>{collection.description}</S.Subtitle>
           )}
@@ -105,10 +105,9 @@ export function SuiteRunsList() {
               <S.RunCard key={run.id} onClick={() => handleViewRun(run.id)}>
                 <S.RunHeader>
                   <S.RunInfo>
-                    <S.RunId>Run #{run.id.substring(0, 8)}</S.RunId>
-                    <S.RunTimestamp>
-                      Started: {new Date(run.startedAt).toLocaleString()}
-                    </S.RunTimestamp>
+                    <S.RunId>
+                      Started {new Date(run.startedAt).toLocaleString()}
+                    </S.RunId>
                     {run.finishedAt && (
                       <S.RunTimestamp>
                         Finished: {new Date(run.finishedAt).toLocaleString()}

@@ -32,7 +32,9 @@ export function RunForm() {
 
   const createRunMutation = useCreateRun({
     onSuccess: (run) => {
-      setSuccess(`Run ${run.runId} started.`);
+      const taskName =
+        tasks.find((task) => task.id === run.taskId)?.name ?? run.taskId;
+      setSuccess(`Run "${taskName}" started.`);
       navigate(`/runs/${run.runId}`);
     },
   });

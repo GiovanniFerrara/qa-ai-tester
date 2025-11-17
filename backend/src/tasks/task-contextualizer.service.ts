@@ -37,7 +37,7 @@ export class TaskContextualizerService {
     schema: this.schema,
     strict: true,
   };
-  private readonly model = 'gpt-5-mini';
+  private readonly model = 'gpt-4.1';
   private readonly systemPrompt = [
     'You translate informal QA automation requests into structured tasks for the QA AI Tester app.',
     'Produce concise titles, solid functional descriptions, and a clear goal that states success criteria.',

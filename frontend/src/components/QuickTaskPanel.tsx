@@ -44,7 +44,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
   const contextualizeMutation = useContextualizeTask({
     onSuccess: (draft) => {
       onPrefill(draft);
-      setStatus("Task form pre-filled. Review and save when ready.");
+      setStatus("Test Case form pre-filled. Review and save when ready.");
     },
   });
 
@@ -114,7 +114,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
       return;
     }
 
-    setStatus("Generating task draft…");
+    setStatus("Generating test draft…");
     contextualizeMutation.mutate({ prompt });
   };
 
@@ -125,9 +125,10 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
   return (
     <QuickTaskPanelWrapper>
       <QuickTaskHeader>
-        <h3>Quick Task Builder</h3>
+        <h3>Quick Test Case Builder</h3>
         <p>
-          Record or type a short request and let AI fill out the full task form.
+          Record or type a short request and let AI fill out the full test case
+          form.
         </p>
       </QuickTaskHeader>
       {error && <ErrorMessage>{error.message}</ErrorMessage>}
@@ -153,7 +154,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
         <Button type="button" onClick={handleContextualize} disabled={isBusy}>
           {contextualizeMutation.isPending
             ? "Creating Draft…"
-            : "Create Task Draft"}
+            : "Create Test Case Draft"}
         </Button>
       </QuickTaskActions>
       {recording && (

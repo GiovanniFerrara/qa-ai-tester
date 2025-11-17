@@ -44,19 +44,19 @@ export function TasksManager() {
   const { data: tasks = [], error } = useTasks();
   const createTask = useCreateTask({
     onSuccess: () => {
-      setSuccess("Task created successfully.");
+      setSuccess("Test Case created successfully.");
       resetForm();
     },
   });
   const updateTask = useUpdateTask({
     onSuccess: () => {
-      setSuccess("Task updated successfully.");
+      setSuccess("Test Case updated successfully.");
       resetForm();
     },
   });
   const deleteTask = useDeleteTask({
     onSuccess: () => {
-      setSuccess("Task deleted.");
+      setSuccess("Test Case deleted.");
       resetForm();
     },
   });
@@ -112,7 +112,7 @@ export function TasksManager() {
     };
     createTask.mutate(clonePayload, {
       onSuccess: (created) => {
-        setSuccess("Task cloned successfully.");
+        setSuccess("Test Case cloned successfully.");
         setEditingTaskId(created.id);
         setForm(toTaskInput(created));
       },
@@ -184,7 +184,7 @@ export function TasksManager() {
       },
     });
     setSuccess(
-      "Task fields populated from quick task draft. Review and save when ready."
+      "Test Case fields populated from quick task draft. Review and save when ready."
     );
   };
 
@@ -242,7 +242,7 @@ export function TasksManager() {
 
       <Card as={S.TasksForm}>
         <QuickTaskPanel onPrefill={handleQuickPrefill} />
-        <h2>{editingTaskId ? "Edit Task" : "Create Task"}</h2>
+        <h2>{editingTaskId ? "Edit Test Case" : "Create Test Case"}</h2>
 
         {(error || actionError) && (
           <ErrorMessage>{error?.message || actionError?.message}</ErrorMessage>
@@ -439,8 +439,8 @@ export function TasksManager() {
               {isActionLoading
                 ? "Saving..."
                 : editingTaskId
-                  ? "Update Task"
-                  : "Create Task"}
+                  ? "Update Test Case"
+                  : "Create Test Case"}
             </Button>
             {editingTaskId && (
               <Button variant="secondary" onClick={resetForm}>
@@ -452,7 +452,7 @@ export function TasksManager() {
 
         {selectedTask && (
           <S.TaskPreview>
-            <h3>Current Task Preview</h3>
+            <h3>Current Test Case Preview</h3>
             <p>
               <strong>Name:</strong> {selectedTask.name}
             </p>
