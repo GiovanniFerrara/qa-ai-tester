@@ -198,7 +198,7 @@ export function TasksManager() {
         <S.TasksHeader>
           <h2>Test Cases</h2>
           <Button variant="secondary" onClick={resetForm}>
-            + New Task
+            + New Test
           </Button>
         </S.TasksHeader>
         {sortedTasks.length === 0 ? (
