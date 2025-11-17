@@ -55,6 +55,7 @@ describe('TaskRegistryService', () => {
       role: 'admin',
       provider: 'openai',
       requireFindings: true,
+      autoAuthEnabled: false,
       kpiSpec: {
         type: 'staticValues',
         values: { noop: 'ok' },

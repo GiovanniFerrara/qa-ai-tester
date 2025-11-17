@@ -22,6 +22,8 @@ const createConfigService = (
         KPI_BASE_URL: 'https://api.example',
         STORAGE_STATE_PATH: 'playwright/.auth/analyst.json',
         ARTIFACT_DIR: path.join(os.tmpdir(), 'qa-artifacts'),
+        LOGIN_USERNAME: 'demo@qa.ai',
+        LOGIN_PASSWORD: 'password',
         DEFAULT_PROVIDER: 'openai',
         OPENAI_MODEL: 'computer-use-preview',
         CLAUDE_MODEL: 'claude-sonnet-4-5',

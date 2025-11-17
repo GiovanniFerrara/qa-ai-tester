@@ -24,6 +24,8 @@ describe('KpiOracleService', () => {
       KPI_BASE_URL: 'https://api.example',
       STORAGE_STATE_PATH: 'state.json',
       ARTIFACT_DIR: 'artifacts',
+      LOGIN_USERNAME: 'demo@qa.ai',
+      LOGIN_PASSWORD: 'password',
       DEFAULT_PROVIDER: 'openai',
       OPENAI_MODEL: 'computer-use-preview',
       CLAUDE_MODEL: 'claude',

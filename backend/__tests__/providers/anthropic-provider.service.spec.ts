@@ -28,6 +28,7 @@ describe('AnthropicProviderService', () => {
         role: 'analyst',
         provider: 'anthropic',
         requireFindings: true,
+        autoAuthEnabled: false,
         kpiSpec: { type: 'staticValues', values: { revenue: 100 } },
         budgets: { maxToolCalls: 10, maxTimeMs: 1000, maxScreenshots: 5 },
       },
