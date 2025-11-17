@@ -1420,3 +1420,37 @@ button:disabled {
   }
 }
 
+
+.severity-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.severity-row .severity-badge {
+  min-width: 90px;
+  text-align: center;
+}
+
+.severity-meter {
+  flex: 1;
+  height: 24px;
+  background: #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.severity-meter-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+}
+
+.severity-row > span:last-child {
+  min-width: 40px;
+  text-align: right;
+  font-weight: 600;
+  color: #2c3e50;
+}
