@@ -11,6 +11,12 @@ AI-powered automated quality assurance system that uses AI models (OpenAI GPT or
 - Capturing evidence (screenshots, DOM snapshots, traces)
 - Generating structured QA reports with categorized findings
 
+## Demo
+
+Watch QA AI Tester in action:
+
+[![QA AI Tester Demo](https://img.youtube.com/vi/giESDzEjwsA/0.jpg)](https://youtu.be/giESDzEjwsA)
+
 ### Key Features
 
 - 🤖 **AI-Powered Testing** - Uses OpenAI GPT or Anthropic Claude for intelligent test execution
