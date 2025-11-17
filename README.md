@@ -93,7 +93,7 @@ DEFAULT_PROVIDER=openai
 
 # AI model selection
 OPENAI_MODEL=computer-use-preview
-CLAUDE_MODEL=claude-sonnet-4-5-sonnet-20250219
+CLAUDE_MODEL=claude-haiku-4-5 #recommended
 
 # Authentication (optional - see Authentication Setup below)
 STORAGE_STATE_PATH=playwright/.auth/analyst.json
