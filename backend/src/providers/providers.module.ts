@@ -9,7 +9,6 @@ import { OpenAiProviderService } from './openai-provider.service';
 import { OpenAiComputerUseService } from './openai-computer-use.service';
 import { SchemaService } from './schema.service';
 import { ComputerUseOrchestratorService } from './computer-use-orchestrator.service';
-import { KpiOracleService } from '../services/kpi-oracle.service';
 import { AnthropicActionMapper } from './anthropic/action-mapper.service';
 import { AnthropicQaReportService } from './anthropic/qa-report.service';
 
@@ -25,7 +24,6 @@ import { AnthropicQaReportService } from './anthropic/qa-report.service';
     AnthropicQaReportService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
-    KpiOracleService,
   ],
   exports: [
     SchemaService,
@@ -35,7 +33,6 @@ import { AnthropicQaReportService } from './anthropic/qa-report.service';
     AnthropicComputerUseService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
-    KpiOracleService,
   ],
 })
 export class ProvidersModule {}

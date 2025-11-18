@@ -116,16 +116,17 @@ export const useCancelRun = (
   options?: UseMutationOptions<{ success: boolean; run: RunState }, ApiException, string>
 ) => {
   const queryClient = useQueryClient();
+  const userOnSuccess = options?.onSuccess;
   return useMutation({
     ...options,
     mutationFn: api.cancelRun,
-    onSuccess: (...args) => {
+    onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runs });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runSummary });
-      if (args[1]) {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.run(args[1]) });
+      if (variables) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.run(variables) });
       }
-      options?.onSuccess?.(...args);
+      userOnSuccess?.(data, variables, context, undefined as never);
     },
   });
 };
@@ -227,6 +228,7 @@ export const useCancelCollectionRun = (
   options?: UseMutationOptions<{ success: boolean; run: CollectionRunRecord }, ApiException, string>
 ) => {
   const queryClient = useQueryClient();
+  const userOnSuccess = options?.onSuccess;
   return useMutation({
     ...options,
     mutationFn: api.cancelCollectionRun,
@@ -241,7 +243,7 @@ export const useCancelCollectionRun = (
           queryKey: QUERY_KEYS.collectionRun(data.run.collectionId, data.run.id),
         });
       }
-      options?.onSuccess?.(data, variables, context);
+      userOnSuccess?.(data, variables, context, undefined as never);
     },
   });
 };

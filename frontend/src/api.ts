@@ -95,12 +95,6 @@ export const api = {
         severity: string;
         observed: string;
       }>;
-      kpiAlerts: Array<{
-        runId: string;
-        label: string;
-        expected: string;
-        observed: string;
-      }>;
       providerUsage: Record<string, number>;
     }>(`${API_BASE}/runs/summary`),
 
@@ -140,17 +134,6 @@ export const api = {
 
   restoreFinding: (runId: string, findingId: string) =>
     fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/findings/${findingId}/restore`, {
-      method: 'POST',
-    }),
-
-  dismissKpi: (runId: string, kpiLabel: string, reason: DismissReason) =>
-    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/kpi/${encodeURIComponent(kpiLabel)}/dismiss`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
-
-  restoreKpi: (runId: string, kpiLabel: string) =>
-    fetchJSON<{ success: boolean }>(`${API_BASE}/runs/${runId}/kpi/${encodeURIComponent(kpiLabel)}/restore`, {
       method: 'POST',
     }),
 

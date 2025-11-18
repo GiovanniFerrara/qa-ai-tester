@@ -15,10 +15,6 @@ const createTask = (taskId: string): TaskSpec => ({
   model: 'computer-use-preview',
   requireFindings: true,
   autoAuthEnabled: false,
-  kpiSpec: {
-    type: 'staticValues',
-    values: {},
-  },
   budgets: {
     maxToolCalls: 10,
     maxTimeMs: 1_000,
@@ -46,14 +42,6 @@ const baseReport: QaReport = {
       evidence: [],
       suggestedFix: 'Fix login form',
       confidence: 0.8,
-    },
-  ],
-  kpiTable: [
-    {
-      label: 'Revenue',
-      expected: '100',
-      observed: '50',
-      status: 'mismatch',
     },
   ],
   links: {
@@ -177,23 +165,6 @@ describe('OrchestratorService dismissals and collections', () => {
     expect(summaryAfterRestore.totals.findings).toBe(1);
   });
 
-  it('dismisses KPI alerts and removes them from summary lists', () => {
-    const summaryBefore = service.getRunSummary();
-    expect(summaryBefore.kpiAlerts).toHaveLength(1);
-
-    const dismissed = service.dismissKpi('run-1', 'Revenue', 'fixed');
-    expect(dismissed.report?.kpiTable[0].dismissal).toMatchObject({
-      reason: 'fixed',
-    });
-
-    const summaryAfterDismiss = service.getRunSummary();
-    expect(summaryAfterDismiss.kpiAlerts).toHaveLength(0);
-
-    service.restoreKpi('run-1', 'Revenue');
-    const summaryAfterRestore = service.getRunSummary();
-    expect(summaryAfterRestore.kpiAlerts).toHaveLength(1);
-  });
-
   it('runs task collections sequentially', async () => {
     buildService([]);
 
@@ -231,7 +202,6 @@ describe('OrchestratorService dismissals and collections', () => {
         runId: firstRunId,
         taskId: 'task-1',
         findings: [],
-        kpiTable: [],
         status: 'passed',
         startedAt: new Date().toISOString(),
         finishedAt: new Date().toISOString(),

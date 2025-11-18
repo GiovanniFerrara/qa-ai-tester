@@ -11,8 +11,6 @@ describe('Environment configuration', () => {
     DEFAULT_PROVIDER: 'openai',
     OPENAI_MODEL: 'computer-use-preview',
     CLAUDE_MODEL: 'claude-sonnet-4-5',
-    KPI_ENDPOINT: '/api/kpi',
-    KPI_TOLERANCE_PERCENT: '1',
   };
 
   it('validates a complete environment', () => {

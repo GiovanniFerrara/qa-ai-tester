@@ -56,10 +56,6 @@ describe('TaskRegistryService', () => {
       provider: 'openai',
       requireFindings: true,
       autoAuthEnabled: false,
-      kpiSpec: {
-        type: 'staticValues',
-        values: { noop: 'ok' },
-      },
       budgets: {
         maxToolCalls: 50,
         maxTimeMs: 60_000,

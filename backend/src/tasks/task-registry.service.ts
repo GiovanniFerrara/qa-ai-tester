@@ -41,10 +41,6 @@ export class TaskRegistryService {
     const persistedTask: TaskSpec = {
       ...taskDefinition,
       id: taskDefinition.id ?? uuidv4(),
-      kpiSpec: taskDefinition.kpiSpec ?? {
-        type: 'staticValues',
-        values: {},
-      },
       budgets: taskDefinition.budgets ?? {
         maxToolCalls: 200,
         maxTimeMs: 180_000,
@@ -68,7 +64,6 @@ export class TaskRegistryService {
       ...existing,
       ...updates,
       id: taskId,
-      kpiSpec: updates.kpiSpec ?? existing.kpiSpec,
       autoAuthEnabled:
         updates.autoAuthEnabled ?? existing.autoAuthEnabled ?? false,
       budgets: {
@@ -107,10 +102,6 @@ export class TaskRegistryService {
       provider: 'openai',
       autoAuthEnabled: false,
       requireFindings: true,
-      kpiSpec: {
-        type: 'staticValues',
-        values: {},
-      },
       budgets: {
         maxToolCalls: 200,
         maxTimeMs: 180_000,

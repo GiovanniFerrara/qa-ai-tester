@@ -153,12 +153,6 @@ export function RunsList() {
       severity: string;
       observed: string;
     }> = [];
-    const kpiAlerts: Array<{
-      runId: string;
-      label: string;
-      expected: string;
-      observed: string;
-    }> = [];
 
     sortedRuns.forEach((run) => {
       run.report?.findings.forEach((finding) => {
@@ -178,16 +172,6 @@ export function RunsList() {
           });
         }
       });
-      (run.report?.kpiTable ?? []).forEach((kpi) => {
-        if (!kpi.dismissal && kpi.status !== "ok" && kpiAlerts.length < 30) {
-          kpiAlerts.push({
-            runId: run.runId,
-            label: kpi.label,
-            expected: kpi.expected,
-            observed: kpi.observed,
-          });
-        }
-      });
     });
     return {
       totals: {
@@ -203,7 +187,6 @@ export function RunsList() {
       },
       severity,
       urgentFindings: urgent,
-      kpiAlerts,
       providerUsage: sortedRuns.reduce<Record<string, number>>((acc, run) => {
         acc[run.provider] = (acc[run.provider] ?? 0) + 1;
         return acc;
@@ -213,7 +196,6 @@ export function RunsList() {
 
   const severityTotals = derivedSummary.severity;
   const urgentFindings = derivedSummary.urgentFindings ?? [];
-  const kpiAlerts = derivedSummary.kpiAlerts ?? [];
   const providerUsage = Object.entries(derivedSummary.providerUsage ?? {});
 
   const formatDuration = (ms: number) => {
@@ -346,38 +328,6 @@ export function RunsList() {
                   )
                 )}
               </S.SeverityList>
-            )}
-          </Card>
-
-          <Card>
-            <h3>KPI Alerts</h3>
-            {kpiAlerts.length === 0 ? (
-              <S.Muted>No KPI mismatches detected.</S.Muted>
-            ) : (
-              <S.KpiAlerts>
-                {kpiAlerts.map((alert) => {
-                  const runName = getRunDisplayName(alert.runId);
-                  return (
-                    <li key={`${alert.runId}-${alert.label}`}>
-                      <div>
-                        <strong>{alert.label}</strong>
-                        <br />
-                        <span>Test: {runName}</span>
-                        <br />
-                        <span>
-                          Expected: {alert.expected} • Observed: {alert.observed}
-                        </span>
-                      </div>
-                      <S.LinkButton
-                        type="button"
-                        onClick={() => navigate(`/runs/${alert.runId}`)}
-                      >
-                        View
-                      </S.LinkButton>
-                    </li>
-                  );
-                })}
-              </S.KpiAlerts>
             )}
           </Card>
 

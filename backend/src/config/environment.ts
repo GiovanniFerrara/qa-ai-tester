@@ -12,7 +12,6 @@ export const EnvSchema = z.object({
   RUNS_DB_PATH: z.string().optional(),
   TASK_COLLECTIONS_DB_PATH: z.string().optional(),
   COLLECTION_RUNS_DB_PATH: z.string().optional(),
-  KPI_BASE_URL: z.string().url().optional(),
   STORAGE_STATE_PATH: z.string().default('playwright/.auth/analyst.json'),
   ARTIFACT_DIR: z.string().default('artifacts'),
   LOGIN_USERNAME: z.string().default('demo@jurny.com'),
@@ -20,8 +19,6 @@ export const EnvSchema = z.object({
   DEFAULT_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
   OPENAI_MODEL: z.string().default('computer-use-preview'),
   CLAUDE_MODEL: z.string().default('claude-sonnet-4-5-sonnet-20250219'),
-  KPI_ENDPOINT: z.string().default('/api/kpi'),
-  KPI_TOLERANCE_PERCENT: z.string().default('1'),
 });
 
 export type AppEnvironment = z.infer<typeof EnvSchema>;

@@ -113,6 +113,29 @@
                 "type": "number",
                 "minimum": 0,
                 "maximum": 1
+              },
+              "dismissal": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "false_positive",
+                      "fixed"
+                    ]
+                  },
+                  "dismissedAt": {
+                    "type": "string"
+                  },
+                  "dismissedBy": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "dismissedAt"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -126,38 +149,6 @@
               "evidence",
               "suggestedFix",
               "confidence"
-            ],
-            "additionalProperties": false
-          }
-        },
-        "kpiTable": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "label": {
-                "type": "string"
-              },
-              "expected": {
-                "type": "string"
-              },
-              "observed": {
-                "type": "string"
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "ok",
-                  "mismatch",
-                  "missing"
-                ]
-              }
-            },
-            "required": [
-              "label",
-              "expected",
-              "observed",
-              "status"
             ],
             "additionalProperties": false
           }
@@ -234,7 +225,6 @@
         "summary",
         "status",
         "findings",
-        "kpiTable",
         "links",
         "costs"
       ],

@@ -1,6 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCollection, useCollectionRuns, useRuns } from "../hooks/useApi";
+import {
+  useCollection,
+  useCollectionRuns,
+  useRuns,
+  useStartCollectionRun,
+  useDeleteCollection,
+} from "../hooks/useApi";
 import {
   getCollectionRunError,
   getCollectionRunResult,
@@ -22,6 +28,8 @@ const formatBaseUrl = (value?: string | null) => {
 export function SuiteRunsList() {
   const navigate = useNavigate();
   const { collectionId } = useParams<{ collectionId: string }>();
+  const [isStarting, setIsStarting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: collection, isLoading: collectionLoading } = useCollection(
     collectionId || ""
@@ -31,12 +39,11 @@ export function SuiteRunsList() {
     isLoading: runsLoading,
     error,
   } = useCollectionRuns(collectionId || "");
-  const {
-    data: allRuns = [],
-    isLoading: suiteRunsLoading,
-  } = useRuns({
+  const { data: allRuns = [], isLoading: suiteRunsLoading } = useRuns({
     refetchInterval: 5000,
   });
+  const startRun = useStartCollectionRun();
+  const deleteCollection = useDeleteCollection();
 
   const runMap = useMemo(
     () => new Map(allRuns.map((run) => [run.runId, run])),
@@ -49,6 +56,52 @@ export function SuiteRunsList() {
 
   const handleBack = () => {
     navigate("/test-suites");
+  };
+
+  const handleStartRun = async () => {
+    if (!collectionId) return;
+
+    try {
+      setIsStarting(true);
+      const run = await startRun.mutateAsync({
+        collectionId,
+        executionMode: collection?.executionMode,
+      });
+      navigate(`/test-suites/${collectionId}/runs/${run.id}`);
+    } catch (err) {
+      alert(
+        `Failed to start test suite: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+    } finally {
+      setIsStarting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    navigate(`/test-suites/${collectionId}/edit`);
+  };
+
+  const handleDelete = async () => {
+    if (!collectionId) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete "${collection?.name}"? This will not delete existing run history.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteCollection.mutateAsync(collectionId);
+      navigate("/test-suites");
+    } catch (err) {
+      alert(
+        `Failed to delete test suite: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+      setIsDeleting(false);
+    }
   };
 
   if (collectionLoading || runsLoading || suiteRunsLoading) {
@@ -84,10 +137,27 @@ export function SuiteRunsList() {
           <S.BackButton onClick={handleBack}>
             ← Back to Test Suites
           </S.BackButton>
-          <S.Title>{collection.name} - Runs</S.Title>
-          {collection.description && (
-            <S.Subtitle>{collection.description}</S.Subtitle>
-          )}
+          <S.TitleRow>
+            <div>
+              <S.Title>{collection.name} - Runs</S.Title>
+              {collection.description && (
+                <S.Subtitle>{collection.description}</S.Subtitle>
+              )}
+            </div>
+            <S.ActionButtons>
+              <S.ActionButton onClick={handleEdit}>✏️ Edit</S.ActionButton>
+              <S.ActionButton onClick={handleStartRun} disabled={isStarting}>
+                {isStarting ? "Starting..." : "▶ Run"}
+              </S.ActionButton>
+              <S.ActionButton
+                variant="danger"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? "Deleting..." : "🗑️ Delete"}
+              </S.ActionButton>
+            </S.ActionButtons>
+          </S.TitleRow>
           <S.HeaderMeta>
             <S.EnvTag muted={!collection.baseUrl}>
               <span>Base URL:</span>
@@ -100,8 +170,11 @@ export function SuiteRunsList() {
       {!runs || runs.length === 0 ? (
         <S.Card>
           <S.EmptyState>
-            <h3>No Test Cases Yet</h3>
+            <h3>No Runs Yet</h3>
             <p>This test suite hasn't been executed yet.</p>
+            <S.RunButton onClick={handleStartRun} disabled={isStarting}>
+              {isStarting ? "Starting..." : "▶ Run This Test Suite"}
+            </S.RunButton>
           </S.EmptyState>
         </S.Card>
       ) : (

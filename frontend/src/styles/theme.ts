@@ -116,20 +116,6 @@ export const theme = {
       }
     },
     
-    kpi: {
-      ok: {
-        bg: '#d1e7dd',
-        text: '#0f5132'
-      },
-      mismatch: {
-        bg: '#f8d7da',
-        text: '#842029'
-      },
-      missing: {
-        bg: '#fff3cd',
-        text: '#856404'
-      }
-    }
   },
   
   spacing: {

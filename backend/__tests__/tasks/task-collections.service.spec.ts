@@ -13,7 +13,6 @@ const mockTask: TaskSpec = {
   provider: 'openai',
   requireFindings: true,
   autoAuthEnabled: false,
-  kpiSpec: { type: 'staticValues', values: {} },
   budgets: { maxToolCalls: 10, maxTimeMs: 1000, maxScreenshots: 5 },
 };
 

@@ -6,7 +6,6 @@ import {
   AssertToolRequestSchema,
   ComputerActionSchema,
   DomSnapshotRequestSchema,
-  KpiOracleRequestSchema,
   QaReportSchema,
 } from '../models/contracts';
 
@@ -15,7 +14,6 @@ export class SchemaService {
   private readonly qaReportSchema: JsonSchema7Type;
   private readonly computerActionSchema: JsonSchema7Type;
   private readonly domSnapshotSchema: JsonSchema7Type;
-  private readonly kpiOracleSchema: JsonSchema7Type;
   private readonly assertToolSchema: JsonSchema7Type;
 
   constructor() {
@@ -50,10 +48,6 @@ export class SchemaService {
       },
       required: ['selector', 'mode', 'attributes', 'computed'],
     } as JsonSchema7Type;
-    this.kpiOracleSchema = this.extractRootSchema(
-      zodToJsonSchema(KpiOracleRequestSchema, { name: 'KpiOracleRequest' }),
-      'KpiOracleRequest',
-    );
     this.assertToolSchema = this.extractRootSchema(
       zodToJsonSchema(AssertToolRequestSchema, { name: 'AssertToolRequest' }),
       'AssertToolRequest',
@@ -70,10 +64,6 @@ export class SchemaService {
 
   getDomSnapshotSchema(): JsonSchema7Type {
     return this.domSnapshotSchema;
-  }
-
-  getKpiOracleSchema(): JsonSchema7Type {
-    return this.kpiOracleSchema;
   }
 
   getAssertToolSchema(): JsonSchema7Type {

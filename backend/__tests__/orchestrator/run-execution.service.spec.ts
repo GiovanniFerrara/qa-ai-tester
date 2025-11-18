@@ -18,7 +18,6 @@ describe('RunExecutionService', () => {
     model: 'computer-use-preview',
     requireFindings: true,
     autoAuthEnabled: true,
-    kpiSpec: { type: 'staticValues', values: { revenue: 1000 } } as const,
     budgets: {
       maxToolCalls: 200,
       maxTimeMs: 120_000,
@@ -72,7 +71,6 @@ describe('RunExecutionService', () => {
             summary: 'Dashboard rendered successfully.',
             status: 'passed',
             findings: [],
-            kpiTable: [],
             links: {
               traceUrl: null,
               screenshotsGalleryUrl: null,
@@ -287,7 +285,6 @@ describe('RunExecutionService', () => {
                 confidence: 0.9,
               },
             ],
-            kpiTable: [],
             links: {
               traceUrl: null,
               screenshotsGalleryUrl: null,

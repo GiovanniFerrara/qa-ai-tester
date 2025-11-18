@@ -54,6 +54,5 @@ export interface StoredRunRecord {
   summary?: {
     findings: number;
     severityCounts: Record<string, number>;
-    kpiAlerts: number;
   };
 }

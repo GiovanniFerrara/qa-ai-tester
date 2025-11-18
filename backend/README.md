@@ -11,7 +11,6 @@ The backend implements:
 - **Event Streaming** - Real-time SSE updates for run monitoring
 - **Task Management** - Persistent task storage with CRUD operations
 - **Artifact Management** - Comprehensive capture of screenshots, traces, and reports
-- **KPI Integration** - Optional metrics validation via backend API endpoints
 
 ## Architecture
 
@@ -47,7 +46,6 @@ The backend implements:
 - [`run.ts`](src/models/run.ts:1) - Run metadata and result types
 
 **[`services/`](src/services:1)** - Utility services
-- [`kpi-oracle.service.ts`](src/services/kpi-oracle.service.ts:1) - KPI fetching and validation
 
 ## Prerequisites
 
@@ -126,148 +124,12 @@ ARTIFACT_DIR=artifacts
 TASKS_DB_PATH=data/tasks.json
 
 # ============================================
-# KPI Monitoring (Optional)
+
 # ============================================
 
-# Base URL for KPI API endpoint
-KPI_BASE_URL=https://api.your-app.com
 
-# KPI endpoint path
-KPI_ENDPOINT=/api/metrics
 
-# Tolerance percentage for KPI validation (e.g., 5 = 5%)
-KPI_TOLERANCE_PERCENT=1
-```
 
-### Environment Variables Reference
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENAI_API_KEY` | Yes* | - | OpenAI API key for GPT models |
-| `CLAUDE_API_KEY` | Yes* | - | Anthropic API key for Claude models |
-| `DEFAULT_PROVIDER` | No | `openai` | Default AI provider (openai/anthropic) |
-| `OPENAI_MODEL` | No | `computer-use-preview` | OpenAI model to use |
-| `CLAUDE_MODEL` | No | `claude-sonnet-4-5-sonnet-20250219` | Anthropic model to use |
-| `BASE_URL` | Yes | - | Target application URL |
-| `PORT` | No | `3005` | Backend server port |
-| `STORAGE_STATE_PATH` | No | `playwright/.auth/analyst.json` | Auth state file path |
-| `ARTIFACT_DIR` | No | `artifacts` | Artifact storage directory |
-| `TASKS_DB_PATH` | No | `data/tasks.json` | Task database file |
-| `KPI_BASE_URL` | No | - | KPI API base URL |
-| `KPI_ENDPOINT` | No | `/api/kpi` | KPI endpoint path |
-| `KPI_TOLERANCE_PERCENT` | No | `1` | KPI tolerance percentage |
-
-\* At least one AI provider key (OpenAI or Anthropic) is required
-
-## Authentication Setup
-
-For testing applications that require login, you need to set up authenticated browser sessions using Playwright.
-
-### Understanding [`tests/auth.setup.ts`](tests/auth.setup.ts:1)
-
-The auth setup script is a Playwright test that:
-1. Logs into your application
-2. Saves the authenticated session state (cookies, localStorage, etc.)
-3. Creates a reusable authentication file
-
-This file is then used by all QA runs to start with an already logged-in session, avoiding the need to log in for every test.
-
-### Configuring Your Login Flow
-
-Edit [`tests/auth.setup.ts`](tests/auth.setup.ts:1) to match your application's authentication:
-
-```typescript
-import { test as setup } from '@playwright/test';
-
-setup('create authenticated storage state', async ({ page }) => {
-  const storagePath = process.env.STORAGE_STATE_PATH ?? 'playwright/.auth/analyst.json';
-  console.log(`Using storage state path: ${storagePath}`);
-
-  // 1. Navigate to your login page
-  await page.goto('https://your-app.com/login');
-  console.log('Login page loaded');
-
-  // 2. Fill in login form
-  // Adjust selectors to match your form fields
-  await page.fill('#email', 'test-user@example.com');
-  await page.fill('#password', 'your-password');
-  
-  // 3. Submit the form
-  await page.click('button[type="submit"]');
-
-  // 4. Wait for successful login
-  // Adjust URL pattern to match your post-login page
-  await page.waitForURL('**/dashboard', { timeout: 15000 });
-  console.log('Login successful');
-
-  // 5. Save the authenticated session
-  await page.context().storageState({ path: storagePath });
-  console.log(`Storage state saved to ${storagePath}`);
-});
-```
-
-### Common Authentication Patterns
-
-**Simple Username/Password:**
-```typescript
-await page.goto('https://app.com/login');
-await page.fill('input[name="username"]', 'user@example.com');
-await page.fill('input[name="password"]', 'password123');
-await page.click('button[type="submit"]');
-await page.waitForURL('**/home');
-```
-
-**Multi-Factor Authentication (MFA):**
-```typescript
-// Initial login
-await page.goto('https://app.com/login');
-await page.fill('#username', 'user@example.com');
-await page.click('button[type="submit"]');
-
-// Wait for MFA challenge page
-await page.waitForURL('**/mfa');
-
-// Enter MFA code
-await page.fill('#mfa-code', '123456');
-await page.click('button[type="submit"]');
-
-// Wait for dashboard
-await page.waitForURL('**/dashboard');
-```
-
-**OAuth/Social Login:**
-```typescript
-await page.goto('https://app.com/login');
-await page.click('button:has-text("Login with Google")');
-
-// Wait for OAuth popup and fill credentials
-// This is more complex and may require popup handling
-```
-
-### Finding the Right Selectors
-
-To find the correct selectors for your form fields:
-
-1. **Using Browser DevTools:**
-   - Right-click on the input field → Inspect
-   - Look for `id`, `name`, or `class` attributes
-   - Prefer `id` selectors (e.g., `#email`) as they're most stable
-
-2. **Using Playwright Inspector:**
-   ```bash
-   npx playwright codegen https://your-app.com/login
-   ```
-   This opens a browser and generates selectors as you interact with the page.
-
-3. **Common Selector Patterns:**
-   - By ID: `#email`, `#password`, `#submit-button`
-   - By name: `input[name="email"]`, `input[name="password"]`
-   - By type: `input[type="email"]`, `input[type="password"]`
-   - By text: `button:has-text("Sign In")`, `a:has-text("Login")`
-
-### Running the Authentication Setup
-
-```bash
 # Run the auth setup
 npm run playwright:test
 
@@ -338,7 +200,6 @@ This creates JSON Schema files in [`schemas/`](schemas:1):
 - `qaReport.schema.json`
 - `computerAction.schema.json`
 - `domSnapshotRequest.schema.json`
-- `kpiOracleRequest.schema.json`
 - `assertToolRequest.schema.json`
 
 ### Run Tests
@@ -476,7 +337,6 @@ The OpenAI integration ([`openai-computer-use.service.ts`](src/providers/openai-
 3. **Tool Execution**
    - `computer_action` - Browser actions (click, type, scroll)
    - `dom_snapshot` - Capture page structure
-   - `kpi_oracle` - Query metrics endpoint
    - `assert` - Record test assertions
 
 4. **Report Generation**
@@ -523,45 +383,6 @@ Each run creates a directory: [`artifacts/{runId}/`](artifacts:1)
     "failedAssertions": 3
   }
 }
-```
-
-## KPI Monitoring
-
-### Configuration
-
-```env
-KPI_BASE_URL=https://api.your-app.com
-KPI_ENDPOINT=/api/metrics
-KPI_TOLERANCE_PERCENT=5
-```
-
-### Expected API Response
-
-Your KPI endpoint should return:
-
-```json
-{
-  "metrics": {
-    "activeUsers": 1250,
-    "responseTimeMs": 180,
-    "errorRate": 0.02
-  }
-}
-```
-
-### Usage in Tests
-
-The AI can query KPIs during testing:
-
-```typescript
-// AI executes kpi_oracle tool
-const kpiResult = await kpiOracleService.queryKpi({
-  metric: "activeUsers",
-  expectedValue: 1200,
-  tolerance: 5
-});
-
-// Returns validation result with actual vs expected
 ```
 
 ## Production Considerations

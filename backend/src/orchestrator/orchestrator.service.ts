@@ -176,12 +176,6 @@ export class OrchestratorService {
       severity: string;
       observed: string;
     }>;
-    kpiAlerts: Array<{
-      runId: string;
-      label: string;
-      expected: string;
-      observed: string;
-    }>;
     providerUsage: Record<string, number>;
   } {
     const runs = [...this.runs.values()];
@@ -248,18 +242,6 @@ export class OrchestratorService {
         observed: finding.observed,
       }));
 
-    const kpiAlerts = runs
-      .flatMap((run) =>
-        this.getActiveKpiAlerts(run.report).map((kpi) => ({ kpi, run })),
-      )
-      .slice(0, 10)
-      .map(({ kpi, run }) => ({
-        runId: run.runId,
-        label: kpi.label,
-        expected: kpi.expected,
-        observed: kpi.observed,
-      }));
-
     const providerUsage = runs.reduce<Record<string, number>>((acc, run) => {
       acc[run.provider] = (acc[run.provider] ?? 0) + 1;
       return acc;
@@ -269,7 +251,6 @@ export class OrchestratorService {
       totals,
       severity,
       urgentFindings,
-      kpiAlerts,
       providerUsage,
     };
   }
@@ -487,53 +468,6 @@ export class OrchestratorService {
     });
   }
 
-  dismissKpi(
-    runId: string,
-    label: string,
-    reason: DismissReason,
-    dismissedBy?: string,
-  ): StoredRunRecord {
-    return this.updateRunReport(runId, (report) => {
-      const index = report.kpiTable.findIndex((row) => row.label === label);
-      if (index === -1) {
-        throw new NotFoundException(`KPI "${label}" not found in run ${runId}`);
-      }
-      const dismissedAt = new Date().toISOString();
-      const actor = dismissedBy?.trim() || 'manual';
-      const updatedTable = [...report.kpiTable];
-      updatedTable[index] = {
-        ...updatedTable[index],
-        dismissal: {
-          reason,
-          dismissedAt,
-          dismissedBy: actor,
-        },
-      };
-      return {
-        ...report,
-        kpiTable: updatedTable,
-      };
-    });
-  }
-
-  restoreKpi(runId: string, label: string): StoredRunRecord {
-    return this.updateRunReport(runId, (report) => {
-      const index = report.kpiTable.findIndex((row) => row.label === label);
-      if (index === -1) {
-        throw new NotFoundException(`KPI "${label}" not found in run ${runId}`);
-      }
-      const updatedTable = [...report.kpiTable];
-      updatedTable[index] = {
-        ...updatedTable[index],
-        dismissal: undefined,
-      };
-      return {
-        ...report,
-        kpiTable: updatedTable,
-      };
-    });
-  }
-
   private persistRuns(): void {
     this.runStorage.saveRuns([...this.runs.values()]);
   }
@@ -610,12 +544,6 @@ export class OrchestratorService {
     return (report?.findings ?? []).filter((finding) => !finding.dismissal);
   }
 
-  private getActiveKpiAlerts(report?: QaReport): QaReport['kpiTable'] {
-    return (report?.kpiTable ?? []).filter(
-      (kpi) => kpi.status !== 'ok' && !kpi.dismissal,
-    );
-  }
-
   private buildRunSummarySnapshot(report: QaReport): StoredRunRecord['summary'] {
     const activeFindings = this.getActiveFindings(report);
     const severityCounts: Record<string, number> = {
@@ -628,11 +556,9 @@ export class OrchestratorService {
     activeFindings.forEach((finding) => {
       severityCounts[finding.severity] = (severityCounts[finding.severity] ?? 0) + 1;
     });
-    const activeKpiAlerts = this.getActiveKpiAlerts(report).length;
     return {
       findings: activeFindings.length,
       severityCounts,
-      kpiAlerts: activeKpiAlerts,
     };
   }
 

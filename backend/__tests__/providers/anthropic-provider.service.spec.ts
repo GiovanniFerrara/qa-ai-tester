@@ -22,22 +22,21 @@ describe('AnthropicProviderService', () => {
         id: 'task-1',
         name: 'Dashboard Check',
         description: 'Ensure dashboard widgets render correctly.',
-        goal: 'Check KPIs',
+        goal: 'Check dashboard widgets',
         instructions: 'Confirm charts render and note any missing data.',
         route: '/dashboard',
         role: 'analyst',
         provider: 'anthropic',
         requireFindings: true,
         autoAuthEnabled: false,
-        kpiSpec: { type: 'staticValues', values: { revenue: 100 } },
         budgets: { maxToolCalls: 10, maxTimeMs: 1000, maxScreenshots: 5 },
       },
       'run-abc',
     );
 
     expect(plan.model).toBe('claude-sonnet-4-5');
-    expect(plan.tools).toHaveLength(5);
-    expect(plan.system).toContain('Check KPIs');
+    expect(plan.tools).toHaveLength(4);
+    expect(plan.system).toContain('Use tool calls to inspect the dashboard');
     expect(plan.messages[0].content).toContain('run-abc');
   });
 });

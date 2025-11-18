@@ -194,40 +194,6 @@ export function RunDetail() {
     [runId, refetchRun]
   );
 
-  const handleDismissKpi = useCallback(
-    async (kpiLabel: string, reason: DismissReason) => {
-      if (!runId) return;
-      setDismissingItem(kpiLabel);
-      setOpenDismissMenu(null);
-
-      try {
-        await api.dismissKpi(runId, kpiLabel, reason);
-        await refetchRun();
-      } catch (error) {
-        console.error("Failed to dismiss KPI:", error);
-      } finally {
-        setDismissingItem(null);
-      }
-    },
-    [runId, refetchRun]
-  );
-
-  const handleRestoreKpi = useCallback(
-    async (kpiLabel: string) => {
-      if (!runId) return;
-      setDismissingItem(kpiLabel);
-
-      try {
-        await api.restoreKpi(runId, kpiLabel);
-        await refetchRun();
-      } catch (error) {
-        console.error("Failed to restore KPI:", error);
-      } finally {
-        setDismissingItem(null);
-      }
-    },
-    [runId, refetchRun]
-  );
 
   const loading = runLoading;
   const error = runError;
@@ -493,15 +459,6 @@ export function RunDetail() {
               </S.SummaryCard>
               <S.SummaryCard>
                 <S.SummaryValue>
-                  {
-                    run.report.kpiTable.filter((item) => item.status === "ok")
-                      .length
-                  }
-                </S.SummaryValue>
-                <S.SummaryLabel>KPI Passed</S.SummaryLabel>
-              </S.SummaryCard>
-              <S.SummaryCard>
-                <S.SummaryValue>
                   ${run.report.costs.priceUsd.toFixed(4)}
                 </S.SummaryValue>
                 <S.SummaryLabel>Cost (USD)</S.SummaryLabel>
@@ -528,101 +485,6 @@ export function RunDetail() {
               </S.SeverityBreakdown>
             )}
           </Card>
-
-          {run.report.kpiTable.length > 0 && (
-            <Card>
-              <h2>KPI Assessment</h2>
-              <S.KpiTable>
-                <S.KpiTableHeader>
-                  <div>Label</div>
-                  <div>Expected</div>
-                  <div>Observed</div>
-                  <div>Status</div>
-                  <div>Actions</div>
-                </S.KpiTableHeader>
-                {run.report.kpiTable.map((kpi, idx) => {
-                  const RowComponent = kpi.dismissal
-                    ? S.DismissedKpiRow
-                    : S.KpiTableRow;
-                  return (
-                    <RowComponent key={idx}>
-                      <S.KpiLabel>{kpi.label}</S.KpiLabel>
-                      <S.KpiExpected>{kpi.expected}</S.KpiExpected>
-                      <S.KpiObserved>{kpi.observed}</S.KpiObserved>
-                      <div>
-                        <S.KpiStatus status={kpi.status}>
-                          {kpi.status === "ok"
-                            ? "✓ OK"
-                            : kpi.status === "mismatch"
-                              ? "✗ Mismatch"
-                              : "? Missing"}
-                        </S.KpiStatus>
-                      </div>
-                      <S.DismissActions>
-                        {kpi.dismissal ? (
-                          <>
-                            <S.DismissedBadge reason={kpi.dismissal.reason}>
-                              {kpi.dismissal.reason === "fixed"
-                                ? "✓ Fixed"
-                                : "⚠ False Positive"}
-                            </S.DismissedBadge>
-                            <S.RestoreButton
-                              onClick={() => handleRestoreKpi(kpi.label)}
-                              disabled={dismissingItem === kpi.label}
-                            >
-                              {dismissingItem === kpi.label ? "..." : "Restore"}
-                            </S.RestoreButton>
-                          </>
-                        ) : kpi.status !== "ok" ? (
-                          <S.DismissMenu>
-                            <S.DismissButton
-                              onClick={() =>
-                                setOpenDismissMenu(
-                                  openDismissMenu === kpi.label
-                                    ? null
-                                    : kpi.label
-                                )
-                              }
-                              disabled={dismissingItem === kpi.label}
-                            >
-                              {dismissingItem === kpi.label
-                                ? "Dismissing..."
-                                : "Dismiss"}
-                            </S.DismissButton>
-                            {openDismissMenu === kpi.label && (
-                              <S.DismissDropdown>
-                                <S.DismissOption
-                                  onClick={() =>
-                                    handleDismissKpi(
-                                      kpi.label,
-                                      "false_positive"
-                                    )
-                                  }
-                                >
-                                  <strong>False Positive</strong>
-                                  <span>
-                                    This alert is incorrect or not applicable
-                                  </span>
-                                </S.DismissOption>
-                                <S.DismissOption
-                                  onClick={() =>
-                                    handleDismissKpi(kpi.label, "fixed")
-                                  }
-                                >
-                                  <strong>Fixed</strong>
-                                  <span>This issue has been resolved</span>
-                                </S.DismissOption>
-                              </S.DismissDropdown>
-                            )}
-                          </S.DismissMenu>
-                        ) : null}
-                      </S.DismissActions>
-                    </RowComponent>
-                  );
-                })}
-              </S.KpiTable>
-            </Card>
-          )}
 
           <Card>
             <h2>Findings</h2>

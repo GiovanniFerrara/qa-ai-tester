@@ -15,13 +15,6 @@ export interface TaskSpec {
     maxTimeMs: number;
     maxScreenshots: number;
   };
-  kpiSpec?: {
-    type: 'staticValues' | 'apiEndpoint';
-    values?: Record<string, string | number>;
-    url?: string;
-    params?: Record<string, unknown>;
-    method?: 'GET' | 'POST';
-  };
 }
 
 export interface TaskInput {
@@ -78,13 +71,6 @@ export interface QAReport {
   summary: string;
   status: 'passed' | 'failed' | 'inconclusive';
   findings: Finding[];
-  kpiTable: Array<{
-    label: string;
-    expected: string;
-    observed: string;
-    status: 'ok' | 'mismatch' | 'missing';
-    dismissal?: FindingDismissal;
-  }>;
   links: {
     traceUrl: string;
     screenshotsGalleryUrl: string;

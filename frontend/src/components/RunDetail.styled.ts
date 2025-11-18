@@ -360,76 +360,6 @@ export const SeverityBadge = styled.span<{ severity: string }>`
   color: white;
 `;
 
-export const KpiTable = styled.div`
-  overflow-x: auto;
-`;
-
-export const KpiTableHeader = styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px 180px;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md};
-  background: ${theme.colors.primary};
-  color: white;
-  font-weight: 600;
-  border-radius: ${theme.borderRadius.md} ${theme.borderRadius.md} 0 0;
-`;
-
-export const KpiTableRow = styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 120px 180px;
-  gap: ${theme.spacing.md};
-  padding: ${theme.spacing.md};
-  border-bottom: 1px solid ${theme.colors.border};
-  align-items: center;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-export const KpiLabel = styled.div`
-  font-weight: 600;
-  color: ${theme.colors.text};
-`;
-
-export const KpiExpected = styled.div`
-  color: ${theme.colors.text};
-  font-size: ${theme.fontSizes.sm};
-`;
-
-export const KpiObserved = styled.div`
-  color: ${theme.colors.text};
-  font-size: ${theme.fontSizes.sm};
-`;
-
-export const KpiStatus = styled.span<{ status?: string }>`
-  padding: ${theme.spacing.xs} ${theme.spacing.md};
-  border-radius: ${theme.borderRadius.md};
-  font-weight: 600;
-  font-size: ${theme.fontSizes.sm};
-  display: inline-block;
-  
-  ${props => {
-    if (props.status === 'ok') {
-      return `
-        background: ${theme.colors.success.bg};
-        color: ${theme.colors.success.text};
-      `;
-    }
-    if (props.status === 'mismatch') {
-      return `
-        background: ${theme.colors.error.bg};
-        color: ${theme.colors.error.text};
-      `;
-    }
-    return `
-      background: ${theme.colors.borderLight};
-      color: ${theme.colors.textSecondary};
-    `;
-  }}
-`;
-
 export const Finding = styled.div<{ severity?: string }>`
   background: white;
   border-left: 4px solid;
@@ -721,15 +651,4 @@ export const DismissedFinding = styled(Finding)<{ severity?: string }>`
     );
     pointer-events: none;
   }
-`;
-
-export const DismissedKpiRow = styled(KpiTableRow)`
-  opacity: 0.7;
-  background: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 10px,
-    rgba(0, 0, 0, 0.02) 10px,
-    rgba(0, 0, 0, 0.02) 20px
-  );
 `;

@@ -70,10 +70,6 @@ export class TasksController {
       model: parsed.model,
       requireFindings: parsed.requireFindings,
       autoAuthEnabled: parsed.autoAuthEnabled,
-      kpiSpec: {
-        type: 'staticValues',
-        values: {},
-      },
       budgets: this.mergeBudgets(parsed.budgets),
     });
     return task;

@@ -21,7 +21,6 @@ const createConfigService = (
         RUNS_DB_PATH: '',
         TASK_COLLECTIONS_DB_PATH: '',
         COLLECTION_RUNS_DB_PATH: '',
-        KPI_BASE_URL: 'https://api.example',
         STORAGE_STATE_PATH: 'playwright/.auth/analyst.json',
         ARTIFACT_DIR: path.join(os.tmpdir(), 'qa-artifacts'),
         LOGIN_USERNAME: 'demo@qa.ai',
@@ -29,8 +28,6 @@ const createConfigService = (
         DEFAULT_PROVIDER: 'openai',
         OPENAI_MODEL: 'computer-use-preview',
         CLAUDE_MODEL: 'claude-sonnet-4-5',
-        KPI_ENDPOINT: '/api/kpi',
-        KPI_TOLERANCE_PERCENT: '1',
       };
       return (overrides[key] ?? defaults[key]) as never;
     }),
@@ -61,9 +58,9 @@ describe('WorkerGatewayService', () => {
     const elementMock = {
       count: jest.fn().mockResolvedValue(1),
       boundingBox: jest.fn().mockResolvedValue({ x: 10, y: 20, width: 100, height: 40 }),
-      getAttribute: jest.fn().mockImplementation(async (attr: string) => (attr === 'data-testid' ? 'kpi-card' : null)),
+      getAttribute: jest.fn().mockImplementation(async (attr: string) => (attr === 'data-testid' ? 'metric-card' : null)),
       innerText: jest.fn().mockResolvedValue('Revenue'),
-      toString: () => 'locator("#kpi")',
+      toString: () => 'locator("#widget")',
     };
     const locatorMock = {
       first: jest.fn(() => elementMock),
@@ -76,16 +73,16 @@ describe('WorkerGatewayService', () => {
     handle.page = pageMock as never;
 
     const snapshot = await service.getDomSnapshot(handle, {
-      selector: '#kpi',
+      selector: '#widget',
       mode: 'single',
       attributes: ['data-testid'],
     });
 
     expect(snapshot.elements).toHaveLength(1);
     expect(snapshot.elements[0]).toMatchObject({
-      selector: 'locator("#kpi")',
+      selector: 'locator("#widget")',
       innerText: 'Revenue',
-      attributes: { 'data-testid': 'kpi-card' },
+      attributes: { 'data-testid': 'metric-card' },
       boundingBox: { x: 10, y: 20, width: 100, height: 40 },
     });
     await fs.rm(handle.artifactDir, { recursive: true, force: true });

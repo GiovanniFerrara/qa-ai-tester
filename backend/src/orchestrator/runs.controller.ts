@@ -81,47 +81,6 @@ export class RunsController {
     return { success: true, run: updated };
   }
 
-  @Post(':runId/kpi/:label/dismiss')
-  async dismissKpi(
-    @Param('runId') runId: string,
-    @Param('label') label: string,
-    @Body() body: unknown,
-  ) {
-    try {
-      const payload = DismissPayloadSchema.parse(body);
-      const decodedLabel = decodeURIComponent(label);
-      const updated = await this.orchestratorService.dismissKpi(
-        runId,
-        decodedLabel,
-        payload.reason,
-        payload.dismissedBy,
-      );
-      return { success: true, run: updated };
-    } catch (error) {
-      if (error instanceof URIError) {
-        throw new BadRequestException('Invalid KPI label encoding');
-      }
-      if (error instanceof ZodError) {
-        throw new BadRequestException(error.errors.map((err) => err.message).join(', '));
-      }
-      throw error;
-    }
-  }
-
-  @Post(':runId/kpi/:label/restore')
-  async restoreKpi(@Param('runId') runId: string, @Param('label') label: string) {
-    try {
-      const decodedLabel = decodeURIComponent(label);
-      const updated = await this.orchestratorService.restoreKpi(runId, decodedLabel);
-      return { success: true, run: updated };
-    } catch (error) {
-      if (error instanceof URIError) {
-        throw new BadRequestException('Invalid KPI label encoding');
-      }
-      throw error;
-    }
-  }
-
   @Post(':runId/cancel')
   async cancelRun(@Param('runId') runId: string) {
     const run = await this.orchestratorService.cancelRun(runId);

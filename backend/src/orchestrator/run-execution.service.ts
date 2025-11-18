@@ -185,7 +185,6 @@ export class RunExecutionService {
         artifactDir: handle.artifactDir,
         screenshots: handle.screenshots,
         budgets: task.budgets,
-        kpiSpec: task.kpiSpec,
         eventsPath: eventsPath ?? null,
         responsesPath: responsesPath ?? null,
         usageTotals,
@@ -201,7 +200,6 @@ export class RunExecutionService {
             },
             {},
           ),
-          kpiAlerts: (report.kpiTable ?? []).filter((kpi) => kpi.status !== 'ok').length,
         },
       };
       await writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
@@ -329,7 +327,6 @@ export class RunExecutionService {
           options.reason,
         ),
       ],
-      kpiTable: [],
       links: {
         traceUrl: options.tracePath,
         screenshotsGalleryUrl: path.dirname(options.initialScreenshot),

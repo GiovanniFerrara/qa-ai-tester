@@ -6,7 +6,6 @@ import {
   AssertToolRequestSchema,
   ComputerActionSchema,
   DomSnapshotRequestSchema,
-  KpiOracleRequestSchema,
   QaReportSchema,
 } from '../src/models/contracts';
 
@@ -16,7 +15,6 @@ const schemaDefinitions = {
   qaReport: QaReportSchema,
   computerAction: ComputerActionSchema,
   domSnapshotRequest: DomSnapshotRequestSchema,
-  kpiOracleRequest: KpiOracleRequestSchema,
   assertToolRequest: AssertToolRequestSchema,
 } as const;
 

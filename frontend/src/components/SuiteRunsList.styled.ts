@@ -35,6 +35,14 @@ export const BackButton = styled.button`
   }
 `;
 
+export const TitleRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: ${theme.spacing.lg};
+  flex-wrap: wrap;
+`;
+
 export const Title = styled.h1`
   font-size: ${theme.fontSizes['3xl']};
   font-weight: 700;
@@ -46,6 +54,36 @@ export const Subtitle = styled.p`
   font-size: ${theme.fontSizes.lg};
   color: ${theme.colors.textSecondary};
   margin: 0;
+`;
+
+export const ActionButtons = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+export const ActionButton = styled.button<{ variant?: 'danger' }>`
+  background: ${props => props.variant === 'danger' ? theme.colors.error.text : theme.colors.primary};
+  color: white;
+  border: none;
+  padding: ${theme.spacing.sm} ${theme.spacing.lg};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.base};
+  font-weight: 600;
+  cursor: pointer;
+  transition: ${theme.transitions.normal};
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: ${props => props.variant === 'danger' ? '#a01c24' : theme.colors.primaryDark};
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 export const HeaderMeta = styled.div`
@@ -129,7 +167,33 @@ export const EmptyState = styled.div`
 
   p {
     font-size: ${theme.fontSizes.base};
-    margin: 0;
+    margin: 0 0 ${theme.spacing.xl} 0;
+  }
+`;
+
+export const RunButton = styled.button`
+  background: ${theme.colors.primary};
+  color: white;
+  border: none;
+  padding: ${theme.spacing.md} ${theme.spacing.xl};
+  border-radius: ${theme.borderRadius.md};
+  font-size: ${theme.fontSizes.base};
+  font-weight: 600;
+  cursor: pointer;
+  transition: ${theme.transitions.normal};
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.sm};
+
+  &:hover:not(:disabled) {
+    background: ${theme.colors.primaryDark};
+    transform: translateY(-2px);
+    box-shadow: ${theme.shadows.md};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 

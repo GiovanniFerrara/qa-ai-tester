@@ -13,7 +13,6 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   AssertToolRequestSchema,
   DomSnapshotRequestSchema,
-  KpiOracleResponseSchema,
   type QaReport,
   type Finding,
 } from '../models/contracts';
@@ -22,7 +21,6 @@ import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 import { AnthropicProviderService } from './anthropic-provider.service';
 import type { ComputerUseSessionResult } from './openai-computer-use.service';
-import { KpiOracleService } from '../services/kpi-oracle.service';
 import type { RunEvent, RunEventsService } from '../orchestrator/run-events.service';
 import {
   AnthropicActionMapper,
@@ -62,7 +60,6 @@ export class AnthropicComputerUseService {
   constructor(
     private readonly provider: AnthropicProviderService,
     private readonly workerGateway: WorkerGatewayService,
-    private readonly kpiOracleService: KpiOracleService,
     private readonly actionMapper: AnthropicActionMapper,
     private readonly qaReportService: AnthropicQaReportService,
   ) {}
@@ -195,14 +192,6 @@ export class AnthropicComputerUseService {
             resultBlock = await this.handleDomSnapshot({
               toolUse,
               handle,
-            });
-            break;
-          }
-          case 'kpi_oracle': {
-            resultBlock = await this.handleKpiOracle({
-              toolUse,
-              task,
-              abortSignal: options.abortSignal,
             });
             break;
           }
@@ -459,35 +448,6 @@ export class AnthropicComputerUseService {
       type: 'tool_result',
       tool_use_id: toolUse.id,
       content: [{ type: 'text', text: JSON.stringify(snapshot) }],
-    };
-  }
-
-  private async handleKpiOracle(params: {
-    toolUse: ToolUseBlock;
-    task: TaskSpec;
-    abortSignal?: AbortSignal;
-  }): Promise<ToolResultBlockParam> {
-    const { toolUse, task, abortSignal } = params;
-    if (abortSignal?.aborted) {
-      const reason = abortSignal.reason;
-      if (reason instanceof Error) {
-        throw reason;
-      }
-      if (typeof reason === 'string' && reason.length > 0) {
-        throw new RunCancelledError(reason);
-      }
-      throw new RunCancelledError();
-    }
-    const context =
-      (typeof toolUse.input === 'object' && toolUse.input !== null
-        ? (toolUse.input as Record<string, unknown>).filters
-        : undefined) ?? {};
-    const result = await this.kpiOracleService.resolve(task.kpiSpec, context as Record<string, unknown>);
-    const validated = KpiOracleResponseSchema.parse(result);
-    return {
-      type: 'tool_result',
-      tool_use_id: toolUse.id,
-      content: [{ type: 'text', text: JSON.stringify(validated) }],
     };
   }
 

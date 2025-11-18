@@ -46,21 +46,6 @@ export const FindingSchema = z.object({
 
 export type Finding = z.infer<typeof FindingSchema>;
 
-export const KpiSpecSchema = z.union([
-  z.object({
-    type: z.literal('staticValues'),
-    values: z.record(z.union([z.string(), z.number()])),
-  }),
-  z.object({
-    type: z.literal('apiEndpoint'),
-    url: z.string(),
-    params: z.record(z.any()).optional(),
-    method: z.enum(['GET', 'POST']).default('GET'),
-  }),
-]);
-
-export type KpiSpec = z.infer<typeof KpiSpecSchema>;
-
 export const BudgetSchema = z.object({
   maxToolCalls: z.number().int().positive(),
   maxTimeMs: z.number().int().positive(),
@@ -81,21 +66,10 @@ export const TaskSpecSchema = z.object({
   model: z.string().optional(),
   requireFindings: z.boolean().default(true),
   autoAuthEnabled: z.boolean().default(false),
-  kpiSpec: KpiSpecSchema,
   budgets: BudgetSchema,
 });
 
 export type TaskSpec = z.infer<typeof TaskSpecSchema>;
-
-export const KpiTableRowSchema = z.object({
-  label: z.string(),
-  expected: z.string(),
-  observed: z.string(),
-  status: z.enum(['ok', 'mismatch', 'missing']),
-  dismissal: DismissalSchema.optional(),
-});
-
-export type KpiTableRow = z.infer<typeof KpiTableRowSchema>;
 
 export const QaReportSchema = z.object({
   id: z.string(),
@@ -106,7 +80,6 @@ export const QaReportSchema = z.object({
   summary: z.string(),
   status: z.enum(['passed', 'failed', 'inconclusive']),
   findings: z.array(FindingSchema),
-  kpiTable: z.array(KpiTableRowSchema),
   links: z.object({
     traceUrl: z.string().nullable(),
     screenshotsGalleryUrl: z.string().nullable(),
@@ -233,19 +206,6 @@ export const DomSnapshotResponseSchema = z.object({
 });
 
 export type DomSnapshotResponse = z.infer<typeof DomSnapshotResponseSchema>;
-
-export const KpiOracleRequestSchema = z.object({
-  spec: KpiSpecSchema,
-  context: z.record(z.any()).default({}),
-});
-
-export type KpiOracleRequest = z.infer<typeof KpiOracleRequestSchema>;
-
-export const KpiOracleResponseSchema = z.object({
-  data: z.record(z.union([z.string(), z.number()])),
-});
-
-export type KpiOracleResponse = z.infer<typeof KpiOracleResponseSchema>;
 
 export const AssertToolRequestSchema = z.object({
   severity: FindingSeverity,

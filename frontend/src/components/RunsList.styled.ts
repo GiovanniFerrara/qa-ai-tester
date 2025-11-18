@@ -155,39 +155,6 @@ export const SeverityMeterFill = styled.div<{ severity?: string }>`
   }}
 `;
 
-export const KpiAlerts = styled.ul`
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: ${theme.spacing.md};
-  max-height: 400px;
-  overflow-y: auto;
-
-  li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: ${theme.spacing.md};
-    background: ${theme.colors.background};
-    border-radius: ${theme.borderRadius.md};
-    gap: ${theme.spacing.md};
-
-    > div {
-      flex: 1;
-
-      strong {
-        color: ${theme.colors.text};
-        font-size: ${theme.fontSizes.base};
-      }
-
-      span {
-        font-size: ${theme.fontSizes.sm};
-        color: ${theme.colors.textSecondary};
-      }
-    }
-  }
-`;
-
 export const UrgentList = styled.ul`
   list-style: none;
   display: flex;
