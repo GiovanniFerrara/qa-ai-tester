@@ -5,7 +5,7 @@ import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { AppEnvironment } from '../config/environment';
-import type { QaReport, DismissReason } from '../models/contracts';
+import type { QaReport, DismissReason, Finding } from '../models/contracts';
 import type { AiProvider, RunResult, StoredRunRecord } from '../models/run';
 import type { CollectionRunRecord, ExecutionMode } from '../models/collections';
 import { TaskRegistryService } from '../tasks/task-registry.service';
@@ -175,6 +175,7 @@ export class OrchestratorService {
       assertion: string;
       severity: string;
       observed: string;
+      timestamp: string;
     }>;
     providerUsage: Record<string, number>;
   } {
@@ -224,23 +225,25 @@ export class OrchestratorService {
       info: 0,
     };
     runs.forEach((run) => {
-      this.getActiveFindings(run.report).forEach((finding) => {
+      this.getActiveFindings(run.report).forEach((finding: Finding) => {
         severity[finding.severity] = (severity[finding.severity] ?? 0) + 1;
       });
     });
 
     const urgentFindings = runs
       .flatMap((run) =>
-        this.getActiveFindings(run.report).map((finding) => ({ finding, run })),
+        this.getActiveFindings(run.report).map((finding: Finding) => ({ finding, run })),
       )
       .filter(({ finding }) => ['blocker', 'critical'].includes(finding.severity))
-      .slice(0, 10)
       .map(({ finding, run }) => ({
         runId: run.runId,
         assertion: finding.assertion,
         severity: finding.severity,
         observed: finding.observed,
-      }));
+        timestamp: run.report?.finishedAt ?? run.startedAt,
+      }))
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 10);
 
     const providerUsage = runs.reduce<Record<string, number>>((acc, run) => {
       acc[run.provider] = (acc[run.provider] ?? 0) + 1;
@@ -410,7 +413,7 @@ export class OrchestratorService {
           }
         }
       } else {
-        await Promise.all(collection.taskIds.map((taskId) => startTask(taskId)));
+        await Promise.all(collection.taskIds.map((taskId: string) => startTask(taskId)));
       }
 
       this.evaluateCollectionRunCompletion(record);
@@ -428,7 +431,7 @@ export class OrchestratorService {
     dismissedBy?: string,
   ): StoredRunRecord {
     return this.updateRunReport(runId, (report) => {
-      const index = report.findings.findIndex((finding) => finding.id === findingId);
+      const index = report.findings.findIndex((finding: Finding) => finding.id === findingId);
       if (index === -1) {
         throw new NotFoundException(`Finding ${findingId} not found in run ${runId}`);
       }
@@ -452,7 +455,7 @@ export class OrchestratorService {
 
   restoreFinding(runId: string, findingId: string): StoredRunRecord {
     return this.updateRunReport(runId, (report) => {
-      const index = report.findings.findIndex((finding) => finding.id === findingId);
+      const index = report.findings.findIndex((finding: Finding) => finding.id === findingId);
       if (index === -1) {
         throw new NotFoundException(`Finding ${findingId} not found in run ${runId}`);
       }
@@ -541,7 +544,7 @@ export class OrchestratorService {
   }
 
   private getActiveFindings(report?: QaReport): QaReport['findings'] {
-    return (report?.findings ?? []).filter((finding) => !finding.dismissal);
+    return (report?.findings ?? []).filter((finding: Finding) => !finding.dismissal);
   }
 
   private buildRunSummarySnapshot(report: QaReport): StoredRunRecord['summary'] {
@@ -553,7 +556,7 @@ export class OrchestratorService {
       minor: 0,
       info: 0,
     };
-    activeFindings.forEach((finding) => {
+    activeFindings.forEach((finding: Finding) => {
       severityCounts[finding.severity] = (severityCounts[finding.severity] ?? 0) + 1;
     });
     return {

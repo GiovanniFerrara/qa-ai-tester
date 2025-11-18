@@ -1,6 +1,11 @@
 import { useMemo, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRuns, useTasks, useRunSummary, useCancelRun } from "../hooks/useApi";
+import {
+  useRuns,
+  useTasks,
+  useRunSummary,
+  useCancelRun,
+} from "../hooks/useApi";
 import {
   Card,
   Button,
@@ -152,6 +157,7 @@ export function RunsList() {
       assertion: string;
       severity: string;
       observed: string;
+      timestamp: string;
     }> = [];
 
     sortedRuns.forEach((run) => {
@@ -161,14 +167,14 @@ export function RunsList() {
         }
         if (
           !finding.dismissal &&
-          ["blocker", "critical"].includes(finding.severity) &&
-          urgent.length < 10
+          ["blocker", "critical"].includes(finding.severity)
         ) {
           urgent.push({
             runId: run.runId,
             assertion: finding.assertion,
             severity: finding.severity,
             observed: finding.observed,
+            timestamp: run.report?.finishedAt ?? run.startedAt,
           });
         }
       });

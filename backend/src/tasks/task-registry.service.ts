@@ -90,23 +90,25 @@ export class TaskRegistryService {
   }
 
   private seedDefaultTask(): void {
-    this.registerTask({
-      id: 'dashboard-sanity',
-      name: 'Dashboard Sanity',
-      description: 'Ensure the main dashboard renders successfully for an analyst user.',
-      goal: 'Load the dashboard and confirm core widgets render without authentication prompts or errors.',
-      instructions:
-        'Take an initial screenshot and confirm presence of the welcome banner and inbox module. Record at least one finding summarizing the state.',
-      route: '/dashboard',
-      role: 'analyst',
-      provider: 'openai',
-      autoAuthEnabled: false,
-      requireFindings: true,
-      budgets: {
-        maxToolCalls: 200,
-        maxTimeMs: 180_000,
-        maxScreenshots: 25,
-      },
-    });
+    // Set a task see if you wish
+
+    //  this.registerTask({
+    //   id: 'dashboard-sanity',
+    //   name: 'Dashboard Sanity',
+    //   description: 'Ensure the main dashboard renders successfully for an analyst user.',
+    //   goal: 'Load the dashboard and confirm core widgets render without authentication prompts or errors.',
+    //   instructions:
+    //     'Take an initial screenshot and confirm presence of the welcome banner and inbox module. Record at least one finding summarizing the state.',
+    //   route: '/dashboard',
+    //   role: 'analyst',
+    //   provider: 'anthropic',
+    //   autoAuthEnabled: false,
+    //   requireFindings: true,
+    //   budgets: {
+    //     maxToolCalls: 200,
+    //     maxTimeMs: 180_000,
+    //     maxScreenshots: 25,
+    //   },
+    // });
   }
 }
