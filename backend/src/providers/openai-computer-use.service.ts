@@ -86,6 +86,8 @@ export class OpenAiComputerUseService {
     const initialScreenshotBuffer = await fs.readFile(options.initialScreenshotPath);
     const initialScreenshotBase64 = initialScreenshotBuffer.toString('base64');
 
+    const initialScreenshotName = path.basename(options.initialScreenshotPath);
+
     const input: ResponseCreateParams['input'] = [
       {
         role: 'system',
@@ -96,6 +98,10 @@ export class OpenAiComputerUseService {
         content: [
           { type: 'input_text', text: plan.userPrompt },
           { type: 'input_image', image_url: `data:image/png;base64,${initialScreenshotBase64}` },
+          {
+            type: 'input_text',
+            text: `Latest screenshot saved as ${initialScreenshotName}. Use this exact filename when referencing evidence screenshots.`,
+          },
         ] as const,
       },
     ] as ResponseCreateParams['input'];
@@ -227,6 +233,7 @@ export class OpenAiComputerUseService {
             `Run ${runId}: executing computer action ${call.action.type} (call_id=${call.call_id})`,
           );
           const actionResult = await this.workerGateway.performComputerAction(handle, mappedAction);
+          const screenshotName = path.basename(actionResult.screenshotPath);
           events.push({
             step: events.length + 1,
             type: 'computer',
@@ -253,6 +260,7 @@ export class OpenAiComputerUseService {
               callId: call.call_id,
               image: `data:image/png;base64,${actionResult.screenshot}`,
               viewport: actionResult.viewport,
+              screenshotName,
             },
           });
 
@@ -268,6 +276,15 @@ export class OpenAiComputerUseService {
               code: safety.code,
               message: safety.message,
             })),
+          });
+          followUpInputs.push({
+            role: 'user',
+            content: [
+              {
+                type: 'input_text',
+                text: `Screenshot saved as ${screenshotName}. Reference this filename for any findings or evidence.`,
+              },
+            ],
           });
           totalToolCalls += 1;
         }

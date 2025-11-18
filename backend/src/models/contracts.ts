@@ -178,6 +178,7 @@ export type ComputerAction = z.infer<typeof ComputerActionSchema>;
 
 export const ComputerActionResultSchema = z.object({
   screenshot: z.string(),
+  screenshotPath: z.string(),
   viewport: z.object({
     width: z.number(),
     height: z.number(),

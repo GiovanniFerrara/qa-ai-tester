@@ -148,6 +148,7 @@ export class WorkerGatewayService {
 
     return {
       screenshot: screenshotBase64,
+      screenshotPath,
       viewport,
       consoleEvents: [],
       networkEvents: [],

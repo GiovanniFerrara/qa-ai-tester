@@ -347,6 +347,7 @@ export class AnthropicComputerUseService {
     );
     const start = Date.now();
     const result = await this.workerGateway.performComputerAction(handle, action);
+    const screenshotName = path.basename(result.screenshotPath);
     const latency = Date.now() - start;
 
     events.push({
@@ -366,6 +367,7 @@ export class AnthropicComputerUseService {
         callId: toolUse.id,
         image: `data:image/png;base64,${result.screenshot}`,
         viewport: result.viewport,
+        screenshotName,
       },
       timestamp: new Date().toISOString(),
     });
@@ -387,7 +389,12 @@ export class AnthropicComputerUseService {
           text: JSON.stringify({
             viewport: result.viewport,
             latencyMs: latency,
+            screenshotName,
           }),
+        },
+        {
+          type: 'text',
+          text: `Screenshot saved as ${screenshotName}. Reference this filename when providing evidence.`,
         },
       ],
     };

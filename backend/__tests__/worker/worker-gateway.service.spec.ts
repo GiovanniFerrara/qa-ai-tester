@@ -124,6 +124,7 @@ describe('WorkerGatewayService', () => {
     expect(pageMock.mouse.click).toHaveBeenCalledWith(100, 200);
     expect(result.viewport).toEqual({ width: 1366, height: 768 });
     expect(result.screenshot).toBe(screenshotBuffer.toString('base64'));
+    expect(result.screenshotPath).toMatch(/screens/);
     expect(handle.screenshots.length).toBe(1);
     await fs.rm(handle.artifactDir, { recursive: true, force: true });
   });
