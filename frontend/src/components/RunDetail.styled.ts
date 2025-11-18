@@ -22,7 +22,6 @@ export const RunDetailHeader = styled.div`
 
     p {
       color: ${theme.colors.textSecondary};
-      font-family: ${theme.fonts.mono};
     }
   }
 `;
@@ -376,13 +375,11 @@ export const KpiLabel = styled.div`
 
 export const KpiExpected = styled.div`
   color: ${theme.colors.text};
-  font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.sm};
 `;
 
 export const KpiObserved = styled.div`
   color: ${theme.colors.text};
-  font-family: ${theme.fonts.mono};
   font-size: ${theme.fontSizes.sm};
 `;
 

@@ -57,7 +57,7 @@ export const theme = {
       critical: '#fee2e2',
       major: '#fff4e6',
       minor: '#f1f5f9',
-      info: '#e6fffa'
+      info: '#ffffff'
     },
     
     badge: {

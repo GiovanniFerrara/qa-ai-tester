@@ -10,7 +10,8 @@ import { SuiteRunDetail } from "./components/SuiteRunDetail";
 import {
   Header,
   HeaderContainer,
-  Title,
+  TitleContainer,
+  Logo,
   Subtitle,
   Nav,
   NavLink,
@@ -27,7 +28,9 @@ function Navigation() {
   return (
     <Header>
       <HeaderContainer>
-        <Title>QA AI Tester</Title>
+        <TitleContainer>
+          <Logo src="/logo.png" alt="QA AI Tester" />
+        </TitleContainer>
         <Subtitle>AI-powered automated quality assurance testing</Subtitle>
         <Nav>
           <NavLink to="/" $isActive={isActive("/")}>

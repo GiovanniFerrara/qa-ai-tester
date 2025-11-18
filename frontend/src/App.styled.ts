@@ -16,6 +16,19 @@ export const HeaderContainer = styled.div`
   padding: 0 ${theme.spacing['2xl']};
 `;
 
+export const TitleContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: ${theme.spacing.sm};
+`;
+
+export const Logo = styled.img`
+  height: 80px;
+  width: auto;
+  border-radius: 10px;
+`;
+
 export const Title = styled.h1`
   text-align: center;
   font-size: ${theme.fontSizes['6xl']};
@@ -26,6 +39,7 @@ export const Subtitle = styled.p`
   text-align: center;
   opacity: 0.9;
 `;
+
 
 export const Nav = styled.nav`
   display: flex;
