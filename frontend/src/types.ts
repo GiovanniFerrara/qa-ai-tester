@@ -99,7 +99,7 @@ export interface QAReport {
   };
 }
 
-export type RunStatus = 'running' | 'completed' | 'failed';
+export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface RunArtifacts {
   screenshots: string[];
@@ -201,7 +201,7 @@ export interface CollectionRunRecord {
   id: string;
   collectionId: string;
   executionMode: ExecutionMode;
-  status: 'running' | 'completed';
+  status: 'running' | 'completed' | 'cancelled';
   startedAt: string;
   finishedAt?: string;
   baseUrl?: string | null;

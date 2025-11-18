@@ -1,6 +1,6 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useRuns, useTasks, useRunSummary } from "../hooks/useApi";
+import { useRuns, useTasks, useRunSummary, useCancelRun } from "../hooks/useApi";
 import {
   Card,
   Button,
@@ -13,6 +13,7 @@ import * as S from "./RunsList.styled";
 
 export function RunsList() {
   const navigate = useNavigate();
+  const [cancellingRunId, setCancellingRunId] = useState<string | null>(null);
   const formatBaseUrl = useCallback((value?: string | null) => {
     if (!value) {
       return "Default BASE_URL";
@@ -31,6 +32,11 @@ export function RunsList() {
     refetch: refetchRuns,
   } = useRuns({
     refetchInterval: 5000,
+  });
+  const cancelRunMutation = useCancelRun({
+    onSuccess: () => {
+      void refetchRuns();
+    },
   });
 
   const { data: tasksData = [], isLoading: tasksLoading } = useTasks({
@@ -77,6 +83,18 @@ export function RunsList() {
       return task?.name ?? run.taskId;
     },
     [runMap, tasks]
+  );
+  const handleCancelRun = useCallback(
+    (event: React.MouseEvent, runId: string) => {
+      event.stopPropagation();
+      setCancellingRunId(runId);
+      cancelRunMutation.mutate(runId, {
+        onSettled: () => {
+          setCancellingRunId((current) => (current === runId ? null : current));
+        },
+      });
+    },
+    [cancelRunMutation]
   );
 
   const derivedSummary = useMemo(() => {
@@ -428,6 +446,22 @@ export function RunsList() {
                           ? "RUNNING"
                           : run.status.toUpperCase()}
                       </StatusBadge>
+                    )}
+                    {run.status === "running" && (
+                      <Button
+                        variant="danger"
+                        size="small"
+                        onClick={(event) => handleCancelRun(event, run.runId)}
+                        disabled={
+                          cancellingRunId === run.runId &&
+                          cancelRunMutation.isPending
+                        }
+                      >
+                        {cancellingRunId === run.runId &&
+                        cancelRunMutation.isPending
+                          ? "Cancelling..."
+                          : "Cancel"}
+                      </Button>
                     )}
                   </div>
                 </S.RunHeader>

@@ -41,6 +41,10 @@ export const theme = {
       inconclusive: {
         bg: '#fff3cd',
         text: '#856404'
+      },
+      cancelled: {
+        bg: '#e2e8f0',
+        text: '#475569'
       }
     },
     

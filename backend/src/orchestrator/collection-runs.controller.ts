@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Post } from '@nestjs/common';
 
 import { OrchestratorService } from './orchestrator.service';
 
@@ -14,5 +14,11 @@ export class CollectionRunsController {
   @Get(':collectionRunId')
   get(@Param('collectionRunId') collectionRunId: string) {
     return this.orchestrator.getCollectionRun(collectionRunId);
+  }
+
+  @Post(':collectionRunId/cancel')
+  async cancel(@Param('collectionRunId') collectionRunId: string) {
+    const run = await this.orchestrator.cancelCollectionRun(collectionRunId);
+    return { success: true, run };
   }
 }

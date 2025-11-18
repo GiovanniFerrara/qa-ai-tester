@@ -4,7 +4,12 @@ import type {
   RunState,
 } from "../types";
 
-export type ResultStatus = "running" | "passed" | "failed" | "inconclusive";
+export type ResultStatus =
+  | "running"
+  | "passed"
+  | "failed"
+  | "inconclusive"
+  | "cancelled";
 
 export interface ItemResult {
   status: ResultStatus;
@@ -25,6 +30,15 @@ export const getCollectionItemResult = (
   runMap: RunLookup
 ): ItemResult => {
   const run = item.runId ? runMap.get(item.runId) : undefined;
+
+  if (item.status === "cancelled" || run?.status === "cancelled") {
+    return {
+      status: "cancelled",
+      label: "CANCELLED",
+      error: run?.error ?? item.error,
+      run,
+    };
+  }
 
   if (item.status === "failed" || run?.status === "failed") {
     return {
@@ -74,6 +88,9 @@ export const getCollectionRunResult = (
   if (record.status === "running") {
     return { status: "running", label: "RUNNING" };
   }
+  if (record.status === "cancelled") {
+    return { status: "cancelled", label: "CANCELLED" };
+  }
 
   let hasFailed = false;
   let hasInconclusive = false;
@@ -84,7 +101,11 @@ export const getCollectionRunResult = (
       hasFailed = true;
       break;
     }
-    if (result.status === "inconclusive" || result.status === "running") {
+    if (
+      result.status === "inconclusive" ||
+      result.status === "running" ||
+      result.status === "cancelled"
+    ) {
       hasInconclusive = true;
     }
   }

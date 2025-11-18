@@ -1,8 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { MouseEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useCollection,
   useCollectionRun,
+  useCancelCollectionRun,
+  useCancelRun,
   useRuns,
   useTasks,
 } from "../hooks/useApi";
@@ -12,6 +15,7 @@ import {
   getCollectionRunError,
   getCollectionRunResult,
 } from "../utils/collectionRunResults";
+import { Button } from "../styles/shared.styled";
 import * as S from "./SuiteRunDetail.styled";
 
 const formatBaseUrl = (value?: string | null) => {
@@ -44,6 +48,7 @@ export function SuiteRunDetail() {
     data: run,
     isLoading,
     error,
+    refetch: refetchCollectionRun,
   } = useCollectionRun(collectionId || "", runId || "");
   const { data: collection } = useCollection(collectionId || "", {
     enabled: !!collectionId,
@@ -52,6 +57,18 @@ export function SuiteRunDetail() {
   const { data: allRuns = [] } = useRuns({
     refetchInterval: 5000,
   });
+  const cancelRunMutation = useCancelRun({
+    onSuccess: () => {
+      void refetchCollectionRun();
+    },
+  });
+  const cancelCollectionRunMutation = useCancelCollectionRun({
+    onSuccess: () => {
+      void refetchCollectionRun();
+    },
+  });
+  const [cancellingRunId, setCancellingRunId] = useState<string | null>(null);
+  const [cancellingSuite, setCancellingSuite] = useState(false);
 
   const taskMap = useMemo(
     () => new Map(tasks.map((task) => [task.id, task])),
@@ -72,6 +89,36 @@ export function SuiteRunDetail() {
   const handleViewTask = (taskRunId: string) => {
     navigate(`/runs/${taskRunId}`);
   };
+
+  const handleCancelSuite = useCallback(() => {
+    if (!run?.id) {
+      return;
+    }
+    setCancellingSuite(true);
+    cancelCollectionRunMutation.mutate(run.id, {
+      onSettled: () => {
+        setCancellingSuite(false);
+      },
+    });
+  }, [cancelCollectionRunMutation, run?.id]);
+
+  const handleCancelTask = useCallback(
+    (event: MouseEvent, taskRunId: string) => {
+      event.stopPropagation();
+      if (!taskRunId) {
+        return;
+      }
+      setCancellingRunId(taskRunId);
+      cancelRunMutation.mutate(taskRunId, {
+        onSettled: () => {
+          setCancellingRunId((current) =>
+            current === taskRunId ? null : current
+          );
+        },
+      });
+    },
+    [cancelRunMutation]
+  );
 
   if (isLoading) {
     return <S.LoadingState>Loading run details...</S.LoadingState>;
@@ -122,9 +169,25 @@ export function SuiteRunDetail() {
                 Started {new Date(run.startedAt).toLocaleString()}
               </S.RunSubtitle>
             </div>
-            <S.StatusBadge status={suiteResult.status}>
-              {suiteResult.label}
-            </S.StatusBadge>
+            <S.SuiteActions>
+              <S.StatusBadge status={suiteResult.status}>
+                {suiteResult.label}
+              </S.StatusBadge>
+              {run?.status === "running" && (
+                <Button
+                  variant="danger"
+                  size="small"
+                  onClick={handleCancelSuite}
+                  disabled={
+                    cancellingSuite || cancelCollectionRunMutation.isPending
+                  }
+                >
+                  {cancellingSuite || cancelCollectionRunMutation.isPending
+                    ? "Cancelling..."
+                    : "Cancel Suite"}
+                </Button>
+              )}
+            </S.SuiteActions>
           </S.TitleRow>
         </S.HeaderContent>
       </S.Header>
@@ -238,43 +301,67 @@ export function SuiteRunDetail() {
                   </S.TaskRunStatus>
                 </S.TaskRunHeader>
 
-                <S.TaskRunMeta>
-                  {canOpen ? (
-                    <>
-                      {relatedRun?.status === "completed" &&
-                      relatedRun.report ? (
-                        <>
-                          <span>
-                            Findings: {relatedRun.report.findings.length}
-                          </span>
-                          <span>
-                            Duration:{" "}
-                            {formatDuration(
-                              relatedRun.report.costs.durationMs
-                            )}
-                          </span>
-                        </>
-                      ) : relatedRun?.status === "failed" ? (
-                        <S.ErrorText>
-                          Failed
-                          {relatedRun.error ? `: ${relatedRun.error}` : ""}
-                        </S.ErrorText>
-                      ) : itemResult.status === "failed" &&
-                        itemResult.error ? (
-                        <S.ErrorText>
-                          Failed: {itemResult.error}
-                        </S.ErrorText>
-                      ) : itemResult.status === "running" ? (
-                        <span>In progress…</span>
-                      ) : (
-                        <span>Awaiting result…</span>
-                      )}
-                      <span>Tap to open detailed report</span>
-                    </>
-                  ) : (
-                    <span>Not started yet</span>
+                <S.TaskRunActions>
+                  <S.TaskRunMeta>
+                    {canOpen ? (
+                      <>
+                        {relatedRun?.status === "completed" &&
+                        relatedRun.report ? (
+                          <>
+                            <span>
+                              Findings: {relatedRun.report.findings.length}
+                            </span>
+                            <span>
+                              Duration:{" "}
+                              {formatDuration(
+                                relatedRun.report.costs.durationMs
+                              )}
+                            </span>
+                          </>
+                        ) : relatedRun?.status === "failed" ? (
+                          <S.ErrorText>
+                            Failed
+                            {relatedRun.error ? `: ${relatedRun.error}` : ""}
+                          </S.ErrorText>
+                        ) : itemResult.status === "failed" &&
+                          itemResult.error ? (
+                          <S.ErrorText>
+                            Failed: {itemResult.error}
+                          </S.ErrorText>
+                        ) : itemResult.status === "running" ? (
+                          <span>In progress…</span>
+                        ) : (
+                          <span>Awaiting result…</span>
+                        )}
+                        <span>Tap to open detailed report</span>
+                      </>
+                    ) : (
+                      <span>
+                        {itemResult.status === "cancelled"
+                          ? "Cancelled before execution"
+                          : "Not started yet"}
+                      </span>
+                    )}
+                  </S.TaskRunMeta>
+                  {item.runId && itemResult.status === "running" && (
+                    <Button
+                      variant="danger"
+                      size="small"
+                      onClick={(event) =>
+                        handleCancelTask(event, item.runId!)
+                      }
+                      disabled={
+                        cancellingRunId === item.runId &&
+                        cancelRunMutation.isPending
+                      }
+                    >
+                      {cancellingRunId === item.runId &&
+                      cancelRunMutation.isPending
+                        ? "Cancelling..."
+                        : "Cancel Task"}
+                    </Button>
                   )}
-                </S.TaskRunMeta>
+                </S.TaskRunActions>
               </S.TaskRunCard>
             );
           })}

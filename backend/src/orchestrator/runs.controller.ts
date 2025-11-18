@@ -121,4 +121,10 @@ export class RunsController {
       throw error;
     }
   }
+
+  @Post(':runId/cancel')
+  async cancelRun(@Param('runId') runId: string) {
+    const run = await this.orchestratorService.cancelRun(runId);
+    return { success: true, run };
+  }
 }

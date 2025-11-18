@@ -25,6 +25,7 @@ import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 import { OpenAiProviderService } from './openai-provider.service';
 import type { RunEvent, RunEventsService } from '../orchestrator/run-events.service';
+import { RunCancelledError } from '../orchestrator/run-errors';
 
 interface ComputerUseRunOptions {
   runId: string;
@@ -33,6 +34,7 @@ interface ComputerUseRunOptions {
   initialScreenshotPath: string;
   startedAt: Date;
   events?: Pick<RunEventsService, 'emit'>;
+  abortSignal?: AbortSignal;
 }
 
 export interface ComputerUseSessionResult {
@@ -69,6 +71,20 @@ export class OpenAiComputerUseService {
 
   async run(options: ComputerUseRunOptions): Promise<ComputerUseSessionResult> {
     const { handle, runId, task } = options;
+    const ensureNotCancelled = (): void => {
+      if (!options.abortSignal?.aborted) {
+        return;
+      }
+      const reason = options.abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      if (typeof reason === 'string' && reason.length > 0) {
+        throw new RunCancelledError(reason);
+      }
+      throw new RunCancelledError();
+    };
+    ensureNotCancelled();
     const plan = this.provider.buildComputerUsePlan(task, runId);
     const client = this.provider.getClient();
     const emitEvent = (
@@ -149,6 +165,7 @@ export class OpenAiComputerUseService {
     let promptedForReport = false;
 
     while (iterations < maxIterations) {
+      ensureNotCancelled();
       iterations += 1;
 
       const functionCalls = this.extractFunctionCalls(response);
@@ -190,6 +207,7 @@ export class OpenAiComputerUseService {
 
       if (functionCalls.length > 0) {
         for (const call of functionCalls) {
+          ensureNotCancelled();
           const result = await this.handleFunctionCall(call, { runId, task, handle }, findingsFromTool);
           const outputPayload =
             typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
@@ -228,6 +246,7 @@ export class OpenAiComputerUseService {
 
       if (computerCalls.length > 0) {
         for (const call of computerCalls) {
+          ensureNotCancelled();
           const mappedAction = this.mapComputerAction(call);
           this.logger.debug(
             `Run ${runId}: executing computer action ${call.action.type} (call_id=${call.call_id})`,
@@ -286,10 +305,11 @@ export class OpenAiComputerUseService {
               },
             ],
           });
-          totalToolCalls += 1;
+            totalToolCalls += 1;
+          }
         }
-      }
 
+      ensureNotCancelled();
       const maybeReport = this.tryExtractReport(response, findingsFromTool, options);
       if (followUpInputs.length === 0) {
         if (maybeReport) {
@@ -345,6 +365,7 @@ export class OpenAiComputerUseService {
         }
       }
 
+      ensureNotCancelled();
       const followUpParams: ResponseCreateParams = {
         model: plan.model,
         tools: plan.tools,
@@ -355,6 +376,7 @@ export class OpenAiComputerUseService {
       };
 
       response = await client.responses.create(followUpParams);
+      ensureNotCancelled();
 
       recordResponseUsage(response.usage);
       this.logger.debug(

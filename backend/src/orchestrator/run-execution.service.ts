@@ -11,6 +11,7 @@ import { RunEventsService } from './run-events.service';
 import { AuthStateService } from '../worker/auth-state.service';
 import { WorkerGatewayService } from '../worker/worker-gateway.service';
 import type { BrowserRunHandle } from '../worker/worker-gateway.service';
+import { RunCancelledError } from './run-errors';
 
 @Injectable()
 export class RunExecutionService {
@@ -29,12 +30,14 @@ export class RunExecutionService {
     task: TaskSpec,
     providerKey: AiProvider,
     baseUrlOverride?: string,
+    abortSignal?: AbortSignal,
   ): Promise<RunResult> {
     const startedAt = new Date();
     const provider = this.providerRegistry.resolve(providerKey);
     this.logger.log(
       `Starting run ${runId} with task ${task.id} using provider ${provider.provider}`,
     );
+    this.throwIfCancelled(abortSignal);
 
     let handle: BrowserRunHandle | null = null;
     let storageStatePath: string | undefined;
@@ -43,18 +46,21 @@ export class RunExecutionService {
       const shouldBootstrapAuth = task.autoAuthEnabled ?? false;
       if (shouldBootstrapAuth) {
         storageStatePath = await this.authStateService.createStorageState(runId, baseUrlOverride);
+        this.throwIfCancelled(abortSignal);
       } else {
         this.logger.debug(
           `Skipping automated auth bootstrap for run ${runId} (autoAuthEnabled=false)`,
         );
       }
 
+      this.throwIfCancelled(abortSignal);
       handle = await this.workerGateway.startRun(
         runId,
         task.route,
         baseUrlOverride,
         storageStatePath,
       );
+      this.throwIfCancelled(abortSignal);
       if (!handle) {
         throw new Error('Failed to initialize browser run handle');
       }
@@ -67,6 +73,7 @@ export class RunExecutionService {
       });
 
       const initialScreenshot = await this.workerGateway.captureScreenshot(handle, 'initial');
+      this.throwIfCancelled(abortSignal);
       try {
         const screenshotBuffer = await readFile(initialScreenshot);
         this.runEvents.emit(runId, {
@@ -99,6 +106,7 @@ export class RunExecutionService {
           handle,
           initialScreenshotPath: initialScreenshot,
           startedAt,
+          abortSignal,
         });
         report = sessionResult.report;
         eventsPath = sessionResult.eventsPath;
@@ -378,5 +386,19 @@ export class RunExecutionService {
     return findings.some(
       (finding) => !finding.dismissal && finding.severity !== 'info',
     );
+  }
+
+  private throwIfCancelled(signal?: AbortSignal): void {
+    if (!signal?.aborted) {
+      return;
+    }
+    const reason = signal.reason;
+    if (reason instanceof Error) {
+      throw reason;
+    }
+    if (typeof reason === 'string' && reason.length > 0) {
+      throw new RunCancelledError(reason);
+    }
+    throw new RunCancelledError();
   }
 }

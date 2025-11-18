@@ -112,6 +112,24 @@ export const useRun = (runId: string, options?: Omit<UseQueryOptions<RunState, A
   });
 };
 
+export const useCancelRun = (
+  options?: UseMutationOptions<{ success: boolean; run: RunState }, ApiException, string>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: api.cancelRun,
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runs });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runSummary });
+      if (args[1]) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.run(args[1]) });
+      }
+      options?.onSuccess?.(...args);
+    },
+  });
+};
+
 export const useCollections = (options?: Omit<UseQueryOptions<TaskCollection[], ApiException>, 'queryKey' | 'queryFn'>) => {
   return useQuery({
     queryKey: QUERY_KEYS.collections,
@@ -202,5 +220,28 @@ export const useCollectionRun = (collectionId: string, runId: string, options?: 
     enabled: !!collectionId && !!runId,
     refetchInterval: 5000,
     ...options,
+  });
+};
+
+export const useCancelCollectionRun = (
+  options?: UseMutationOptions<{ success: boolean; run: CollectionRunRecord }, ApiException, string>
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    ...options,
+    mutationFn: api.cancelCollectionRun,
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runs });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.runSummary });
+      if (data?.run?.collectionId) {
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.collectionRuns(data.run.collectionId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.collectionRun(data.run.collectionId, data.run.id),
+        });
+      }
+      options?.onSuccess?.(data, variables, context);
+    },
   });
 };

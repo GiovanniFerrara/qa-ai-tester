@@ -1,6 +1,7 @@
 import { OrchestratorService } from 'src/orchestrator/orchestrator.service';
 import type { StoredRunRecord, RunResult } from 'src/models/run';
 import type { QaReport, TaskSpec } from 'src/models/contracts';
+import { RunCancelledError } from 'src/orchestrator/run-errors';
 
 const createTask = (taskId: string): TaskSpec => ({
   id: taskId,
@@ -257,5 +258,23 @@ describe('OrchestratorService dismissals and collections', () => {
     expect(() => service.getCollectionRunForCollection('other', 'collection-run-existing')).toThrow(
       /not found/,
     );
+  });
+
+  it('cancels an in-flight run', async () => {
+    buildService([]);
+    const deferred = createDeferred<RunResult>();
+    runExecutionService.execute.mockReturnValue(deferred.promise);
+
+    const pending = await service.startRun('task-1');
+    const cancelPromise = service.cancelRun(pending.runId);
+
+    const abortSignal = runExecutionService.execute.mock.calls[0][4];
+    expect(abortSignal?.aborted).toBe(true);
+
+    deferred.reject(new RunCancelledError());
+    await cancelPromise;
+
+    const stored = service.getRun(pending.runId);
+    expect(stored.status).toBe('cancelled');
   });
 });

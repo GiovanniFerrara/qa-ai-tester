@@ -113,6 +113,11 @@ export const api = {
   getRun: (runId: string) =>
     fetchJSON<RunState>(`${API_BASE}/runs/${runId}`),
 
+  cancelRun: (runId: string) =>
+    fetchJSON<{ success: boolean; run: RunState }>(`${API_BASE}/runs/${runId}/cancel`, {
+      method: 'POST',
+    }),
+
   subscribeToRunEvents: (runId: string, onEvent: (event: RunEvent) => void) => {
     const source = new EventSource(`${API_BASE}/runs/${runId}/events`);
     source.onmessage = (event) => {
@@ -185,4 +190,10 @@ export const api = {
 
   getCollectionRun: (collectionId: string, runId: string) =>
     fetchJSON<CollectionRunRecord>(`${API_BASE}/collections/${collectionId}/runs/${runId}`),
+
+  cancelCollectionRun: (collectionRunId: string) =>
+    fetchJSON<{ success: boolean; run: CollectionRunRecord }>(
+      `${API_BASE}/collection-runs/${collectionRunId}/cancel`,
+      { method: 'POST' }
+    ),
 };

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -13,6 +13,7 @@ import { TaskCollectionsService } from '../tasks/task-collections.service';
 import { RunExecutionService } from './run-execution.service';
 import { RunStorageService } from './run-storage.service';
 import { CollectionRunStorageService } from './collection-run-storage.service';
+import { RunCancelledError } from './run-errors';
 
 @Injectable()
 export class OrchestratorService {
@@ -20,6 +21,8 @@ export class OrchestratorService {
   private readonly runs = new Map<string, StoredRunRecord>();
   private readonly collectionRuns = new Map<string, CollectionRunRecord>();
   private readonly runCompletionPromises = new Map<string, Promise<void>>();
+  private readonly runAbortControllers = new Map<string, AbortController>();
+  private readonly collectionRunAbortControllers = new Map<string, AbortController>();
   private readonly lastBaseUrlPath: string;
 
   constructor(
@@ -64,8 +67,11 @@ export class OrchestratorService {
     this.runs.set(runId, pendingRecord);
     this.persistRuns();
 
+    const abortController = new AbortController();
+    this.runAbortControllers.set(runId, abortController);
+
     const executionPromise = this.runExecutionService
-      .execute(runId, task, provider, baseUrlOverride)
+      .execute(runId, task, provider, baseUrlOverride, abortController.signal)
       .then((result: RunResult) => {
         const finishedAt = new Date();
         const completedRecord: StoredRunRecord = {
@@ -82,22 +88,35 @@ export class OrchestratorService {
       })
       .catch((error) => {
         const finishedAt = new Date();
-        this.logger.error(
-          `Run ${runId} failed during execution: ${(error as Error).message}`,
-          (error as Error).stack,
-        );
-        const failedRecord: StoredRunRecord = {
-          ...pendingRecord,
-          status: 'failed',
-          finishedAt: finishedAt.toISOString(),
-          error: (error as Error).message,
-        };
-        this.runs.set(runId, failedRecord);
-        this.persistRuns();
+        if (error instanceof RunCancelledError) {
+          this.logger.warn(`Run ${runId} was cancelled: ${error.message}`);
+          const cancelledRecord: StoredRunRecord = {
+            ...pendingRecord,
+            status: 'cancelled',
+            finishedAt: finishedAt.toISOString(),
+            error: error.message,
+          };
+          this.runs.set(runId, cancelledRecord);
+          this.persistRuns();
+        } else {
+          this.logger.error(
+            `Run ${runId} failed during execution: ${(error as Error).message}`,
+            (error as Error).stack,
+          );
+          const failedRecord: StoredRunRecord = {
+            ...pendingRecord,
+            status: 'failed',
+            finishedAt: finishedAt.toISOString(),
+            error: (error as Error).message,
+          };
+          this.runs.set(runId, failedRecord);
+          this.persistRuns();
+        }
         throw error;
       })
       .finally(() => {
         this.runCompletionPromises.delete(runId);
+        this.runAbortControllers.delete(runId);
       });
     this.runCompletionPromises.set(
       runId,
@@ -115,6 +134,23 @@ export class OrchestratorService {
       throw new NotFoundException(`Run ${runId} not found`);
     }
     return run;
+  }
+
+  async cancelRun(runId: string): Promise<StoredRunRecord> {
+    const run = this.runs.get(runId);
+    if (!run) {
+      throw new NotFoundException(`Run ${runId} not found`);
+    }
+    if (run.status !== 'running') {
+      return run;
+    }
+    const controller = this.runAbortControllers.get(runId);
+    if (!controller) {
+      throw new BadRequestException(`Run ${runId} cannot be cancelled at this time`);
+    }
+    controller.abort(new RunCancelledError());
+    await this.waitForRunCompletion(runId).catch(() => undefined);
+    return this.getRun(runId);
   }
 
   listRuns(): StoredRunRecord[] {
@@ -254,6 +290,52 @@ export class OrchestratorService {
     return record;
   }
 
+  async cancelCollectionRun(collectionRunId: string): Promise<CollectionRunRecord> {
+    const record = this.getCollectionRun(collectionRunId);
+    if (record.status !== 'running') {
+      return record;
+    }
+    const controller = this.collectionRunAbortControllers.get(collectionRunId);
+    if (controller) {
+      controller.abort(new RunCancelledError('Collection run cancelled by user'));
+    }
+
+    const runningItems = record.items.filter((item) => item.status === 'running' && item.runId);
+    await Promise.all(
+      runningItems.map((item) =>
+        item.runId ? this.cancelRun(item.runId).catch(() => undefined) : Promise.resolve(),
+      ),
+    );
+
+    const collection = this.taskCollections.get(record.collectionId);
+    if (collection) {
+      const knownTaskIds = new Set(record.items.map((item) => item.taskId));
+      for (const taskId of collection.taskIds) {
+        if (!knownTaskIds.has(taskId)) {
+          const taskName = this.taskRegistry.get(taskId)?.name ?? taskId;
+          record.items.push({
+            taskId,
+            taskName,
+            status: 'cancelled',
+            error: 'Collection run cancelled before execution',
+          });
+        }
+      }
+    }
+
+    record.items.forEach((item) => {
+      if (item.status === 'running') {
+        item.status = 'cancelled';
+        item.error = 'Run cancelled';
+      }
+    });
+
+    record.status = 'cancelled';
+    record.finishedAt = new Date().toISOString();
+    this.persistCollectionRuns();
+    return record;
+  }
+
   getCollectionRunForCollection(
     collectionId: string,
     collectionRunId: string,
@@ -289,11 +371,23 @@ export class OrchestratorService {
     };
     this.collectionRuns.set(collectionRunId, record);
     this.persistCollectionRuns();
+    const collectionAbortController = new AbortController();
+    this.collectionRunAbortControllers.set(collectionRunId, collectionAbortController);
 
     const startTask = async (taskId: string): Promise<string | null> => {
+      const task = this.taskRegistry.get(taskId);
+      const taskName = task?.name ?? taskId;
+      if (collectionAbortController.signal.aborted) {
+        record.items.push({
+          taskId,
+          taskName,
+          status: 'cancelled',
+          error: 'Collection run cancelled before execution',
+        });
+        this.persistCollectionRuns();
+        return null;
+      }
       try {
-        const task = this.taskRegistry.get(taskId);
-        const taskName = task?.name ?? taskId;
         const runRecord = await this.startRun(taskId, undefined, effectiveBaseUrl);
         record.items.push({
           taskId,
@@ -305,8 +399,6 @@ export class OrchestratorService {
         this.attachCollectionRunWatcher(collectionRunId, runRecord.runId);
         return runRecord.runId;
       } catch (error) {
-        const task = this.taskRegistry.get(taskId);
-        const taskName = task?.name ?? taskId;
         record.items.push({
           taskId,
           taskName,
@@ -318,20 +410,34 @@ export class OrchestratorService {
       }
     };
 
-    if (executionMode === 'sequential') {
-      for (const taskId of collection.taskIds) {
-        const runId = await startTask(taskId);
-        if (runId) {
-          await this.waitForRunCompletion(runId);
+    try {
+      if (executionMode === 'sequential') {
+        for (const taskId of collection.taskIds) {
+          if (collectionAbortController.signal.aborted) {
+            const taskName = this.taskRegistry.get(taskId)?.name ?? taskId;
+            record.items.push({
+              taskId,
+              taskName,
+              status: 'cancelled',
+              error: 'Collection run cancelled before execution',
+            });
+            continue;
+          }
+          const runId = await startTask(taskId);
+          if (runId) {
+            await this.waitForRunCompletion(runId);
+          }
         }
+      } else {
+        await Promise.all(collection.taskIds.map((taskId) => startTask(taskId)));
       }
-    } else {
-      await Promise.all(collection.taskIds.map((taskId) => startTask(taskId)));
-    }
 
-    this.evaluateCollectionRunCompletion(record);
-    this.persistCollectionRuns();
-    return record;
+      this.evaluateCollectionRunCompletion(record);
+      this.persistCollectionRuns();
+      return record;
+    } finally {
+      this.collectionRunAbortControllers.delete(collectionRunId);
+    }
   }
 
   dismissFinding(
@@ -474,6 +580,10 @@ export class OrchestratorService {
   }
 
   private evaluateCollectionRunCompletion(record: CollectionRunRecord): void {
+    if (record.status === 'cancelled') {
+      record.finishedAt = record.finishedAt ?? new Date().toISOString();
+      return;
+    }
     if (!record.items.length) {
       return;
     }

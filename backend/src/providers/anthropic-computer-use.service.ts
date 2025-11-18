@@ -33,6 +33,7 @@ import {
   type QaReportContext,
 } from './anthropic/qa-report.service';
 import { safeStringify } from './anthropic/utils';
+import { RunCancelledError } from '../orchestrator/run-errors';
 
 export interface AnthropicComputerUseOptions {
   runId: string;
@@ -41,6 +42,7 @@ export interface AnthropicComputerUseOptions {
   initialScreenshotPath: string;
   startedAt: Date;
   events?: Pick<RunEventsService, 'emit'>;
+  abortSignal?: AbortSignal;
 }
 
 interface ComputerUseEvent {
@@ -67,6 +69,20 @@ export class AnthropicComputerUseService {
 
   async run(options: AnthropicComputerUseOptions): Promise<ComputerUseSessionResult> {
     const { runId, task, handle, events: runEvents } = options;
+    const ensureNotCancelled = (): void => {
+      if (!options.abortSignal?.aborted) {
+        return;
+      }
+      const reason = options.abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      if (typeof reason === 'string' && reason.length > 0) {
+        throw new RunCancelledError(reason);
+      }
+      throw new RunCancelledError();
+    };
+    ensureNotCancelled();
     const plan = this.provider.buildPlan(task, runId);
     const client = this.provider.getClient();
     const emitEvent = (event: Omit<RunEvent, 'timestamp'> & Partial<Pick<RunEvent, 'timestamp'>>) => {
@@ -123,6 +139,7 @@ export class AnthropicComputerUseService {
     let reportReminderSent = false;
 
     while (iterations < maxIterations) {
+      ensureNotCancelled();
       iterations += 1;
       const response = await client.messages.create({
         model: plan.model,
@@ -160,6 +177,7 @@ export class AnthropicComputerUseService {
       const toolResultBlocks: ToolResultBlockParam[] = [];
 
       for (const toolUse of toolUses) {
+        ensureNotCancelled();
         let resultBlock: ToolResultBlockParam | null = null;
 
         switch (toolUse.name) {
@@ -169,6 +187,7 @@ export class AnthropicComputerUseService {
               handle,
               events,
               emitEvent,
+              abortSignal: options.abortSignal,
             });
             break;
           }
@@ -183,6 +202,7 @@ export class AnthropicComputerUseService {
             resultBlock = await this.handleKpiOracle({
               toolUse,
               task,
+              abortSignal: options.abortSignal,
             });
             break;
           }
@@ -318,8 +338,19 @@ export class AnthropicComputerUseService {
     handle: BrowserRunHandle;
     events: ComputerUseEvent[];
     emitEvent: (event: RunEvent) => void;
+    abortSignal?: AbortSignal;
   }): Promise<ToolResultBlockParam> {
-    const { toolUse, handle, events, emitEvent } = params;
+    const { toolUse, handle, events, emitEvent, abortSignal } = params;
+    if (abortSignal?.aborted) {
+      const reason = abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      if (typeof reason === 'string' && reason.length > 0) {
+        throw new RunCancelledError(reason);
+      }
+      throw new RunCancelledError();
+    }
     const action = this.actionMapper.toComputerAction(toolUse.input as ComputerToolInput);
     if (!action) {
       const rawInput = safeStringify(toolUse.input);
@@ -349,6 +380,16 @@ export class AnthropicComputerUseService {
     const result = await this.workerGateway.performComputerAction(handle, action);
     const screenshotName = path.basename(result.screenshotPath);
     const latency = Date.now() - start;
+    if (abortSignal?.aborted) {
+      const reason = abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      if (typeof reason === 'string' && reason.length > 0) {
+        throw new RunCancelledError(reason);
+      }
+      throw new RunCancelledError();
+    }
 
     events.push({
       step: events.length + 1,
@@ -424,8 +465,19 @@ export class AnthropicComputerUseService {
   private async handleKpiOracle(params: {
     toolUse: ToolUseBlock;
     task: TaskSpec;
+    abortSignal?: AbortSignal;
   }): Promise<ToolResultBlockParam> {
-    const { toolUse, task } = params;
+    const { toolUse, task, abortSignal } = params;
+    if (abortSignal?.aborted) {
+      const reason = abortSignal.reason;
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      if (typeof reason === 'string' && reason.length > 0) {
+        throw new RunCancelledError(reason);
+      }
+      throw new RunCancelledError();
+    }
     const context =
       (typeof toolUse.input === 'object' && toolUse.input !== null
         ? (toolUse.input as Record<string, unknown>).filters

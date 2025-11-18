@@ -30,7 +30,7 @@ export interface CollectionRunRecord {
   id: string;
   collectionId: string;
   executionMode: ExecutionMode;
-  status: 'running' | 'completed';
+  status: 'running' | 'completed' | 'cancelled';
   startedAt: string;
   finishedAt?: string;
   baseUrl?: string;

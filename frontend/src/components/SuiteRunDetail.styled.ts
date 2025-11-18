@@ -43,6 +43,12 @@ export const TitleRow = styled.div`
   flex-wrap: wrap;
 `;
 
+export const SuiteActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  align-items: center;
+`;
+
 export const Title = styled.h1`
   font-size: ${theme.fontSizes['3xl']};
   font-weight: 700;
@@ -228,6 +234,10 @@ export const TaskRunCard = styled.div`
   &[data-status="running"] {
     border-left-color: ${theme.colors.status.running.text};
   }
+
+  &[data-status="cancelled"] {
+    border-left-color: ${theme.colors.status.cancelled.text};
+  }
 `;
 
 export const TaskRunHeader = styled.div`
@@ -278,6 +288,13 @@ export const TaskRunMeta = styled.div`
     align-items: center;
     gap: ${theme.spacing.xs};
   }
+`;
+
+export const TaskRunActions = styled.div`
+  display: flex;
+  gap: ${theme.spacing.sm};
+  flex-wrap: wrap;
+  margin-top: ${theme.spacing.sm};
 `;
 
 export const TaskId = styled.span`

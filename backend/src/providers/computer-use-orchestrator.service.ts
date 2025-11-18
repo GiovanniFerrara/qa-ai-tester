@@ -13,6 +13,7 @@ export interface ComputerUseOptions {
   handle: BrowserRunHandle;
   initialScreenshotPath: string;
   startedAt: Date;
+  abortSignal?: AbortSignal;
 }
 
 @Injectable()
@@ -32,6 +33,7 @@ export class ComputerUseOrchestratorService {
         initialScreenshotPath: options.initialScreenshotPath,
         startedAt: options.startedAt,
         events: this.runEventsService,
+        abortSignal: options.abortSignal,
       });
     }
 
@@ -43,6 +45,7 @@ export class ComputerUseOrchestratorService {
         initialScreenshotPath: options.initialScreenshotPath,
         startedAt: options.startedAt,
         events: this.runEventsService,
+        abortSignal: options.abortSignal,
       });
     }
 

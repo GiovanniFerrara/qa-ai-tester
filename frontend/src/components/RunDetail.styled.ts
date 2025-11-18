@@ -7,6 +7,26 @@ export const RunDetailContainer = styled.div`
   gap: ${theme.spacing.xl};
 `;
 
+export const BackButton = styled.button`
+  background: transparent;
+  border: none;
+  color: ${theme.colors.primary};
+  font-size: ${theme.fontSizes.base};
+  cursor: pointer;
+  padding: ${theme.spacing.sm};
+  margin-left: -${theme.spacing.sm};
+  margin-bottom: ${theme.spacing.md};
+  transition: ${theme.transitions.normal};
+  display: inline-flex;
+  align-items: center;
+  gap: ${theme.spacing.xs};
+
+  &:hover {
+    color: ${theme.colors.primaryDark};
+    transform: translateX(-4px);
+  }
+`;
+
 export const RunDetailHeader = styled.div`
   display: flex;
   justify-content: space-between;

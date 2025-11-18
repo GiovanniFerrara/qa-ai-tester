@@ -38,7 +38,7 @@ export interface RunResult {
   artifacts: RunArtifacts;
 }
 
-export type RunStatus = 'running' | 'completed' | 'failed';
+export type RunStatus = 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface StoredRunRecord {
   runId: string;

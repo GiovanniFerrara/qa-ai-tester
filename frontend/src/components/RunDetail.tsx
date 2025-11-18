@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
-import { useRun, useTasks } from "../hooks/useApi";
+import { useCancelRun, useRun, useTasks } from "../hooks/useApi";
 import type { RunEvent, DismissReason } from "../types";
 import {
   Card,
@@ -40,6 +40,11 @@ export function RunDetail() {
     refetch: refetchRun,
   } = useRun(runId ?? "", {
     enabled: !!runId,
+  });
+  const cancelRunMutation = useCancelRun({
+    onSuccess: () => {
+      void refetchRun();
+    },
   });
 
   const { data: tasks = [] } = useTasks({
@@ -164,6 +169,13 @@ export function RunDetail() {
     },
     [runId, refetchRun]
   );
+
+  const handleCancelRun = useCallback(() => {
+    if (!runId || cancelRunMutation.isPending) {
+      return;
+    }
+    cancelRunMutation.mutate(runId);
+  }, [cancelRunMutation, runId]);
 
   const handleRestoreFinding = useCallback(
     async (findingId: string) => {
@@ -304,6 +316,9 @@ export function RunDetail() {
   return (
     <S.RunDetailContainer>
       <Card>
+        <S.BackButton onClick={() => navigate("/runs")}>
+          ← Back to Test Cases
+        </S.BackButton>
         <S.RunDetailHeader>
           <div>
             <h2>{task?.name || run?.taskId || "Unknown Test Case"}</h2>
@@ -313,9 +328,16 @@ export function RunDetail() {
             <StatusBadge status={run?.status ?? "running"}>
               {(run?.status ?? "running").toUpperCase()}
             </StatusBadge>
-            <Button onClick={() => navigate("/runs")}>
-              ← Back to Test Cases
-            </Button>
+            {run?.status === "running" && (
+              <Button
+                variant="danger"
+                size="small"
+                onClick={handleCancelRun}
+                disabled={cancelRunMutation.isPending}
+              >
+                {cancelRunMutation.isPending ? "Cancelling..." : "Cancel Run"}
+              </Button>
+            )}
           </S.RunDetailMeta>
         </S.RunDetailHeader>
         <S.RunTimes>
