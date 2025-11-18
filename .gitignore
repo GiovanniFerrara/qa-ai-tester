@@ -12,3 +12,5 @@ backend/artifacts
 frontend/node_modules
 frontend/dist
 data/
+node_modules
+.DS_Store
