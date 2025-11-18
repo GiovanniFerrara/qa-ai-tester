@@ -1,5 +1,10 @@
+import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCollection, useCollectionRuns } from "../hooks/useApi";
+import { useCollection, useCollectionRuns, useRuns } from "../hooks/useApi";
+import {
+  getCollectionRunError,
+  getCollectionRunResult,
+} from "../utils/collectionRunResults";
 import * as S from "./SuiteRunsList.styled";
 
 const formatBaseUrl = (value?: string | null) => {
@@ -26,6 +31,17 @@ export function SuiteRunsList() {
     isLoading: runsLoading,
     error,
   } = useCollectionRuns(collectionId || "");
+  const {
+    data: allRuns = [],
+    isLoading: suiteRunsLoading,
+  } = useRuns({
+    refetchInterval: 5000,
+  });
+
+  const runMap = useMemo(
+    () => new Map(allRuns.map((run) => [run.runId, run])),
+    [allRuns]
+  );
 
   const handleViewRun = (runId: string) => {
     navigate(`/test-suites/${collectionId}/runs/${runId}`);
@@ -35,7 +51,7 @@ export function SuiteRunsList() {
     navigate("/test-suites");
   };
 
-  if (collectionLoading || runsLoading) {
+  if (collectionLoading || runsLoading || suiteRunsLoading) {
     return <S.LoadingState>Loading suite runs...</S.LoadingState>;
   }
 
@@ -91,6 +107,8 @@ export function SuiteRunsList() {
       ) : (
         <S.RunsListContainer>
           {runs.map((run) => {
+            const suiteResult = getCollectionRunResult(run, runMap);
+            const suiteError = getCollectionRunError(run, runMap);
             const completedItems = run.items.filter(
               (item) => item.status === "completed"
             ).length;
@@ -114,8 +132,8 @@ export function SuiteRunsList() {
                       </S.RunTimestamp>
                     )}
                   </S.RunInfo>
-                  <S.StatusBadge status={run.status}>
-                    {run.status === "running" ? "🔄 Running" : "✓ Completed"}
+                  <S.StatusBadge status={suiteResult.status}>
+                    {suiteResult.label}
                   </S.StatusBadge>
                 </S.RunHeader>
 
@@ -133,9 +151,19 @@ export function SuiteRunsList() {
                     <strong>Progress:</strong> {completedItems}/{totalItems}{" "}
                     tasks
                   </S.MetaItem>
+                  <S.MetaItem>
+                    <strong>Result:</strong> {suiteResult.label}
+                  </S.MetaItem>
                   {failedItems > 0 && (
                     <S.MetaItem>
                       <S.ErrorText>{failedItems} failed</S.ErrorText>
+                    </S.MetaItem>
+                  )}
+                  {suiteError && suiteResult.status === "failed" && (
+                    <S.MetaItem>
+                      <S.ErrorText title={suiteError}>
+                        Error: {suiteError}
+                      </S.ErrorText>
                     </S.MetaItem>
                   )}
                 </S.RunMeta>

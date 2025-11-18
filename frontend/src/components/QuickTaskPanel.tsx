@@ -137,7 +137,7 @@ export function QuickTaskPanel({ onPrefill }: QuickTaskPanelProps) {
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe what you want the QA agent to validate..."
-        rows={4}
+        rows={8}
       />
       <QuickTaskActions>
         {recordingSupported && (

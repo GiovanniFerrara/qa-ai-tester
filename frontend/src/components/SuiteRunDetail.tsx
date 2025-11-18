@@ -1,7 +1,17 @@
 import { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useCollection, useCollectionRun, useTasks } from "../hooks/useApi";
+import {
+  useCollection,
+  useCollectionRun,
+  useRuns,
+  useTasks,
+} from "../hooks/useApi";
 import type { CollectionRunItem } from "../types";
+import {
+  getCollectionItemResult,
+  getCollectionRunError,
+  getCollectionRunResult,
+} from "../utils/collectionRunResults";
 import * as S from "./SuiteRunDetail.styled";
 
 const formatBaseUrl = (value?: string | null) => {
@@ -14,6 +24,13 @@ const formatBaseUrl = (value?: string | null) => {
   } catch {
     return value;
   }
+};
+
+const formatDuration = (ms?: number) => {
+  if (!ms || Number.isNaN(ms)) return "—";
+  if (ms < 1000) return `${ms} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  return `${(ms / 60000).toFixed(1)} min`;
 };
 
 export function SuiteRunDetail() {
@@ -32,10 +49,17 @@ export function SuiteRunDetail() {
     enabled: !!collectionId,
   });
   const { data: tasks = [] } = useTasks();
+  const { data: allRuns = [] } = useRuns({
+    refetchInterval: 5000,
+  });
 
   const taskMap = useMemo(
     () => new Map(tasks.map((task) => [task.id, task])),
     [tasks]
+  );
+  const runMap = useMemo(
+    () => new Map(allRuns.map((item) => [item.runId, item])),
+    [allRuns]
   );
 
   const getTaskName = (taskId: string) =>
@@ -83,6 +107,8 @@ export function SuiteRunDetail() {
   ).length;
   const totalItems = run.items.length;
   const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+  const suiteResult = getCollectionRunResult(run, runMap);
+  const suiteError = getCollectionRunError(run, runMap);
 
   return (
     <S.Container>
@@ -96,8 +122,8 @@ export function SuiteRunDetail() {
                 Started {new Date(run.startedAt).toLocaleString()}
               </S.RunSubtitle>
             </div>
-            <S.StatusBadge status={run.status}>
-              {run.status === "running" ? "🔄 Running" : "✓ Completed"}
+            <S.StatusBadge status={suiteResult.status}>
+              {suiteResult.label}
             </S.StatusBadge>
           </S.TitleRow>
         </S.HeaderContent>
@@ -141,10 +167,22 @@ export function SuiteRunDetail() {
             <span>{completedItems}</span>
           </S.MetaItem>
 
+          <S.MetaItem>
+            <label>Suite Result</label>
+            <span>{suiteResult.label}</span>
+          </S.MetaItem>
+
           {failedItems > 0 && (
             <S.MetaItem>
               <label>Failed</label>
               <span style={{ color: "#842029" }}>{failedItems}</span>
+            </S.MetaItem>
+          )}
+
+          {suiteError && (
+            <S.MetaItem>
+              <label>Last Error</label>
+              <S.ErrorText title={suiteError}>{suiteError}</S.ErrorText>
             </S.MetaItem>
           )}
         </S.MetaGrid>
@@ -173,35 +211,73 @@ export function SuiteRunDetail() {
         </S.EmptyState>
       ) : (
         <S.TaskRunsList>
-          {run.items.map((item: CollectionRunItem) => (
-            <S.TaskRunCard
-              key={item.runId || item.taskId}
-              data-status={item.status}
-              onClick={() => item.runId && handleViewTask(item.runId)}
-            >
-              <S.TaskRunHeader>
-                <S.TaskRunTitle>
-                  <S.TaskId>{getTaskName(item.taskId)}</S.TaskId>
-                </S.TaskRunTitle>
-                <S.TaskRunStatus status={item.status}>
-                  {item.status === "completed" && "✓ Completed"}
-                  {item.status === "failed" && "✗ Failed"}
-                  {item.status === "running" && "🔄 Running"}
-                </S.TaskRunStatus>
-              </S.TaskRunHeader>
+          {run.items.map((item: CollectionRunItem) => {
+            const itemResult = getCollectionItemResult(item, runMap);
+            const relatedRun = itemResult.run;
+            const canOpen = Boolean(item.runId);
+            const onCardClick = () => {
+              if (item.runId) {
+                handleViewTask(item.runId);
+              }
+            };
 
-              <S.TaskRunMeta>
-                {item.runId ? (
-                  <span>Tap to open detailed report</span>
-                ) : (
-                  <span>Not started yet</span>
-                )}
-                {item.error && (
-                  <span style={{ color: "#842029" }}>Error: {item.error}</span>
-                )}
-              </S.TaskRunMeta>
-            </S.TaskRunCard>
-          ))}
+            return (
+              <S.TaskRunCard
+                key={item.runId || item.taskId}
+                data-status={itemResult.status}
+                onClick={onCardClick}
+              >
+                <S.TaskRunHeader>
+                  <S.TaskRunTitle>
+                    <S.TaskId>
+                      {item.taskName ?? getTaskName(item.taskId)}
+                    </S.TaskId>
+                  </S.TaskRunTitle>
+                  <S.TaskRunStatus status={itemResult.status}>
+                    {itemResult.label}
+                  </S.TaskRunStatus>
+                </S.TaskRunHeader>
+
+                <S.TaskRunMeta>
+                  {canOpen ? (
+                    <>
+                      {relatedRun?.status === "completed" &&
+                      relatedRun.report ? (
+                        <>
+                          <span>
+                            Findings: {relatedRun.report.findings.length}
+                          </span>
+                          <span>
+                            Duration:{" "}
+                            {formatDuration(
+                              relatedRun.report.costs.durationMs
+                            )}
+                          </span>
+                        </>
+                      ) : relatedRun?.status === "failed" ? (
+                        <S.ErrorText>
+                          Failed
+                          {relatedRun.error ? `: ${relatedRun.error}` : ""}
+                        </S.ErrorText>
+                      ) : itemResult.status === "failed" &&
+                        itemResult.error ? (
+                        <S.ErrorText>
+                          Failed: {itemResult.error}
+                        </S.ErrorText>
+                      ) : itemResult.status === "running" ? (
+                        <span>In progress…</span>
+                      ) : (
+                        <span>Awaiting result…</span>
+                      )}
+                      <span>Tap to open detailed report</span>
+                    </>
+                  ) : (
+                    <span>Not started yet</span>
+                  )}
+                </S.TaskRunMeta>
+              </S.TaskRunCard>
+            );
+          })}
         </S.TaskRunsList>
       )}
     </S.Container>

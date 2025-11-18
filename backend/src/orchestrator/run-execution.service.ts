@@ -143,6 +143,7 @@ export class RunExecutionService {
           rawTranscriptUrl: responsesPath ?? null,
         };
       }
+      this.applyReportStatusOverrides(report);
 
       const priceUsd = this.computePriceUsd(provider.provider, modelUsed, usageTotals);
       report.costs = {
@@ -360,5 +361,22 @@ export class RunExecutionService {
       suggestedFix: 'Review the AI transcript or rerun the task for more detail.',
       confidence: 0.5,
     };
+  }
+
+  private applyReportStatusOverrides(report: QaReport): void {
+    if (this.hasUndismissedBlockingFindings(report.findings)) {
+      if (report.status !== 'failed') {
+        this.logger.debug(
+          `Overriding report status ${report.status} to failed due to blocking findings`,
+        );
+      }
+      report.status = 'failed';
+    }
+  }
+
+  private hasUndismissedBlockingFindings(findings: Finding[] = []): boolean {
+    return findings.some(
+      (finding) => !finding.dismissal && finding.severity !== 'info',
+    );
   }
 }

@@ -65,13 +65,19 @@ export const StatusBadge = styled.div<{ status: string }>`
   font-weight: 600;
   white-space: nowrap;
   
-  ${props => props.status === 'running' ? `
-    background: ${theme.colors.status.running.bg};
-    color: ${theme.colors.status.running.text};
-  ` : `
-    background: ${theme.colors.success.bg};
-    color: ${theme.colors.success.text};
-  `}
+  ${({ status }) => {
+    const colors = theme.colors.status[status as keyof typeof theme.colors.status];
+    if (colors) {
+      return `
+        background: ${colors.bg};
+        color: ${colors.text};
+      `;
+    }
+    return `
+      background: ${theme.colors.status.pending.bg};
+      color: ${theme.colors.status.pending.text};
+    `;
+  }}
 `;
 
 export const LoadingState = styled.div`
@@ -207,12 +213,16 @@ export const TaskRunCard = styled.div`
     box-shadow: ${theme.shadows.md};
   }
 
-  &[data-status="completed"] {
+  &[data-status="passed"] {
     border-left-color: ${theme.colors.success.text};
   }
 
   &[data-status="failed"] {
     border-left-color: ${theme.colors.error.text};
+  }
+
+  &[data-status="inconclusive"] {
+    border-left-color: ${theme.colors.status.pending.text};
   }
 
   &[data-status="running"] {
@@ -241,29 +251,18 @@ export const TaskRunStatus = styled.div<{ status: string }>`
   font-weight: 600;
   white-space: nowrap;
   
-  ${props => {
-    switch (props.status) {
-      case 'completed':
-        return `
-          background: ${theme.colors.success.bg};
-          color: ${theme.colors.success.text};
-        `;
-      case 'failed':
-        return `
-          background: ${theme.colors.error.bg};
-          color: ${theme.colors.error.text};
-        `;
-      case 'running':
-        return `
-          background: ${theme.colors.status.running.bg};
-          color: ${theme.colors.status.running.text};
-        `;
-      default:
-        return `
-          background: ${theme.colors.status.pending.bg};
-          color: ${theme.colors.status.pending.text};
-        `;
+  ${({ status }) => {
+    const colors = theme.colors.status[status as keyof typeof theme.colors.status];
+    if (colors) {
+      return `
+        background: ${colors.bg};
+        color: ${colors.text};
+      `;
     }
+    return `
+      background: ${theme.colors.status.pending.bg};
+      color: ${theme.colors.status.pending.text};
+    `;
   }}
 `;
 
@@ -285,6 +284,11 @@ export const TaskId = styled.span`
   font-family: ${theme.fonts.mono};
   color: ${theme.colors.primary};
   font-weight: 500;
+`;
+
+export const ErrorText = styled.span`
+  color: ${theme.colors.error.text};
+  font-weight: 600;
 `;
 
 export const EmptyState = styled.div`

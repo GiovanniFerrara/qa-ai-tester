@@ -123,22 +123,6 @@ export function TestSuiteForm() {
     }
   };
 
-  const handleSequentialTaskToggle = (taskId: string) => {
-    const isSelected = formData.taskIds.includes(taskId);
-    if (isSelected) {
-      setFormData({
-        ...formData,
-        taskIds: formData.taskIds.filter((id) => id !== taskId),
-      });
-    } else {
-      setFormData({
-        ...formData,
-        taskIds: [...formData.taskIds, taskId],
-      });
-    }
-    setValidationError(null);
-  };
-
   const validateForm = (): boolean => {
     if (!formData.name.trim()) {
       setValidationError("Test suite name is required");

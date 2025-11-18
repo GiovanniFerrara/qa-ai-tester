@@ -234,4 +234,102 @@ describe('RunExecutionService', () => {
       await fs.rm(baseDir, { recursive: true, force: true });
     }
   });
+
+  it('overrides report status to failed when blocking findings exist', async () => {
+    const { baseDir, screenshotDir } = await createTmpDirs();
+
+    try {
+      const mockHandle = {
+        artifactDir: baseDir,
+        screenshotDir,
+        screenshots: [] as string[],
+      };
+
+      const workerGateway = {
+        startRun: jest.fn().mockResolvedValue(mockHandle),
+        captureScreenshot: jest.fn().mockImplementation(async (handle: typeof mockHandle) => {
+          const screenshotPath = path.join(handle.screenshotDir, 'initial.png');
+          await fs.writeFile(screenshotPath, 'fake-screenshot');
+          handle.screenshots.push(screenshotPath);
+          return screenshotPath;
+        }),
+        stopRun: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const providerRegistry = {
+        resolve: jest.fn().mockReturnValue({ provider: 'openai' satisfies AiProvider }),
+      };
+      const authStateService = {
+        createStorageState: jest.fn().mockResolvedValue('/tmp/run-3.json'),
+      };
+
+      const orchestrator = {
+        run: jest.fn().mockResolvedValue({
+          report: {
+            id: 'report-3',
+            runId: 'run-3',
+            taskId: baseTask.id,
+            startedAt: new Date().toISOString(),
+            finishedAt: new Date().toISOString(),
+            summary: 'Detected blocking issue.',
+            status: 'passed',
+            findings: [
+              {
+                id: 'finding-1',
+                severity: 'critical',
+                category: 'functional',
+                assertion: 'Blocking regression',
+                expected: 'Feature works',
+                observed: 'Feature broken',
+                tolerance: null,
+                evidence: [],
+                suggestedFix: 'Fix it',
+                confidence: 0.9,
+              },
+            ],
+            kpiTable: [],
+            links: {
+              traceUrl: null,
+              screenshotsGalleryUrl: null,
+              rawTranscriptUrl: null,
+            },
+            costs: {
+              tokensInput: 1,
+              tokensOutput: 1,
+              toolCalls: 1,
+              durationMs: 100,
+            },
+          },
+          eventsPath: path.join(baseDir, 'computer-use-events.json'),
+          responsesPath: path.join(baseDir, 'model-responses.jsonl'),
+          usageTotals: {
+            tokensInput: 1,
+            tokensOutput: 1,
+            totalTokens: 2,
+          },
+          totalToolCalls: 1,
+        }),
+      };
+
+      const runEvents = {
+        emit: jest.fn(),
+        complete: jest.fn(),
+      };
+
+      const service = new RunExecutionService(
+        providerRegistry as any,
+        workerGateway as any,
+        authStateService as any,
+        orchestrator as any,
+        runEvents as any,
+      );
+
+      const result = await service.execute('run-3', baseTask as any, 'openai', undefined);
+
+      expect(result.report.status).toBe('failed');
+      expect(result.report.findings).toHaveLength(1);
+    } finally {
+      await fs.rm(baseDir, { recursive: true, force: true });
+    }
+  });
 });

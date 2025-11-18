@@ -188,13 +188,19 @@ export const StatusBadge = styled.div<{ status: string }>`
   font-weight: 600;
   white-space: nowrap;
   
-  ${props => props.status === 'running' ? `
-    background: ${theme.colors.status.running.bg};
-    color: ${theme.colors.status.running.text};
-  ` : `
-    background: ${theme.colors.success.bg};
-    color: ${theme.colors.success.text};
-  `}
+  ${({ status }) => {
+    const colors = theme.colors.status[status as keyof typeof theme.colors.status];
+    if (colors) {
+      return `
+        background: ${colors.bg};
+        color: ${colors.text};
+      `;
+    }
+    return `
+      background: ${theme.colors.status.pending.bg};
+      color: ${theme.colors.status.pending.text};
+    `;
+  }}
 `;
 
 export const RunMeta = styled.div`
