@@ -194,7 +194,6 @@ export function RunDetail() {
     [runId, refetchRun]
   );
 
-
   const loading = runLoading;
   const error = runError;
 
@@ -621,7 +620,7 @@ export function RunDetail() {
                                   data-debug-original={screenshot.originalPath}
                                 />
                                 <S.EvidenceInfo>
-                                  <span>{evidence.time}</span>
+                                  <span>{formatTime(evidence.time)}</span>
                                 </S.EvidenceInfo>
                               </S.EvidenceItem>
                             );

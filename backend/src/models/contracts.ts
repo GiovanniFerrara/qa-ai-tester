@@ -14,7 +14,7 @@ export type DismissalRecord = z.infer<typeof DismissalSchema>;
 export const EvidenceRefSchema = z.object({
   screenshotRef: z.string(),
   selector: z.string().nullable(),
-  time: z.string(),
+  time: z.string().describe('ISO 8601 timestamp (e.g., "2025-01-18T21:38:33Z")'),
   networkRequestId: z.string().nullable(),
 });
 

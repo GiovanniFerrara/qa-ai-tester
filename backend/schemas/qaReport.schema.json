@@ -88,7 +88,8 @@
                       ]
                     },
                     "time": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "ISO 8601 timestamp (e.g., \"2025-01-18T21:38:33Z\")"
                     },
                     "networkRequestId": {
                       "type": [

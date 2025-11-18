@@ -185,6 +185,11 @@ export class AnthropicComputerUseService {
               events,
               emitEvent,
               abortSignal: options.abortSignal,
+              findingsFromTool,
+              reportContext,
+              onReport: (report) => {
+                finalReport = report;
+              },
             });
             break;
           }
@@ -328,8 +333,20 @@ export class AnthropicComputerUseService {
     events: ComputerUseEvent[];
     emitEvent: (event: RunEvent) => void;
     abortSignal?: AbortSignal;
+    findingsFromTool: Finding[];
+    reportContext: QaReportContext;
+    onReport: (report: QaReport) => void;
   }): Promise<ToolResultBlockParam> {
-    const { toolUse, handle, events, emitEvent, abortSignal } = params;
+    const {
+      toolUse,
+      handle,
+      events,
+      emitEvent,
+      abortSignal,
+      findingsFromTool,
+      reportContext,
+      onReport,
+    } = params;
     if (abortSignal?.aborted) {
       const reason = abortSignal.reason;
       if (reason instanceof Error) {
@@ -340,6 +357,40 @@ export class AnthropicComputerUseService {
       }
       throw new RunCancelledError();
     }
+    const rawInput = toolUse.input as Record<string, unknown> | undefined;
+    const maybeActionType =
+      rawInput && typeof rawInput === 'object' && 'action' in rawInput
+        ? String((rawInput as { action?: string }).action ?? '').toLowerCase()
+        : null;
+    if (maybeActionType === 'assert') {
+      return this.handleAssertTool({
+        toolUse,
+        findingsFromTool,
+      });
+    }
+    if (maybeActionType === 'qa_report_submit') {
+      const maybeReport = this.qaReportService.parseToolSubmit({
+        toolUse,
+        findingsFromTool,
+        context: reportContext,
+        emitEvent,
+      });
+      if (maybeReport) {
+        onReport(maybeReport);
+        this.logger.debug("maybeReport received")
+        return {
+          type: 'tool_result',
+          tool_use_id: toolUse.id,
+          content: [{ type: 'text', text: 'Report received.' }],
+        };
+      }
+      return {
+        type: 'tool_result',
+        tool_use_id: toolUse.id,
+        content: [{ type: 'text', text: 'Invalid QA report payload.' }],
+      };
+    }
+
     const action = this.actionMapper.toComputerAction(toolUse.input as ComputerToolInput);
     if (!action) {
       const rawInput = safeStringify(toolUse.input);
