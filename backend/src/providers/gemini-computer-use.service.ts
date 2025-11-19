@@ -1,9 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  FunctionCallingConfigMode,
-  type Content,
-  type FunctionCall,
-} from '@google/genai';
+import { FunctionCallingConfigMode, type Content, type FunctionCall } from '@google/genai';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
@@ -47,7 +43,8 @@ type FunctionCallOutcome =
   | {
       kind: 'response';
       content: Content;
-      event?: Omit<ComputerUseEvent, 'step' | 'timestamp'> & Partial<Pick<ComputerUseEvent, 'timestamp'>>;
+      event?: Omit<ComputerUseEvent, 'step' | 'timestamp'> &
+        Partial<Pick<ComputerUseEvent, 'timestamp'>>;
       updatedUrl?: string;
       toolIncrement?: number;
     }
@@ -132,138 +129,171 @@ export class GeminiComputerUseService {
     let totalToolCalls = 0;
     let promptedForReport = false;
     let lastKnownUrl = await handle.page.url();
+    let artifactsWritten = false;
+    const persistArtifacts = async (): Promise<void> => {
+      await this.writeSessionArtifacts(handle.artifactDir, events, responsesSummary);
+      artifactsWritten = true;
+    };
 
-    while (iterations < maxIterations) {
-      ensureNotCancelled();
-      iterations += 1;
-
-      const response = await client.models.generateContent({
-        model: plan.model,
-        contents: history,
-        config: {
-          maxOutputTokens: plan.maxOutputTokens,
-          systemInstruction: plan.systemPrompt,
-          tools: plan.tools,
-          toolConfig: {
-            functionCallingConfig: {
-              mode: FunctionCallingConfigMode.AUTO,
-            },
-          },
-        },
-      });
-
-      this.recordUsageTotals(usageTotals, response);
-      responsesSummary.push({
-        id: response.responseId ?? `iteration-${iterations}`,
-        usage: response.usageMetadata ?? null,
-        functionCalls: response.functionCalls ?? [],
-        textPreview: response.text?.slice(0, 200),
-        timestamp: new Date().toISOString(),
-      });
-
-      const candidate = response.candidates?.[0];
-      if (!candidate?.content) {
-        throw new Error('Gemini response did not include any content.');
-      }
-
-      const modelContent = candidate.content;
-      history.push(modelContent);
-
-      const functionCalls =
-        modelContent.parts
-          ?.map((part) => part.functionCall)
-          .filter((call): call is FunctionCall => Boolean(call?.name)) ?? [];
-
-      if (functionCalls.length > 0) {
-        for (const call of functionCalls) {
-          ensureNotCancelled();
-          const outcome = await this.handleFunctionCall({
-            call,
-            runId,
-            task,
-            handle,
-            findingsFromTool,
-            emitEvent,
-            lastKnownUrl,
-            initialScreenshotPath: options.initialScreenshotPath,
-            startedAt: options.startedAt,
-          });
-
-          if (outcome.kind === 'report') {
-            emitEvent({
-              type: 'status',
-              message: `Gemini provided qa_report_submit with status ${outcome.report.status}`,
-              payload: { report: outcome.report },
-            });
-            await this.writeSessionArtifacts(handle.artifactDir, events, responsesSummary);
-            return {
-              report: outcome.report,
-              eventsPath: path.join(handle.artifactDir, 'computer-use-events.json'),
-              responsesPath: path.join(handle.artifactDir, 'model-responses.jsonl'),
-              usageTotals,
-              totalToolCalls,
-              model: plan.model,
-            };
-          }
-
-          history.push(outcome.content);
-          if (outcome.event) {
-            events.push({
-              ...outcome.event,
-              step: events.length + 1,
-              timestamp: outcome.event.timestamp ?? new Date().toISOString(),
-            });
-          }
-          totalToolCalls += outcome.toolIncrement ?? 1;
-          if (outcome.updatedUrl) {
-            lastKnownUrl = outcome.updatedUrl;
-          }
-        }
-        continue;
-      }
-
-      const maybeReport = this.tryExtractReportFromText(modelContent, findingsFromTool, options);
-      if (maybeReport) {
-        emitEvent({
-          type: 'status',
-          message: `Structured QAReport parsed with status ${maybeReport.status}`,
-          payload: { report: maybeReport },
-        });
-        await this.writeSessionArtifacts(handle.artifactDir, events, responsesSummary);
-        return {
-          report: maybeReport,
-          eventsPath: path.join(handle.artifactDir, 'computer-use-events.json'),
-          responsesPath: path.join(handle.artifactDir, 'model-responses.jsonl'),
-          usageTotals,
-          totalToolCalls,
+    try {
+      while (iterations < maxIterations) {
+        ensureNotCancelled();
+        iterations += 1;
+        const response = await client.models.generateContent({
           model: plan.model,
-        };
-      }
-
-      if (!promptedForReport) {
-        promptedForReport = true;
-        const reminderContent: Content = {
-          role: 'user',
-          parts: [
-            {
-              text: 'Please respond with ONLY the QAReport JSON object (matching the shared schema) when you are ready to conclude.',
-            },
-          ],
-        };
-        history.push(reminderContent);
-        emitEvent({
-          type: 'log',
-          message: 'Prompted Gemini for structured QAReport JSON.',
+          contents: history,
+          config: {
+            maxOutputTokens: plan.maxOutputTokens,
+            systemInstruction: plan.systemPrompt,
+            tools: plan.tools,
+            toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO } },
+          },
         });
-        continue;
+        this.logger.debug(
+          [
+            `Gemini response metadata (iteration ${iterations})`,
+            `responseId=${response.responseId ?? 'n/a'}`,
+            `promptFeedback=${JSON.stringify(response.promptFeedback ?? null)}`,
+            `usage=${JSON.stringify(response.usageMetadata ?? null)}`,
+          ].join(' | '),
+        );
+        this.recordUsageTotals(usageTotals, response);
+        responsesSummary.push({
+          id: response.responseId ?? `iteration-${iterations}`,
+          usage: response.usageMetadata ?? null,
+          functionCalls: response.functionCalls ?? [],
+          textPreview: response.text?.slice(0, 200),
+          timestamp: new Date().toISOString(),
+        });
+        const candidate = response.candidates?.[0];
+        if (candidate?.finishReason === 'MALFORMED_FUNCTION_CALL') {
+          this.logger.warn(
+            `Gemini produced a malformed function call. Retrying... (iteration ${iterations})`,
+          );
+          history.push({
+            role: 'user',
+            parts: [{ text: 'The previous function call was malformed. Please try again.' }],
+          });
+          continue;
+        }
+
+        if (!candidate?.content) {
+          this.logger.error(
+            `Gemini response missing content. promptFeedback=${JSON.stringify(response.promptFeedback ?? null)} fullResponse=${JSON.stringify(response)}`,
+          );
+          throw new Error('Gemini response did not include any content.');
+        }
+        const modelContent = candidate.content;
+        history.push(modelContent);
+
+        // DEBUG LOGGING
+        this.logger.debug(
+          `Gemini response (iteration ${iterations}): ${JSON.stringify(modelContent)}`,
+        );
+
+        const functionCalls =
+          modelContent.parts
+            ?.map((part) => part.functionCall)
+            .filter((call): call is FunctionCall => Boolean(call?.name)) ?? [];
+        if (functionCalls.length > 0) {
+          this.logger.debug(`Processing ${functionCalls.length} function call(s) from Gemini.`);
+          for (const call of functionCalls) {
+            ensureNotCancelled();
+            this.logger.debug(
+              `Handling function call: "${call.name}" with args: ${JSON.stringify(call.args ?? {})}`,
+            );
+            const outcome = await this.handleFunctionCall({
+              call,
+              runId,
+              task,
+              handle,
+              findingsFromTool,
+              emitEvent,
+              lastKnownUrl,
+              initialScreenshotPath: options.initialScreenshotPath,
+              startedAt: options.startedAt,
+            });
+            if (outcome.kind === 'report') {
+              emitEvent({
+                type: 'status',
+                message: `Gemini provided qa_report_submit with status ${outcome.report.status}`,
+                payload: { report: outcome.report },
+              });
+              await persistArtifacts();
+              return {
+                report: outcome.report,
+                eventsPath: path.join(handle.artifactDir, 'computer-use-events.json'),
+                responsesPath: path.join(handle.artifactDir, 'model-responses.jsonl'),
+                usageTotals,
+                totalToolCalls,
+                model: plan.model,
+              };
+            }
+            history.push(outcome.content);
+            if (outcome.event) {
+              events.push({
+                ...outcome.event,
+                step: events.length + 1,
+                timestamp: outcome.event.timestamp ?? new Date().toISOString(),
+              });
+            }
+            totalToolCalls += outcome.toolIncrement ?? 1;
+            if (outcome.updatedUrl) {
+              lastKnownUrl = outcome.updatedUrl;
+            }
+          }
+          continue;
+        }
+        const maybeReport = this.tryExtractReportFromText(modelContent, findingsFromTool, options);
+        if (maybeReport) {
+          emitEvent({
+            type: 'status',
+            message: `Structured QAReport parsed with status ${maybeReport.status}`,
+            payload: { report: maybeReport },
+          });
+          await persistArtifacts();
+          return {
+            report: maybeReport,
+            eventsPath: path.join(handle.artifactDir, 'computer-use-events.json'),
+            responsesPath: path.join(handle.artifactDir, 'model-responses.jsonl'),
+            usageTotals,
+            totalToolCalls,
+            model: plan.model,
+          };
+        }
+        if (!promptedForReport) {
+          promptedForReport = true;
+          const reminderContent: Content = {
+            role: 'user',
+            parts: [
+              {
+                text: 'Please respond with ONLY the QAReport JSON object (matching the shared schema) when you are ready to conclude.',
+              },
+            ],
+          };
+          history.push(reminderContent);
+          emitEvent({ type: 'log', message: 'Prompted Gemini for structured QAReport JSON.' });
+          continue;
+        }
+        throw new Error('Gemini did not return a QAReport after prompting.');
       }
-
-      throw new Error('Gemini did not return a QAReport after prompting.');
+      throw new Error(`Exceeded maximum iteration limit (${maxIterations}) without completion.`);
+    } catch (error) {
+      this.logger.error(
+        `Gemini computer-use session aborted: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw error;
+    } finally {
+      if (!artifactsWritten) {
+        await persistArtifacts().catch((artifactError: unknown) => {
+          this.logger.error(
+            `Failed to persist Gemini artifacts: ${(artifactError as Error).message}`,
+          );
+        });
+      }
     }
-
-    throw new Error(`Exceeded maximum iteration limit (${maxIterations}) without completion.`);
   }
-
   private async handleFunctionCall(params: {
     call: FunctionCall;
     runId: string;
@@ -277,6 +307,7 @@ export class GeminiComputerUseService {
   }): Promise<FunctionCallOutcome> {
     const { call } = params;
     const name = call.name ?? '';
+    this.logger.debug(`Handling function call: "${name}" with args: ${JSON.stringify(call.args)}`);
 
     if (name === 'dom_snapshot') {
       return this.handleDomSnapshotCall(params);
@@ -297,6 +328,7 @@ export class GeminiComputerUseService {
   }): Promise<FunctionCallOutcome> {
     const { call, handle, emitEvent } = params;
     const parsed = DomSnapshotRequestSchema.safeParse(call.args ?? {});
+    const currentUrl = await handle.page.url();
     if (!parsed.success) {
       this.logger.warn(`Invalid dom_snapshot payload: ${parsed.error.message}`);
       return {
@@ -308,7 +340,7 @@ export class GeminiComputerUseService {
               functionResponse: {
                 id: call.id,
                 name: 'dom_snapshot',
-                response: { error: parsed.error.message },
+                response: { error: parsed.error.message, url: currentUrl },
               },
             },
           ],
@@ -334,7 +366,7 @@ export class GeminiComputerUseService {
             functionResponse: {
               id: call.id,
               name: 'dom_snapshot',
-              response: snapshot,
+              response: { ...snapshot, url: currentUrl },
             },
           },
         ],
@@ -351,11 +383,13 @@ export class GeminiComputerUseService {
 
   private async handleAssertCall(params: {
     call: FunctionCall;
+    handle: BrowserRunHandle;
     findingsFromTool: Finding[];
     emitEvent: (event: Omit<RunEvent, 'timestamp'> & Partial<Pick<RunEvent, 'timestamp'>>) => void;
   }): Promise<FunctionCallOutcome> {
-    const { call, findingsFromTool, emitEvent } = params;
+    const { call, handle, findingsFromTool, emitEvent } = params;
     const parsed = AssertToolRequestSchema.safeParse(call.args ?? {});
+    const currentUrl = await handle.page.url();
     if (!parsed.success) {
       this.logger.warn(`Invalid assert payload: ${parsed.error.message}`);
       return {
@@ -367,7 +401,7 @@ export class GeminiComputerUseService {
               functionResponse: {
                 id: call.id,
                 name: 'assert',
-                response: { error: parsed.error.message },
+                response: { error: parsed.error.message, url: currentUrl },
               },
             },
           ],
@@ -404,7 +438,7 @@ export class GeminiComputerUseService {
             functionResponse: {
               id: call.id,
               name: 'assert',
-              response: { assertionId },
+              response: { assertionId, url: currentUrl },
             },
           },
         ],
@@ -425,16 +459,17 @@ export class GeminiComputerUseService {
     findingsFromTool: Finding[];
     initialScreenshotPath: string;
     startedAt: Date;
+    runId: string;
   }): Promise<FunctionCallOutcome> {
-    const { call, task, findingsFromTool, initialScreenshotPath, startedAt } = params;
+    const { call, task, findingsFromTool, initialScreenshotPath, startedAt, runId } = params;
     const payload = (call.args as Record<string, unknown>) ?? {};
     const candidatePayload = payload.report ?? payload.qaReport ?? payload;
-    const parsed = QaReportSchema.safeParse(candidatePayload);
-    if (!parsed.success) {
-      throw new Error(`qa_report_submit payload invalid: ${parsed.error.message}`);
-    }
-
-    const report = parsed.data;
+    const report = this.buildReportFromPayload(candidatePayload, {
+      runId,
+      task,
+      startedAt,
+      initialScreenshotPath,
+    });
     if (!report.findings.length && findingsFromTool.length) {
       report.findings = findingsFromTool;
     }
@@ -463,9 +498,9 @@ export class GeminiComputerUseService {
     const actionName = (call.name ?? '').toLowerCase();
     const waitSecondsMatch = actionName.match(/^wait_(\d+)_seconds$/);
     let updatedUrl = lastKnownUrl;
-    let screenshotResult:
-      | Awaited<ReturnType<WorkerGatewayService['performComputerAction']>>
-      | null = null;
+    let screenshotResult: Awaited<
+      ReturnType<WorkerGatewayService['performComputerAction']>
+    > | null = null;
 
     const emitScreenshotEvent = (label: string): void => {
       if (!screenshotResult) {
@@ -496,11 +531,18 @@ export class GeminiComputerUseService {
           if (!targetUrl) {
             throw new Error('navigate call missing url argument.');
           }
-          await handle.page.goto(targetUrl, { waitUntil: 'networkidle' });
+          try {
+            const resolvedUrl = new URL(targetUrl, lastKnownUrl).toString();
+            await handle.page.goto(resolvedUrl, { waitUntil: 'networkidle' });
+            updatedUrl = resolvedUrl;
+          } catch (err) {
+            // Fallback if URL construction fails (e.g. lastKnownUrl invalid) or navigation fails
+            this.logger.warn(`Navigation failed for ${targetUrl}: ${(err as Error).message}`);
+            throw err;
+          }
           screenshotResult = await this.workerGateway.performComputerAction(handle, {
             action: 'screenshot',
           });
-          updatedUrl = targetUrl;
           break;
         }
         case 'click':
@@ -549,8 +591,7 @@ export class GeminiComputerUseService {
             (Array.isArray((call.args as { keys?: unknown }).keys)
               ? ((call.args as { keys?: string[] }).keys ?? [])
               : []) || [];
-          const singleKey =
-            this.extractStringArg(call.args, ['key', 'combo']) ?? keysArg.join('+');
+          const singleKey = this.extractStringArg(call.args, ['key', 'combo']) ?? keysArg.join('+');
           const keys = singleKey ? [singleKey] : keysArg;
           if (!keys.length) {
             throw new Error('key_press call missing key(s).');
@@ -704,13 +745,15 @@ export class GeminiComputerUseService {
         role: 'user',
         parts: [
           {
-              functionResponse: {
-                id: call.id,
-                name: call.name ?? 'computer',
-                response: {
-                  url: updatedUrl,
+            functionResponse: {
+              id: call.id,
+              name: call.name ?? 'computer',
+              response: {
+                url: updatedUrl,
                 viewport: screenshotResult.viewport,
                 screenshot: path.basename(screenshotResult.screenshotPath),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                safety_decision: (call.args as any)?.safety_decision,
               },
             },
           },
@@ -747,7 +790,10 @@ export class GeminiComputerUseService {
     }
     const parsed = this.extractJsonObject(textParts);
     if (!parsed) {
-      this.logger.warn(`Failed to parse QAReport JSON from Gemini text: "${textParts.slice(0, 160)}..."`);
+      this.logger.warn(
+        `Failed to parse QAReport JSON from Gemini text: "${textParts.slice(0, 160)}...". Full text available in logs.`,
+      );
+      this.logger.debug(`Full failed QAReport text: ${textParts}`);
       return null;
     }
 
@@ -770,7 +816,7 @@ export class GeminiComputerUseService {
       return reportCandidate;
     } catch (error) {
       this.logger.warn(
-        `Failed to validate QAReport JSON from Gemini response: ${(error as Error).message}`,
+        `Failed to validate QAReport JSON from Gemini response: ${(error as Error).message}. Payload was: ${JSON.stringify(parsed)}`,
       );
       return null;
     }
@@ -778,7 +824,13 @@ export class GeminiComputerUseService {
 
   private recordUsageTotals(
     usageTotals: { tokensInput: number; tokensOutput: number; totalTokens: number },
-    response: { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } },
+    response: {
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+    },
   ): void {
     const usage = response.usageMetadata;
     if (!usage) {
@@ -912,6 +964,209 @@ export class GeminiComputerUseService {
     this.logger.debug(
       `Gemini computer-use artifacts persisted to ${artifactDir} (events=${events.length}, responses=${responses.length})`,
     );
+  }
+
+  private buildReportFromPayload(
+    payload: unknown,
+    context: { runId: string; task: TaskSpec; startedAt: Date; initialScreenshotPath: string },
+  ): QaReport {
+    const raw =
+      payload && typeof payload === 'object'
+        ? (payload as Record<string, unknown>)
+        : ({} as Record<string, unknown>);
+
+    const startedAtIso =
+      this.coerceIsoString(raw.startedAt) ?? context.startedAt.toISOString();
+    const finishedAtIso =
+      this.coerceIsoString(raw.finishedAt) ?? new Date().toISOString();
+
+    const normalizedFindings = Array.isArray(raw.findings)
+      ? (raw.findings as unknown[])
+          .map((item, index) =>
+            this.normalizeFinding(item, {
+              defaultScreenshot: context.initialScreenshotPath,
+              defaultTimestamp: finishedAtIso,
+              fallbackLabel: `Finding ${index + 1}`,
+            }),
+          )
+          .filter((finding): finding is Finding => Boolean(finding))
+      : [];
+
+    const linksInput =
+      raw.links && typeof raw.links === 'object'
+        ? (raw.links as Record<string, unknown>)
+        : {};
+    const costsInput =
+      raw.costs && typeof raw.costs === 'object'
+        ? (raw.costs as Record<string, unknown>)
+        : {};
+
+    const normalizedReport = {
+      id: this.coerceString(raw.id) ?? uuidv4(),
+      runId: context.runId,
+      taskId: context.task.id,
+      startedAt: startedAtIso,
+      finishedAt: finishedAtIso,
+      summary: this.coerceString(raw.summary) ?? 'Gemini QA report summary unavailable.',
+      status: this.isValidStatus(this.coerceString(raw.status))
+        ? (this.coerceString(raw.status) as QaReport['status'])
+        : 'inconclusive',
+      findings: normalizedFindings,
+      links: {
+        traceUrl: this.coerceString(linksInput.traceUrl) ?? null,
+        screenshotsGalleryUrl: this.coerceString(linksInput.screenshotsGalleryUrl) ?? null,
+        rawTranscriptUrl: this.coerceString(linksInput.rawTranscriptUrl) ?? null,
+      },
+      costs: {
+        tokensInput: this.coerceNumber(costsInput.tokensInput) ?? 0,
+        tokensOutput: this.coerceNumber(costsInput.tokensOutput) ?? 0,
+        toolCalls: this.coerceNumber(costsInput.toolCalls) ?? 0,
+        durationMs: this.coerceNumber(costsInput.durationMs) ?? 0,
+        priceUsd: this.coerceNumber(costsInput.priceUsd) ?? 0,
+      },
+    };
+
+    const parsed = QaReportSchema.safeParse(normalizedReport);
+    if (!parsed.success) {
+      this.logger.warn(
+        `Failed to normalize Gemini qa_report_submit payload: ${parsed.error.message}`,
+      );
+      throw new Error(`qa_report_submit payload invalid: ${parsed.error.message}`);
+    }
+    return parsed.data;
+  }
+
+  private normalizeFinding(
+    input: unknown,
+    context: { defaultScreenshot: string; defaultTimestamp: string; fallbackLabel: string },
+  ): Finding | null {
+    if (!input || typeof input !== 'object') {
+      return null;
+    }
+    const raw = input as Record<string, unknown>;
+    const evidenceInput = Array.isArray(raw.evidence) ? raw.evidence : [];
+    const normalizedEvidence =
+      evidenceInput.length > 0
+        ? evidenceInput
+            .map((evidence) =>
+              this.normalizeEvidence(
+                evidence,
+                context.defaultScreenshot,
+                context.defaultTimestamp,
+              ),
+            )
+            .filter((item): item is Finding['evidence'][number] => Boolean(item))
+        : [
+            {
+              screenshotRef: context.defaultScreenshot,
+              selector: null,
+              time: context.defaultTimestamp,
+              networkRequestId: null,
+            },
+          ];
+
+    return {
+      id: this.coerceString(raw.id) ?? uuidv4(),
+      severity: this.isValidSeverity(this.coerceString(raw.severity))
+        ? (this.coerceString(raw.severity) as Finding['severity'])
+        : 'info',
+      category: this.isValidCategory(this.coerceString(raw.category))
+        ? (this.coerceString(raw.category) as Finding['category'])
+        : 'functional',
+      assertion: this.coerceString(raw.assertion) ?? context.fallbackLabel,
+      expected: this.coerceString(raw.expected) ?? 'Not specified',
+      observed: this.coerceString(raw.observed) ?? 'Not specified',
+      tolerance: this.coerceString(raw.tolerance) ?? null,
+      evidence: normalizedEvidence,
+      suggestedFix: this.coerceString(raw.suggestedFix) ?? 'Review the observation.',
+      confidence: this.coerceNumber(raw.confidence) ?? 0.5,
+      dismissal:
+        raw.dismissal && typeof raw.dismissal === 'object'
+          ? this.normalizeDismissal(raw.dismissal as Record<string, unknown>)
+          : undefined,
+    };
+  }
+
+  private normalizeEvidence(
+    input: unknown,
+    screenshotFallback: string,
+    timestampFallback: string,
+  ): Finding['evidence'][number] | null {
+    if (!input || typeof input !== 'object') {
+      return null;
+    }
+    const raw = input as Record<string, unknown>;
+    return {
+      screenshotRef: this.coerceString(raw.screenshotRef) ?? screenshotFallback,
+      selector:
+        typeof raw.selector === 'string' || raw.selector === null ? raw.selector : null,
+      time: this.coerceString(raw.time) ?? timestampFallback,
+      networkRequestId:
+        typeof raw.networkRequestId === 'string' || raw.networkRequestId === null
+          ? raw.networkRequestId
+          : null,
+    };
+  }
+
+  private normalizeDismissal(raw: Record<string, unknown>): Finding['dismissal'] | undefined {
+    const reasonValue = this.coerceString(raw.reason);
+    const dismissedAt = this.coerceString(raw.dismissedAt);
+    if (!reasonValue || !dismissedAt) {
+      return undefined;
+    }
+    if (reasonValue !== 'false_positive' && reasonValue !== 'fixed') {
+      return undefined;
+    }
+    return {
+      reason: reasonValue,
+      dismissedAt,
+      dismissedBy: this.coerceString(raw.dismissedBy) ?? undefined,
+    };
+  }
+
+  private isValidSeverity(value: string | null): value is Finding['severity'] {
+    return Boolean(
+      value &&
+        ['blocker', 'critical', 'major', 'minor', 'info'].includes(value as string),
+    );
+  }
+
+  private isValidCategory(value: string | null): value is Finding['category'] {
+    return Boolean(
+      value &&
+        ['functional', 'data-consistency', 'performance', 'a11y', 'reliability'].includes(
+          value as string,
+        ),
+    );
+  }
+
+  private isValidStatus(value: string | null): value is QaReport['status'] {
+    return Boolean(value && ['passed', 'failed', 'inconclusive'].includes(value));
+  }
+
+  private coerceString(value: unknown): string | null {
+    return typeof value === 'string' && value.trim().length > 0 ? value : null;
+  }
+
+  private coerceNumber(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  }
+
+  private coerceIsoString(value: unknown): string | null {
+    if (typeof value === 'string' || value instanceof Date) {
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    }
+    return null;
   }
 
   private extractStringArg(args: unknown, keys: string[]): string | null {
