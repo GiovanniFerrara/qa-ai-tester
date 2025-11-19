@@ -1,12 +1,12 @@
 # QA AI Tester - Backend
 
-NestJS-based backend orchestration API for AI-powered quality assurance testing. This backend coordinates Playwright browser automation with OpenAI and Anthropic AI models to execute comprehensive web application testing through a computer-use interaction loop.
+NestJS-based backend orchestration API for AI-powered quality assurance testing. This backend coordinates Playwright browser automation with OpenAI, Anthropic, and Google Gemini AI models to execute comprehensive web application testing through a computer-use interaction loop.
 
 ## Overview
 
 The backend implements:
-- **Computer-Use Orchestration** - Complete AI-driven interaction loop with OpenAI and Anthropic
-- **Multi-Provider Support** - Seamless switching between OpenAI GPT and Anthropic Claude
+- **Computer-Use Orchestration** - Complete AI-driven interaction loop with OpenAI, Anthropic, and Gemini
+- **Multi-Provider Support** - Seamless switching between OpenAI GPT, Anthropic Claude, and Google Gemini
 - **Browser Automation** - Playwright-based worker gateway for reliable browser control
 - **Event Streaming** - Real-time SSE updates for run monitoring
 - **Task Management** - Persistent task storage with CRUD operations
@@ -28,6 +28,8 @@ The backend implements:
 - [`openai-computer-use.service.ts`](src/providers/openai-computer-use.service.ts:1) - OpenAI computer-use loop
 - [`anthropic-provider.service.ts`](src/providers/anthropic-provider.service.ts:1) - Anthropic SDK wrapper
 - [`anthropic-computer-use.service.ts`](src/providers/anthropic-computer-use.service.ts:1) - Claude computer-use loop
+- [`gemini-provider.service.ts`](src/providers/gemini-provider.service.ts:1) - Gemini SDK wrapper
+- [`gemini-computer-use.service.ts`](src/providers/gemini-computer-use.service.ts:1) - Gemini computer-use loop
 - [`computer-use-orchestrator.service.ts`](src/providers/computer-use-orchestrator.service.ts:1) - Provider routing
 - [`ai-provider-registry.service.ts`](src/providers/ai-provider-registry.service.ts:1) - Provider resolution
 - [`schema.service.ts`](src/providers/schema.service.ts:1) - Zod to JSON Schema conversion
@@ -52,7 +54,7 @@ The backend implements:
 - **Node.js** 20 or higher
 - **npm** (comes with Node.js)
 - **Playwright browsers** (installed via `npx playwright install`)
-- **API Keys**: At least one AI provider key (OpenAI or Anthropic)
+- **API Keys**: At least one AI provider key (OpenAI, Anthropic, or Gemini)
 
 ## Installation
 
@@ -84,12 +86,17 @@ OPENAI_API_KEY=sk-proj-...your-openai-key
 # Required for Anthropic provider
 CLAUDE_API_KEY=sk-ant-...your-anthropic-key
 
-# Default provider to use (openai or anthropic)
+# Google Gemini API Key (get from ai.google.dev)
+# Required for Gemini provider
+GEMINI_API_KEY=sk-gm-...your-gemini-key
+
+# Default provider to use (openai, anthropic, or gemini)
 DEFAULT_PROVIDER=openai
 
 # Model selection
 OPENAI_MODEL=computer-use-preview
 CLAUDE_MODEL=claude-sonnet-4-5-sonnet-20250219
+GEMINI_MODEL=gemini-2.5-computer-use-preview-10-2025
 
 # ============================================
 # Application Configuration
@@ -347,6 +354,10 @@ The OpenAI integration ([`openai-computer-use.service.ts`](src/providers/openai-
 ### Anthropic Computer-Use Loop
 
 The Anthropic integration ([`anthropic-computer-use.service.ts`](src/providers/anthropic-computer-use.service.ts:1)) follows a similar pattern but uses Claude's computer-use API format.
+
+### Gemini Computer-Use Loop
+
+The Gemini integration ([`gemini-computer-use.service.ts`](src/providers/gemini-computer-use.service.ts:1)) drives Google's Gemini 2.5 Computer Use API via the `@google/genai` SDK. It routes Gemini's function calls (e.g., `open_web_browser`, `navigate`, `click`, `qa_report_submit`) through the Playwright worker, streams inline screenshots back to the model, and accepts structured QA reports via the `qa_report_submit` function.
 
 ### Artifacts Generated
 

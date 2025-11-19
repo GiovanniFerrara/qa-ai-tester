@@ -5,12 +5,14 @@ describe('Environment configuration', () => {
     NODE_ENV: 'test',
     OPENAI_API_KEY: 'openai-key',
     CLAUDE_API_KEY: 'claude-key',
+    GEMINI_API_KEY: 'gemini-key',
     BASE_URL: 'https://example.com',
     STORAGE_STATE_PATH: 'playwright/.auth/analyst.json',
     ARTIFACT_DIR: 'artifacts',
     DEFAULT_PROVIDER: 'openai',
     OPENAI_MODEL: 'computer-use-preview',
     CLAUDE_MODEL: 'claude-sonnet-4-5',
+    GEMINI_MODEL: 'gemini-2.5-computer-use-preview-10-2025',
   };
 
   it('validates a complete environment', () => {

@@ -38,7 +38,7 @@ The frontend provides a comprehensive web UI for:
 
 **[`RunForm.tsx`](src/components/RunForm.tsx:1)** - Run creation interface
 - Task selection dropdown
-- Provider override options (OpenAI/Anthropic)
+- Provider override options (OpenAI/Anthropic/Gemini)
 - Model selection per provider
 - Form validation and error handling
 

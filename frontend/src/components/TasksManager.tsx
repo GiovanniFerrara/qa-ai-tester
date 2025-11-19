@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { TaskInput, TaskSpec } from "../types";
+import type { TaskInput, TaskSpec, Provider } from "../types";
 import { QuickTaskPanel } from "./QuickTaskPanel";
 import {
   Card,
@@ -20,6 +20,12 @@ const defaultBudgets = {
   maxTimeMs: 180_000,
   maxScreenshots: 50,
 };
+
+const PROVIDER_OPTIONS: Array<{ label: string; value: Provider }> = [
+  { label: "OpenAI", value: "openai" },
+  { label: "Anthropic", value: "anthropic" },
+  { label: "Gemini", value: "gemini" },
+];
 
 const emptyTask: TaskInput = {
   name: "",
@@ -150,6 +156,13 @@ export function TasksManager() {
     setForm((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  const handleProviderSelect = (value: Provider) => {
+    setForm((prev) => ({
+      ...prev,
+      provider: value,
     }));
   };
 
@@ -327,11 +340,14 @@ export function TasksManager() {
                     <select
                       value={form.provider ?? ""}
                       onChange={(e) =>
-                        handleInputChange("provider", e.target.value)
+                        handleProviderSelect(e.target.value as Provider)
                       }
                     >
-                      <option value="openai">OpenAI</option>
-                      <option value="anthropic">Anthropic</option>
+                      {PROVIDER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
 

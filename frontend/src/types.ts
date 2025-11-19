@@ -1,3 +1,5 @@
+export type Provider = 'openai' | 'anthropic' | 'gemini';
+
 export interface TaskSpec {
   id: string;
   name: string;
@@ -6,7 +8,7 @@ export interface TaskSpec {
   instructions: string;
   route: string;
   role: string;
-  provider?: string;
+  provider?: Provider;
   model?: string;
   requireFindings: boolean;
   autoAuthEnabled: boolean;
@@ -24,7 +26,7 @@ export interface TaskInput {
   instructions?: string;
   route: string;
   role: string;
-  provider?: string;
+  provider?: Provider;
   model?: string;
   requireFindings: boolean;
   autoAuthEnabled?: boolean;
@@ -100,7 +102,7 @@ export interface RunArtifacts {
 export interface RunState {
   runId: string;
   taskId: string;
-  provider: string;
+  provider: Provider;
   status: RunStatus;
   startedAt: string;
   finishedAt?: string;
@@ -112,7 +114,7 @@ export interface RunState {
 
 export interface CreateRunRequest {
   taskId: string;
-  provider?: string;
+  provider?: Provider;
   model?: string;
   baseUrl?: string;
 }

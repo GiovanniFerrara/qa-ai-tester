@@ -7,7 +7,7 @@ import { DismissReasonSchema } from '../models/contracts';
 
 const StartRunSchema = z.object({
   taskId: z.string().min(1, 'taskId is required'),
-  provider: z.enum(['openai', 'anthropic']).optional(),
+  provider: z.enum(['openai', 'anthropic', 'gemini']).optional(),
   baseUrl: z.string().url().optional(),
 });
 

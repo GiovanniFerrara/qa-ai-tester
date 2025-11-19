@@ -1,6 +1,6 @@
 import type { QaReport, TaskSpec } from './contracts';
 
-export type AiProvider = 'openai' | 'anthropic';
+export type AiProvider = 'openai' | 'anthropic' | 'gemini';
 
 export interface RunBudgets {
   startTime: number;

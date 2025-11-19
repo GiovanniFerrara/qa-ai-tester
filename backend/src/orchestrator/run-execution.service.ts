@@ -295,6 +295,9 @@ export class RunExecutionService {
         inputRate = 3;
         outputRate = 12;
       }
+    } else if (provider === 'gemini') {
+      inputRate = 2.5;
+      outputRate = 10;
     }
 
     const price =

@@ -5,9 +5,10 @@ import type { BrowserRunHandle } from '../worker/worker-gateway.service';
 import { AnthropicComputerUseService } from './anthropic-computer-use.service';
 import { OpenAiComputerUseService, type ComputerUseSessionResult } from './openai-computer-use.service';
 import { RunEventsService } from '../orchestrator/run-events.service';
+import { GeminiComputerUseService } from './gemini-computer-use.service';
 
 export interface ComputerUseOptions {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'gemini';
   runId: string;
   task: TaskSpec;
   handle: BrowserRunHandle;
@@ -21,6 +22,7 @@ export class ComputerUseOrchestratorService {
   constructor(
     private readonly openAiComputerUseService: OpenAiComputerUseService,
     private readonly anthropicComputerUseService: AnthropicComputerUseService,
+    private readonly geminiComputerUseService: GeminiComputerUseService,
     private readonly runEventsService: RunEventsService,
   ) {}
 
@@ -39,6 +41,18 @@ export class ComputerUseOrchestratorService {
 
     if (options.provider === 'anthropic') {
       return this.anthropicComputerUseService.run({
+        runId: options.runId,
+        task: options.task,
+        handle: options.handle,
+        initialScreenshotPath: options.initialScreenshotPath,
+        startedAt: options.startedAt,
+        events: this.runEventsService,
+        abortSignal: options.abortSignal,
+      });
+    }
+
+    if (options.provider === 'gemini') {
+      return this.geminiComputerUseService.run({
         runId: options.runId,
         task: options.task,
         handle: options.handle,

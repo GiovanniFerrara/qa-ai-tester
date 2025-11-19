@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTasks, useCreateRun } from "../hooks/useApi";
+import type { Provider } from "../types";
 import {
   Card,
   FormGroup,
@@ -20,7 +21,7 @@ export function RunForm() {
   const { data: tasks = [], isLoading: tasksLoading } = useTasks();
 
   const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [provider, setProvider] = useState("");
+  const [provider, setProvider] = useState<Provider | "">("");
   const [model, setModel] = useState("");
   const [baseUrl, setBaseUrl] = useState<string>(() => {
     if (typeof window === "undefined") {

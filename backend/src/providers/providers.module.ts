@@ -11,6 +11,8 @@ import { SchemaService } from './schema.service';
 import { ComputerUseOrchestratorService } from './computer-use-orchestrator.service';
 import { AnthropicActionMapper } from './anthropic/action-mapper.service';
 import { AnthropicQaReportService } from './anthropic/qa-report.service';
+import { GeminiProviderService } from './gemini-provider.service';
+import { GeminiComputerUseService } from './gemini-computer-use.service';
 
 @Module({
   imports: [WorkerModule, RunEventsModule],
@@ -22,6 +24,8 @@ import { AnthropicQaReportService } from './anthropic/qa-report.service';
     AnthropicComputerUseService,
     AnthropicActionMapper,
     AnthropicQaReportService,
+    GeminiProviderService,
+    GeminiComputerUseService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
   ],
@@ -31,6 +35,8 @@ import { AnthropicQaReportService } from './anthropic/qa-report.service';
     OpenAiComputerUseService,
     AnthropicProviderService,
     AnthropicComputerUseService,
+    GeminiProviderService,
+    GeminiComputerUseService,
     ComputerUseOrchestratorService,
     AiProviderRegistryService,
   ],
