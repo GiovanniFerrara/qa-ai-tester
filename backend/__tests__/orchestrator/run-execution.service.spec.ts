@@ -45,7 +45,7 @@ describe('RunExecutionService', () => {
       const workerGateway = {
         startRun: jest.fn().mockResolvedValue(mockHandle),
         captureScreenshot: jest.fn().mockImplementation(async (handle: typeof mockHandle) => {
-          const screenshotPath = path.join(handle.screenshotDir, 'initial.png');
+          const screenshotPath = path.join(handle.screenshotDir, 'initial.jpg');
           await fs.writeFile(screenshotPath, 'fake-screenshot');
           handle.screenshots.push(screenshotPath);
           return screenshotPath;
@@ -164,7 +164,7 @@ describe('RunExecutionService', () => {
       const workerGateway = {
         startRun: jest.fn().mockResolvedValue(mockHandle),
         captureScreenshot: jest.fn().mockImplementation(async (handle: typeof mockHandle) => {
-          const screenshotPath = path.join(handle.screenshotDir, 'initial.png');
+          const screenshotPath = path.join(handle.screenshotDir, 'initial.jpg');
           await fs.writeFile(screenshotPath, 'fake-screenshot');
           handle.screenshots.push(screenshotPath);
           return screenshotPath;
@@ -246,7 +246,7 @@ describe('RunExecutionService', () => {
       const workerGateway = {
         startRun: jest.fn().mockResolvedValue(mockHandle),
         captureScreenshot: jest.fn().mockImplementation(async (handle: typeof mockHandle) => {
-          const screenshotPath = path.join(handle.screenshotDir, 'initial.png');
+          const screenshotPath = path.join(handle.screenshotDir, 'initial.jpg');
           await fs.writeFile(screenshotPath, 'fake-screenshot');
           handle.screenshots.push(screenshotPath);
           return screenshotPath;

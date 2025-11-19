@@ -92,6 +92,7 @@ export class AnthropicComputerUseService {
 
     const initialScreenshotBuffer = await fs.readFile(options.initialScreenshotPath);
     const initialScreenshotBase64 = initialScreenshotBuffer.toString('base64');
+    const initialScreenshotMime = this.getImageMimeTypeFromPath(options.initialScreenshotPath);
 
     const messages: MessageParam[] = plan.messages.map((message) => ({
       role: message.role,
@@ -110,7 +111,7 @@ export class AnthropicComputerUseService {
       type: 'image',
       source: {
         type: 'base64',
-        media_type: 'image/png',
+        media_type: initialScreenshotMime,
         data: initialScreenshotBase64,
       },
     };
@@ -446,7 +447,7 @@ export class AnthropicComputerUseService {
       message: `Screenshot after ${action.action}`,
       payload: {
         callId: toolUse.id,
-        image: `data:image/png;base64,${result.screenshot}`,
+        image: `data:${result.mimeType};base64,${result.screenshot}`,
         viewport: result.viewport,
         screenshotName,
       },
@@ -461,7 +462,7 @@ export class AnthropicComputerUseService {
           type: 'image',
           source: {
             type: 'base64',
-            media_type: 'image/png',
+            media_type: result.mimeType,
             data: result.screenshot,
           },
         },
@@ -540,6 +541,17 @@ export class AnthropicComputerUseService {
         },
       ],
     };
+  }
+
+  private getImageMimeTypeFromPath(filePath: string): 'image/jpeg' | 'image/png' | 'image/webp' {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') {
+      return 'image/jpeg';
+    }
+    if (ext === '.webp') {
+      return 'image/webp';
+    }
+    return 'image/png';
   }
 
   private buildQaReportContext(options: AnthropicComputerUseOptions): QaReportContext {

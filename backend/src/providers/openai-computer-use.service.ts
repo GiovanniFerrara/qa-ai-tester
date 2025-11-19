@@ -101,6 +101,7 @@ export class OpenAiComputerUseService {
 
     const initialScreenshotBuffer = await fs.readFile(options.initialScreenshotPath);
     const initialScreenshotBase64 = initialScreenshotBuffer.toString('base64');
+    const initialScreenshotMime = this.getImageMimeTypeFromPath(options.initialScreenshotPath);
 
     const initialScreenshotName = path.basename(options.initialScreenshotPath);
 
@@ -113,7 +114,10 @@ export class OpenAiComputerUseService {
         role: 'user',
         content: [
           { type: 'input_text', text: plan.userPrompt },
-          { type: 'input_image', image_url: `data:image/png;base64,${initialScreenshotBase64}` },
+          {
+            type: 'input_image',
+            image_url: `data:${initialScreenshotMime};base64,${initialScreenshotBase64}`,
+          },
           {
             type: 'input_text',
             text: `Latest screenshot saved as ${initialScreenshotName}. Use this exact filename when referencing evidence screenshots.`,
@@ -277,7 +281,7 @@ export class OpenAiComputerUseService {
             message: `Screenshot after ${call.action.type}`,
             payload: {
               callId: call.call_id,
-              image: `data:image/png;base64,${actionResult.screenshot}`,
+              image: `data:${actionResult.mimeType};base64,${actionResult.screenshot}`,
               viewport: actionResult.viewport,
               screenshotName,
             },
@@ -288,7 +292,7 @@ export class OpenAiComputerUseService {
             call_id: call.call_id,
             output: {
               type: 'computer_screenshot',
-              image_url: `data:image/png;base64,${actionResult.screenshot}`,
+              image_url: `data:${actionResult.mimeType};base64,${actionResult.screenshot}`,
             },
             acknowledged_safety_checks: call.pending_safety_checks.map((safety) => ({
               id: safety.id,
@@ -582,6 +586,17 @@ export class OpenAiComputerUseService {
       suggestedFix: 'Review the run transcript for additional context if needed.',
       confidence: 0.5,
     };
+  }
+
+  private getImageMimeTypeFromPath(filePath: string): 'image/jpeg' | 'image/png' | 'image/webp' {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.jpg' || ext === '.jpeg') {
+      return 'image/jpeg';
+    }
+    if (ext === '.webp') {
+      return 'image/webp';
+    }
+    return 'image/png';
   }
 
   private extractJsonObject(text: string): Record<string, unknown> | null {

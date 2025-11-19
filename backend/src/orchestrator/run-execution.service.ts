@@ -76,12 +76,13 @@ export class RunExecutionService {
       this.throwIfCancelled(abortSignal);
       try {
         const screenshotBuffer = await readFile(initialScreenshot);
+        const mimeType = this.getImageMimeType(initialScreenshot);
         this.runEvents.emit(runId, {
           type: 'screenshot',
           message: 'Initial viewport capture',
           timestamp: new Date().toISOString(),
           payload: {
-            image: `data:image/png;base64,${screenshotBuffer.toString('base64')}`,
+            image: `data:${mimeType};base64,${screenshotBuffer.toString('base64')}`,
             path: initialScreenshot,
           },
         });
@@ -383,6 +384,17 @@ export class RunExecutionService {
     return findings.some(
       (finding) => !finding.dismissal && finding.severity !== 'info',
     );
+  }
+
+  private getImageMimeType(imagePath: string): string {
+    const extension = path.extname(imagePath).toLowerCase();
+    if (extension === '.jpg' || extension === '.jpeg') {
+      return 'image/jpeg';
+    }
+    if (extension === '.webp') {
+      return 'image/webp';
+    }
+    return 'image/png';
   }
 
   private throwIfCancelled(signal?: AbortSignal): void {

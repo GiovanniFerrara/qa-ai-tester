@@ -34,6 +34,11 @@ export class WorkerGatewayService {
   private readonly artifactRoot: string;
   private readonly storageStatePath: string;
   private readonly baseUrl: string;
+  private readonly screenshotMimeType = 'image/jpeg';
+  private readonly screenshotMaxBytes = 120_000;
+  private readonly screenshotInitialQuality = 80;
+  private readonly screenshotMinQuality = 45;
+  private readonly screenshotQualityStep = 10;
 
   constructor(private readonly configService: ConfigService<AppEnvironment, true>) {
     this.artifactRoot = path.resolve(
@@ -123,17 +128,18 @@ export class WorkerGatewayService {
 
     const screenshotPath = path.join(
       handle.screenshotDir,
-      `${Date.now()}-${action.action}.png`,
+      `${Date.now()}-${action.action}.jpg`,
     );
 
     let screenshotBase64: string;
+    let screenshotMimeType: 'image/jpeg' | 'image/png' | 'image/webp' = this.screenshotMimeType;
     try {
-      const screenshotBuffer = await page.screenshot({
+      const { buffer } = await this.captureConstrainedScreenshot(page, {
         path: screenshotPath,
-        fullPage: false,
+        fullPage: action.action === 'screenshot',
       });
       handle.screenshots.push(screenshotPath);
-      screenshotBase64 = screenshotBuffer.toString('base64');
+      screenshotBase64 = buffer.toString('base64');
     } catch (error) {
       const fallback = this.getFallbackScreenshotBase64();
       await writeFile(screenshotPath, Buffer.from(fallback, 'base64'));
@@ -142,6 +148,7 @@ export class WorkerGatewayService {
         `Failed to capture screenshot (${action.action}): ${(error as Error).message}. Using fallback image.`,
       );
       screenshotBase64 = fallback;
+      screenshotMimeType = 'image/png';
     }
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
@@ -149,6 +156,7 @@ export class WorkerGatewayService {
     return {
       screenshot: screenshotBase64,
       screenshotPath,
+      mimeType: screenshotMimeType,
       viewport,
       consoleEvents: [],
       networkEvents: [],
@@ -256,9 +264,9 @@ export class WorkerGatewayService {
   }
 
   async captureScreenshot(handle: BrowserRunHandle, label: string): Promise<string> {
-    const screenshotPath = path.join(handle.screenshotDir, `${Date.now()}-${label}.png`);
+    const screenshotPath = path.join(handle.screenshotDir, `${Date.now()}-${label}.jpg`);
     await mkdir(handle.screenshotDir, { recursive: true });
-    await handle.page.screenshot({
+    await this.captureConstrainedScreenshot(handle.page, {
       path: screenshotPath,
       fullPage: true,
     });
@@ -406,6 +414,41 @@ export class WorkerGatewayService {
       default:
         break;
     }
+  }
+
+  private async captureConstrainedScreenshot(
+    page: Page,
+    options: { path: string; fullPage: boolean },
+  ): Promise<{ buffer: Buffer }> {
+    let quality = this.screenshotInitialQuality;
+    let screenshotBuffer: Buffer;
+
+    do {
+      screenshotBuffer = await page.screenshot({
+        path: options.path,
+        fullPage: options.fullPage,
+        type: 'jpeg',
+        quality,
+      });
+      if (screenshotBuffer.byteLength <= this.screenshotMaxBytes || quality <= this.screenshotMinQuality) {
+        break;
+      }
+      quality = Math.max(this.screenshotMinQuality, quality - this.screenshotQualityStep);
+    } while (true);
+
+    if (screenshotBuffer.byteLength > this.screenshotMaxBytes && options.fullPage) {
+      this.logger.warn(
+        `Screenshot exceeded ${this.screenshotMaxBytes} bytes after compression attempts; retrying with viewport-only capture.`,
+      );
+      screenshotBuffer = await page.screenshot({
+        path: options.path,
+        fullPage: false,
+        type: 'jpeg',
+        quality: this.screenshotMinQuality,
+      });
+    }
+
+    return { buffer: screenshotBuffer };
   }
 
   private getFallbackScreenshotBase64(): string {

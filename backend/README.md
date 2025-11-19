@@ -313,7 +313,7 @@ GET /api/artifacts/:runId/:filename
 Examples:
 - `GET /api/artifacts/{runId}/qa-report.json` - QA report
 - `GET /api/artifacts/{runId}/trace.zip` - Playwright trace
-- `GET /api/artifacts/{runId}/screenshots/initial.png` - Screenshot
+- `GET /api/artifacts/{runId}/screenshots/initial.jpg` - Screenshot
 
 ## Computer-Use Implementation
 
