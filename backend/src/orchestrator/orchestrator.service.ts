@@ -234,7 +234,7 @@ export class OrchestratorService {
       .flatMap((run) =>
         this.getActiveFindings(run.report).map((finding: Finding) => ({ finding, run })),
       )
-      .filter(({ finding }) => ['blocker', 'critical'].includes(finding.severity))
+      .filter(({ finding }) => ['blocker', 'critical', 'major'].includes(finding.severity))
       .map(({ finding, run }) => ({
         runId: run.runId,
         assertion: finding.assertion,
