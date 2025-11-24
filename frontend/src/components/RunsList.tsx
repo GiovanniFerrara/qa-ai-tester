@@ -320,11 +320,13 @@ export function RunsList() {
                           severity={severity}
                           style={{
                             width: `${
-                              Math.round(
-                                ((severityTotals[severity] ?? 0) /
-                                  derivedSummary.totals.findings) *
-                                  100
-                              ) || 4
+                              (severityTotals[severity] ?? 0) === 0
+                                ? 0
+                                : Math.round(
+                                    ((severityTotals[severity] ?? 0) /
+                                      derivedSummary.totals.findings) *
+                                      100
+                                  ) || 1
                             }%`,
                           }}
                         />

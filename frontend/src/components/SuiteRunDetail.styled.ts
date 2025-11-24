@@ -292,6 +292,8 @@ export const TaskRunMeta = styled.div`
 
 export const TaskRunActions = styled.div`
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: ${theme.spacing.sm};
   flex-wrap: wrap;
   margin-top: ${theme.spacing.sm};
