@@ -7,10 +7,59 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model StorageBucket {
-  key       String   @id @db.VarChar(128)
-  payload   Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Task {
+  id               String   @id @db.VarChar(191)
+  name             String
+  description      String   @db.Text
+  goal             String   @db.Text
+  instructions     String   @db.Text
+  route            String
+  role             String
+  provider         String?
+  model            String?
+  requireFindings  Boolean  @default(true)
+  autoAuthEnabled  Boolean  @default(false)
+  budgets          Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
+model TaskCollection {
+  id            String   @id @db.VarChar(191)
+  name          String
+  description   String   @db.Text
+  taskIds       Json
+  executionMode String
+  baseUrl       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Run {
+  runId          String   @id @db.VarChar(191)
+  taskId         String
+  provider       String
+  status         String
+  startedAt      DateTime
+  finishedAt     DateTime?
+  error          String?
+  report         Json?
+  artifacts      Json?
+  baseUrlOverride String?
+  summary        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CollectionRun {
+  id            String   @id @db.VarChar(191)
+  collectionId  String
+  executionMode String
+  status        String
+  startedAt     DateTime
+  finishedAt    DateTime?
+  baseUrl       String?
+  items         Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

@@ -19,7 +19,8 @@ const mockTask: TaskSpec = {
 describe('TaskCollectionsService', () => {
   const storage = {
     loadCollections: jest.fn().mockResolvedValue([] as TaskCollection[]),
-    saveCollections: jest.fn().mockResolvedValue(undefined),
+    saveCollection: jest.fn().mockResolvedValue(undefined),
+    deleteCollection: jest.fn().mockResolvedValue(undefined),
   };
   const taskRegistry = {
     get: jest.fn().mockReturnValue(mockTask),
@@ -29,7 +30,8 @@ describe('TaskCollectionsService', () => {
 
   beforeEach(async () => {
     storage.loadCollections.mockResolvedValue([]);
-    storage.saveCollections.mockClear();
+    storage.saveCollection.mockClear();
+    storage.deleteCollection.mockClear();
     taskRegistry.get.mockClear();
     taskRegistry.get.mockReturnValue(mockTask);
     service = new TaskCollectionsService(storage as never, taskRegistry as never);
@@ -45,7 +47,7 @@ describe('TaskCollectionsService', () => {
     });
     expect(created.id).toBeDefined();
     expect(created.baseUrl).toBe('https://env.example.com');
-    expect(storage.saveCollections).toHaveBeenCalled();
+    expect(storage.saveCollection).toHaveBeenCalled();
 
     const updated = await service.update(created.id, {
       executionMode: 'sequential',

@@ -60,7 +60,7 @@ export class TaskCollectionsService implements OnModuleInit {
       updatedAt: now,
     };
     this.collections.set(record.id, record);
-    await this.persist();
+    await this.storage.saveCollection(record);
     return record;
   }
 
@@ -84,7 +84,7 @@ export class TaskCollectionsService implements OnModuleInit {
       updatedAt: new Date().toISOString(),
     };
     this.collections.set(collectionId, updated);
-    await this.persist();
+    await this.storage.saveCollection(updated);
     return updated;
   }
 
@@ -92,11 +92,7 @@ export class TaskCollectionsService implements OnModuleInit {
     if (!this.collections.delete(collectionId)) {
       throw new NotFoundException(`Collection ${collectionId} not found`);
     }
-    await this.persist();
-  }
-
-  private async persist(): Promise<void> {
-    await this.storage.saveCollections(this.list());
+    await this.storage.deleteCollection(collectionId);
   }
 
   private assertTaskIds(taskIds: string[]): void {

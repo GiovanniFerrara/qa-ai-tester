@@ -1,13 +1,12 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { StorageFactoryService } from './storage-factory.service';
+import { DatabaseService } from './database.service';
 
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [StorageFactoryService],
-  exports: [StorageFactoryService],
+  providers: [DatabaseService],
+  exports: [DatabaseService],
 })
 export class StorageModule {}
-

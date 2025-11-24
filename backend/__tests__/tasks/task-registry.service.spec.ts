@@ -8,7 +8,7 @@ import type { AppEnvironment } from 'src/config/environment';
 
 import { TaskRegistryService } from 'src/tasks/task-registry.service';
 import { TaskStorageService } from 'src/tasks/task-storage.service';
-import { StorageFactoryService } from 'src/storage/storage-factory.service';
+import { DatabaseService } from 'src/storage/database.service';
 
 class MockConfigService implements Pick<ConfigService<AppEnvironment, true>, 'get'> {
   constructor(private readonly values: Record<string, unknown>) {}
@@ -27,8 +27,11 @@ describe('TaskRegistryService', () => {
     tempDir = mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
     const storagePath = path.join(tempDir, 'tasks.json');
     const config = new MockConfigService({ TASKS_DB_PATH: storagePath }) as unknown as ConfigService<AppEnvironment, true>;
-    const storageFactory = new StorageFactoryService(config);
-    const storage = new TaskStorageService(config, storageFactory);
+    const database = {
+      isEnabled: false,
+      getClient: jest.fn(),
+    } as unknown as DatabaseService;
+    const storage = new TaskStorageService(config, database);
     service = new TaskRegistryService(storage);
     await service.onModuleInit();
   });

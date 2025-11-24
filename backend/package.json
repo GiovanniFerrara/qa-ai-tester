@@ -12,11 +12,14 @@
     "start:debug": "npm run clean && nest start --debug --watch",
     "worker": "tsx src/worker/workerServer.ts",
     "generate:schema": "tsx scripts/generate-schemas.ts",
-    "prisma:generate": "prisma generate",
     "playwright:test": "playwright test",
     "lint": "eslint --ext .ts src",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "migration:dev": "prisma migrate dev",
+    "migration:run": "prisma migrate deploy",
+    "migration:reset": "prisma migrate reset",
+    "db:generate": "prisma generate"
   },
   "keywords": [],
   "author": "",

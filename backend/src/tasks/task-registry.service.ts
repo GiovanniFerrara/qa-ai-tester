@@ -52,7 +52,7 @@ export class TaskRegistryService implements OnModuleInit {
     };
 
     this.tasks.set(persistedTask.id, persistedTask);
-    await this.persist();
+    await this.storage.saveTask(persistedTask);
     return persistedTask;
   }
 
@@ -76,7 +76,7 @@ export class TaskRegistryService implements OnModuleInit {
     };
 
     this.tasks.set(taskId, updated);
-    await this.persist();
+    await this.storage.saveTask(updated);
     return updated;
   }
 
@@ -84,11 +84,7 @@ export class TaskRegistryService implements OnModuleInit {
     if (!this.tasks.delete(taskId)) {
       throw new NotFoundException(`Task ${taskId} not found`);
     }
-    await this.persist();
-  }
-
-  private async persist(): Promise<void> {
-    await this.storage.saveTasks(this.list());
+    await this.storage.deleteTask(taskId);
   }
 
   private async seedDefaultTask(): Promise<void> {

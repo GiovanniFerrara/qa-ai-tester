@@ -68,7 +68,7 @@ export class OrchestratorService implements OnModuleInit {
       baseUrlOverride: baseUrlOverride ?? undefined,
     };
     this.runs.set(runId, pendingRecord);
-    await this.persistRuns();
+    await this.runStorage.saveRun(pendingRecord);
 
     const abortController = new AbortController();
     this.runAbortControllers.set(runId, abortController);
@@ -86,7 +86,7 @@ export class OrchestratorService implements OnModuleInit {
           summary: this.buildRunSummarySnapshot(result.report),
         };
         this.runs.set(runId, completedRecord);
-        await this.persistRuns();
+        await this.runStorage.saveRun(completedRecord);
         return result;
       })
       .catch(async (error) => {
@@ -100,7 +100,7 @@ export class OrchestratorService implements OnModuleInit {
             error: error.message,
           };
           this.runs.set(runId, cancelledRecord);
-          await this.persistRuns();
+          await this.runStorage.saveRun(cancelledRecord);
         } else {
           this.logger.error(
             `Run ${runId} failed during execution: ${(error as Error).message}`,
@@ -113,7 +113,7 @@ export class OrchestratorService implements OnModuleInit {
             error: (error as Error).message,
           };
           this.runs.set(runId, failedRecord);
-          await this.persistRuns();
+          await this.runStorage.saveRun(failedRecord);
         }
         throw error;
       })
@@ -319,7 +319,7 @@ export class OrchestratorService implements OnModuleInit {
 
     record.status = 'cancelled';
     record.finishedAt = new Date().toISOString();
-    await this.persistCollectionRuns();
+    await this.collectionRunStorage.saveRun(record);
     return record;
   }
 
@@ -357,7 +357,7 @@ export class OrchestratorService implements OnModuleInit {
       items: [],
     };
     this.collectionRuns.set(collectionRunId, record);
-    await this.persistCollectionRuns();
+    await this.collectionRunStorage.saveRun(record);
     const collectionAbortController = new AbortController();
     this.collectionRunAbortControllers.set(collectionRunId, collectionAbortController);
 
@@ -371,7 +371,7 @@ export class OrchestratorService implements OnModuleInit {
           status: 'cancelled',
           error: 'Collection run cancelled before execution',
         });
-        await this.persistCollectionRuns();
+        await this.collectionRunStorage.saveRun(record);
         return null;
       }
       try {
@@ -382,7 +382,7 @@ export class OrchestratorService implements OnModuleInit {
           runId: runRecord.runId,
           status: runRecord.status,
         });
-        await this.persistCollectionRuns();
+        await this.collectionRunStorage.saveRun(record);
         this.attachCollectionRunWatcher(collectionRunId, runRecord.runId);
         return runRecord.runId;
       } catch (error) {
@@ -392,7 +392,7 @@ export class OrchestratorService implements OnModuleInit {
           status: 'failed',
           error: (error as Error).message,
         });
-        await this.persistCollectionRuns();
+        await this.collectionRunStorage.saveRun(record);
         return null;
       }
     };
@@ -420,7 +420,7 @@ export class OrchestratorService implements OnModuleInit {
       }
 
       this.evaluateCollectionRunCompletion(record);
-      await this.persistCollectionRuns();
+      await this.collectionRunStorage.saveRun(record);
       return record;
     } finally {
       this.collectionRunAbortControllers.delete(collectionRunId);
@@ -474,10 +474,6 @@ export class OrchestratorService implements OnModuleInit {
     });
   }
 
-  private async persistRuns(): Promise<void> {
-    await this.runStorage.saveRuns([...this.runs.values()]);
-  }
-
   private waitForRunCompletion(runId: string): Promise<void> {
     const inFlight = this.runCompletionPromises.get(runId);
     if (inFlight) {
@@ -519,7 +515,7 @@ export class OrchestratorService implements OnModuleInit {
       item.error = item.error ?? 'Run data unavailable';
     }
     this.evaluateCollectionRunCompletion(record);
-    await this.persistCollectionRuns();
+    await this.collectionRunStorage.saveRun(record);
   }
 
   private evaluateCollectionRunCompletion(record: CollectionRunRecord): void {
@@ -535,10 +531,6 @@ export class OrchestratorService implements OnModuleInit {
       record.status = 'completed';
       record.finishedAt = record.finishedAt ?? new Date().toISOString();
     }
-  }
-
-  private async persistCollectionRuns(): Promise<void> {
-    await this.collectionRunStorage.saveRuns([...this.collectionRuns.values()]);
   }
 
   private normalizeBaseUrl(value?: string | null): string | undefined {
@@ -586,7 +578,7 @@ export class OrchestratorService implements OnModuleInit {
       summary: this.buildRunSummarySnapshot(updatedReport),
     };
     this.runs.set(runId, updatedRecord);
-    await this.persistRuns();
+    await this.runStorage.saveRun(updatedRecord);
     return updatedRecord;
   }
 
