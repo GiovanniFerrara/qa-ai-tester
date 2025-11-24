@@ -18,8 +18,8 @@ const mockTask: TaskSpec = {
 
 describe('TaskCollectionsService', () => {
   const storage = {
-    loadCollections: jest.fn().mockReturnValue([] as TaskCollection[]),
-    saveCollections: jest.fn(),
+    loadCollections: jest.fn().mockResolvedValue([] as TaskCollection[]),
+    saveCollections: jest.fn().mockResolvedValue(undefined),
   };
   const taskRegistry = {
     get: jest.fn().mockReturnValue(mockTask),
@@ -27,16 +27,17 @@ describe('TaskCollectionsService', () => {
 
   let service: TaskCollectionsService;
 
-  beforeEach(() => {
-    storage.loadCollections.mockReturnValue([]);
+  beforeEach(async () => {
+    storage.loadCollections.mockResolvedValue([]);
     storage.saveCollections.mockClear();
     taskRegistry.get.mockClear();
     taskRegistry.get.mockReturnValue(mockTask);
     service = new TaskCollectionsService(storage as never, taskRegistry as never);
+    await service.onModuleInit();
   });
 
-  it('creates and updates collections while validating task ids', () => {
-    const created = service.create({
+  it('creates and updates collections while validating task ids', async () => {
+    const created = await service.create({
       name: 'Smoke Suite',
       taskIds: ['task-1'],
       executionMode: 'parallel',
@@ -46,18 +47,21 @@ describe('TaskCollectionsService', () => {
     expect(created.baseUrl).toBe('https://env.example.com');
     expect(storage.saveCollections).toHaveBeenCalled();
 
-    const updated = service.update(created.id, { executionMode: 'sequential', baseUrl: null });
+    const updated = await service.update(created.id, {
+      executionMode: 'sequential',
+      baseUrl: null,
+    });
     expect(updated.executionMode).toBe('sequential');
     expect(updated.baseUrl).toBeUndefined();
   });
 
-  it('throws when referencing unknown tasks', () => {
+  it('throws when referencing unknown tasks', async () => {
     taskRegistry.get.mockReturnValueOnce(undefined);
-    expect(() =>
+    await expect(
       service.create({
         name: 'Invalid',
         taskIds: ['missing-task'],
       }),
-    ).toThrow(/Task missing-task not found/);
+    ).rejects.toThrow(/Task missing-task not found/);
   });
 });

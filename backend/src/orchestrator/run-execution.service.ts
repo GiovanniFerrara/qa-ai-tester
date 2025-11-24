@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { Finding, QaReport, TaskSpec } from '../models/contracts';
 import type { AiProvider, RunResult } from '../models/run';
+import type { AppEnvironment } from '../config/environment';
 import { AiProviderRegistryService } from '../providers/ai-provider-registry.service';
 import { ComputerUseOrchestratorService } from '../providers/computer-use-orchestrator.service';
 import { RunEventsService } from './run-events.service';
@@ -16,14 +18,18 @@ import { RunCancelledError } from './run-errors';
 @Injectable()
 export class RunExecutionService {
   private readonly logger = new Logger(RunExecutionService.name);
+  private readonly traceCaptureEnabled: boolean;
 
   constructor(
+    configService: ConfigService<AppEnvironment, true>,
     private readonly providerRegistry: AiProviderRegistryService,
     private readonly workerGateway: WorkerGatewayService,
     private readonly authStateService: AuthStateService,
     private readonly computerUseOrchestratorService: ComputerUseOrchestratorService,
     private readonly runEvents: RunEventsService,
-  ) {}
+  ) {
+    this.traceCaptureEnabled = configService.get('PLAYWRIGHT_TRACE_ENABLED', { infer: true });
+  }
 
   async execute(
     runId: string,
@@ -128,7 +134,9 @@ export class RunExecutionService {
       }
 
       const finishedAt = new Date();
-      const tracePath = path.join(handle.artifactDir, 'trace.zip');
+      const tracePath = this.traceCaptureEnabled
+        ? path.join(handle.artifactDir, 'trace.zip')
+        : undefined;
 
       if (!report) {
         report = this.buildFallbackReport({
@@ -147,7 +155,7 @@ export class RunExecutionService {
         report.finishedAt = finishedAt.toISOString();
         report.links = {
           ...(report.links ?? {}),
-          traceUrl: tracePath,
+          traceUrl: tracePath ?? null,
           screenshotsGalleryUrl: handle.screenshotDir,
           rawTranscriptUrl: responsesPath ?? null,
         };
@@ -310,7 +318,7 @@ export class RunExecutionService {
     startedAt: Date;
     finishedAt: Date;
     initialScreenshot: string;
-    tracePath: string;
+    tracePath?: string;
     reason: string;
   }): QaReport {
     return {
@@ -329,7 +337,7 @@ export class RunExecutionService {
         ),
       ],
       links: {
-        traceUrl: options.tracePath,
+        traceUrl: options.tracePath ?? null,
         screenshotsGalleryUrl: path.dirname(options.initialScreenshot),
         rawTranscriptUrl: null,
       },

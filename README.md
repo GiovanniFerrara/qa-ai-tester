@@ -103,7 +103,17 @@ ARTIFACT_DIR=artifacts
 
 # Task storage
 TASKS_DB_PATH=data/tasks.json
+
+# Optional: enable Prisma + MySQL storage instead of local JSON files
+# DATABASE_URL=mysql://user:password@localhost:3306/qa_ai_tester
+
+# Optional: capture Playwright trace.zip artifacts (disabled by default)
+# PLAYWRIGHT_TRACE_ENABLED=true
 ```
+
+When `DATABASE_URL` is present the backend automatically switches from the JSON files in `backend/data` to a Prisma-powered MySQL bucket table—no code changes required. Leave it unset to keep the lightweight file-based storage that ships by default.
+
+`PLAYWRIGHT_TRACE_ENABLED` lets you opt-in to generating `trace.zip` artifacts from Playwright. This is disabled by default to save disk space, but setting the flag to `true` restores the previous behavior.
 
 #### Where to Get API Keys
 

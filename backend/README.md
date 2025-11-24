@@ -123,12 +123,17 @@ ARTIFACT_DIR=artifacts
 # Path to task database file (JSON format)
 TASKS_DB_PATH=data/tasks.json
 
-# ============================================
+# Optional: switch persistence to MySQL via Prisma
+# DATABASE_URL=mysql://user:password@localhost:3306/qa_ai_tester
+
+# Optional: capture Playwright trace archives (defaults to false)
+# PLAYWRIGHT_TRACE_ENABLED=true
 
 # ============================================
 
+# ============================================
 
-
+Setting `DATABASE_URL` makes the backend use Prisma/MySQL buckets for tasks, runs, and collections. Omitting it keeps the lightweight JSON files in `backend/data`. Similarly, `PLAYWRIGHT_TRACE_ENABLED` controls whether Playwright `trace.zip` artifacts are captured; leave it `false` to minimize disk usage or enable it to retain the full timeline for each run.
 
 # Run the auth setup
 npm run playwright:test

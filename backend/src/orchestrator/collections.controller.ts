@@ -50,10 +50,10 @@ export class CollectionsController {
   }
 
   @Post()
-  create(@Body() body: unknown) {
+  async create(@Body() body: unknown) {
     try {
       const payload = CollectionPayloadSchema.parse(body);
-      return this.taskCollections.create(payload);
+      return await this.taskCollections.create(payload);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new BadRequestException(error.errors.map((err) => err.message).join(', '));
@@ -63,10 +63,10 @@ export class CollectionsController {
   }
 
   @Put(':collectionId')
-  update(@Param('collectionId') collectionId: string, @Body() body: unknown) {
+  async update(@Param('collectionId') collectionId: string, @Body() body: unknown) {
     try {
       const payload = CollectionPayloadSchema.partial().parse(body);
-      return this.taskCollections.update(collectionId, payload);
+      return await this.taskCollections.update(collectionId, payload);
     } catch (error) {
       if (error instanceof ZodError) {
         throw new BadRequestException(error.errors.map((err) => err.message).join(', '));
@@ -76,8 +76,8 @@ export class CollectionsController {
   }
 
   @Delete(':collectionId')
-  remove(@Param('collectionId') collectionId: string) {
-    this.taskCollections.remove(collectionId);
+  async remove(@Param('collectionId') collectionId: string) {
+    await this.taskCollections.remove(collectionId);
     return { success: true };
   }
 

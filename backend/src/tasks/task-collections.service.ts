@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
 import { TaskCollectionSchema, type TaskCollection, type ExecutionMode } from '../models/collections';
@@ -16,14 +16,16 @@ interface CreateCollectionInput {
 type UpdateCollectionInput = Partial<CreateCollectionInput>;
 
 @Injectable()
-export class TaskCollectionsService {
+export class TaskCollectionsService implements OnModuleInit {
   private readonly collections = new Map<string, TaskCollection>();
 
   constructor(
     private readonly storage: TaskCollectionStorageService,
     private readonly taskRegistry: TaskRegistryService,
-  ) {
-    const persisted = this.storage.loadCollections();
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    const persisted = await this.storage.loadCollections();
     for (const collection of persisted) {
       const parsed = TaskCollectionSchema.safeParse({
         ...collection,
@@ -43,7 +45,7 @@ export class TaskCollectionsService {
     return this.collections.get(collectionId);
   }
 
-  create(input: CreateCollectionInput): TaskCollection {
+  async create(input: CreateCollectionInput): Promise<TaskCollection> {
     this.assertTaskIds(input.taskIds);
     const now = new Date().toISOString();
     const baseUrl = this.normalizeBaseUrl(input.baseUrl);
@@ -58,11 +60,11 @@ export class TaskCollectionsService {
       updatedAt: now,
     };
     this.collections.set(record.id, record);
-    this.persist();
+    await this.persist();
     return record;
   }
 
-  update(collectionId: string, updates: UpdateCollectionInput): TaskCollection {
+  async update(collectionId: string, updates: UpdateCollectionInput): Promise<TaskCollection> {
     const existing = this.collections.get(collectionId);
     if (!existing) {
       throw new NotFoundException(`Collection ${collectionId} not found`);
@@ -82,19 +84,19 @@ export class TaskCollectionsService {
       updatedAt: new Date().toISOString(),
     };
     this.collections.set(collectionId, updated);
-    this.persist();
+    await this.persist();
     return updated;
   }
 
-  remove(collectionId: string): void {
+  async remove(collectionId: string): Promise<void> {
     if (!this.collections.delete(collectionId)) {
       throw new NotFoundException(`Collection ${collectionId} not found`);
     }
-    this.persist();
+    await this.persist();
   }
 
-  private persist(): void {
-    this.storage.saveCollections(this.list());
+  private async persist(): Promise<void> {
+    await this.storage.saveCollections(this.list());
   }
 
   private assertTaskIds(taskIds: string[]): void {

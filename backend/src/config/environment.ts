@@ -12,6 +12,7 @@ export const EnvSchema = z.object({
   RUNS_DB_PATH: z.string().optional(),
   TASK_COLLECTIONS_DB_PATH: z.string().optional(),
   COLLECTION_RUNS_DB_PATH: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
   STORAGE_STATE_PATH: z.string().default('playwright/.auth/analyst.json'),
   ARTIFACT_DIR: z.string().default('artifacts'),
   LOGIN_USERNAME: z.string().default('demo@jurny.com'),
@@ -19,6 +20,10 @@ export const EnvSchema = z.object({
   DEFAULT_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
   OPENAI_MODEL: z.string().default('computer-use-preview'),
   CLAUDE_MODEL: z.string().default('claude-sonnet-4-5-sonnet-20250219'),
+  PLAYWRIGHT_TRACE_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type AppEnvironment = z.infer<typeof EnvSchema>;

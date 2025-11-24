@@ -4,6 +4,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 import { validateEnvironment } from './config/environment';
+import { StorageModule } from './storage/storage.module';
 import { OrchestratorModule } from './orchestrator/orchestrator.module';
 import { ProvidersModule } from './providers/providers.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -19,6 +20,7 @@ import { TasksModule } from './tasks/tasks.module';
       rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
       exclude: ['/api*'],
     }),
+    StorageModule,
     ProvidersModule,
     TasksModule,
     OrchestratorModule,

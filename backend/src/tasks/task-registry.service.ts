@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { TaskSpec } from '../models/contracts';
@@ -12,20 +12,22 @@ interface CreateTaskOptions
 type UpdateTaskOptions = Partial<Omit<TaskSpec, 'id'>>;
 
 @Injectable()
-export class TaskRegistryService {
+export class TaskRegistryService implements OnModuleInit {
   private readonly tasks = new Map<string, TaskSpec>();
 
-  constructor(private readonly storage: TaskStorageService) {
-    const persisted = this.storage.loadTasks();
+  constructor(private readonly storage: TaskStorageService) {}
+
+  async onModuleInit(): Promise<void> {
+    const persisted = await this.storage.loadTasks();
     if (persisted.length === 0) {
-      this.seedDefaultTask();
-    } else {
-      for (const task of persisted) {
-        this.tasks.set(task.id, {
-          ...task,
-          autoAuthEnabled: task.autoAuthEnabled ?? false,
-        });
-      }
+      await this.seedDefaultTask();
+      return;
+    }
+    for (const task of persisted) {
+      this.tasks.set(task.id, {
+        ...task,
+        autoAuthEnabled: task.autoAuthEnabled ?? false,
+      });
     }
   }
 
@@ -37,7 +39,7 @@ export class TaskRegistryService {
     return this.tasks.get(taskId);
   }
 
-  registerTask(taskDefinition: CreateTaskOptions): TaskSpec {
+  async registerTask(taskDefinition: CreateTaskOptions): Promise<TaskSpec> {
     const persistedTask: TaskSpec = {
       ...taskDefinition,
       id: taskDefinition.id ?? uuidv4(),
@@ -50,11 +52,11 @@ export class TaskRegistryService {
     };
 
     this.tasks.set(persistedTask.id, persistedTask);
-    this.persist();
+    await this.persist();
     return persistedTask;
   }
 
-  updateTask(taskId: string, updates: UpdateTaskOptions): TaskSpec {
+  async updateTask(taskId: string, updates: UpdateTaskOptions): Promise<TaskSpec> {
     const existing = this.tasks.get(taskId);
     if (!existing) {
       throw new NotFoundException(`Task ${taskId} not found`);
@@ -74,22 +76,22 @@ export class TaskRegistryService {
     };
 
     this.tasks.set(taskId, updated);
-    this.persist();
+    await this.persist();
     return updated;
   }
 
-  removeTask(taskId: string): void {
+  async removeTask(taskId: string): Promise<void> {
     if (!this.tasks.delete(taskId)) {
       throw new NotFoundException(`Task ${taskId} not found`);
     }
-    this.persist();
+    await this.persist();
   }
 
-  private persist(): void {
-    this.storage.saveTasks(this.list());
+  private async persist(): Promise<void> {
+    await this.storage.saveTasks(this.list());
   }
 
-  private seedDefaultTask(): void {
+  private async seedDefaultTask(): Promise<void> {
     // Set a task see if you wish
 
     //  this.registerTask({

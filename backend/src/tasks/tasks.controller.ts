@@ -56,9 +56,9 @@ export class TasksController {
   }
 
   @Post()
-  createTask(@Body() body: unknown) {
+  async createTask(@Body() body: unknown) {
     const parsed = CreateTaskSchema.parse(body);
-    const task = this.taskRegistry.registerTask({
+    const task = await this.taskRegistry.registerTask({
       id: parsed.id,
       name: parsed.name,
       description: parsed.description,
@@ -76,9 +76,9 @@ export class TasksController {
   }
 
   @Put(':taskId')
-  updateTask(@Param('taskId') taskId: string, @Body() body: unknown) {
+  async updateTask(@Param('taskId') taskId: string, @Body() body: unknown) {
     const parsed = UpdateTaskSchema.parse(body);
-    const updated = this.taskRegistry.updateTask(taskId, {
+    const updated = await this.taskRegistry.updateTask(taskId, {
       ...parsed,
       budgets: parsed.budgets ? this.mergeBudgets(parsed.budgets) : undefined,
     });
@@ -86,8 +86,8 @@ export class TasksController {
   }
 
   @Delete(':taskId')
-  deleteTask(@Param('taskId') taskId: string) {
-    this.taskRegistry.removeTask(taskId);
+  async deleteTask(@Param('taskId') taskId: string) {
+    await this.taskRegistry.removeTask(taskId);
     return { success: true };
   }
 

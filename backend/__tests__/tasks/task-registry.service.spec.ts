@@ -8,6 +8,7 @@ import type { AppEnvironment } from 'src/config/environment';
 
 import { TaskRegistryService } from 'src/tasks/task-registry.service';
 import { TaskStorageService } from 'src/tasks/task-storage.service';
+import { StorageFactoryService } from 'src/storage/storage-factory.service';
 
 class MockConfigService implements Pick<ConfigService<AppEnvironment, true>, 'get'> {
   constructor(private readonly values: Record<string, unknown>) {}
@@ -22,31 +23,26 @@ describe('TaskRegistryService', () => {
   let service: TaskRegistryService;
   let tempDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     tempDir = mkdtempSync(path.join(os.tmpdir(), 'tasks-test-'));
     const storagePath = path.join(tempDir, 'tasks.json');
     const config = new MockConfigService({ TASKS_DB_PATH: storagePath }) as unknown as ConfigService<AppEnvironment, true>;
-    const storage = new TaskStorageService(config);
+    const storageFactory = new StorageFactoryService(config);
+    const storage = new TaskStorageService(config, storageFactory);
     service = new TaskRegistryService(storage);
+    await service.onModuleInit();
   });
 
   afterEach(() => {
     rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('registers default dashboard task on init', () => {
-    const tasks = service.list();
-    expect(tasks).toHaveLength(1);
-    expect(tasks[0]).toMatchObject({
-      id: 'dashboard-sanity',
-      name: 'Dashboard Sanity',
-      route: '/dashboard',
-      role: 'analyst',
-    });
+  it('starts empty when no tasks are persisted', () => {
+    expect(service.list()).toHaveLength(0);
   });
 
-  it('registers and retrieves custom tasks', () => {
-    const spec = service.registerTask({
+  it('registers and retrieves custom tasks', async () => {
+    const spec = await service.registerTask({
       name: 'Settings Flow',
       description: 'Validate settings flow for admin user',
       goal: 'Validate settings flow',
@@ -64,6 +60,6 @@ describe('TaskRegistryService', () => {
     });
 
     expect(service.get(spec.id)).toEqual(spec);
-    expect(service.list()).toHaveLength(2);
+    expect(service.list()).toHaveLength(1);
   });
 });

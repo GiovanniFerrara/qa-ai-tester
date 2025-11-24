@@ -34,6 +34,7 @@ export class WorkerGatewayService {
   private readonly artifactRoot: string;
   private readonly storageStatePath: string;
   private readonly baseUrl: string;
+  private readonly traceCaptureEnabled: boolean;
   private readonly screenshotMimeType = 'image/jpeg';
   private readonly screenshotMaxBytes = 120_000;
   private readonly screenshotInitialQuality = 80;
@@ -48,6 +49,8 @@ export class WorkerGatewayService {
       infer: true,
     });
     this.baseUrl = this.configService.get('BASE_URL', { infer: true });
+    this.traceCaptureEnabled =
+      this.configService.get('PLAYWRIGHT_TRACE_ENABLED', { infer: true }) ?? false;
   }
 
   async startRun(
@@ -75,11 +78,13 @@ export class WorkerGatewayService {
 
     const context = await browser.newContext(contextOptions);
 
-    await context.tracing.start({
-      screenshots: true,
-      snapshots: true,
-      sources: true,
-    });
+    if (this.traceCaptureEnabled) {
+      await context.tracing.start({
+        screenshots: true,
+        snapshots: true,
+        sources: true,
+      });
+    }
 
     const page = await context.newPage();
     const base = baseUrlOverride ?? this.baseUrl;
@@ -98,8 +103,10 @@ export class WorkerGatewayService {
   }
 
   async stopRun(handle: BrowserRunHandle): Promise<void> {
-    const tracePath = path.join(handle.artifactDir, 'trace.zip');
-    await handle.context.tracing.stop({ path: tracePath });
+    if (this.traceCaptureEnabled) {
+      const tracePath = path.join(handle.artifactDir, 'trace.zip');
+      await handle.context.tracing.stop({ path: tracePath });
+    }
     await handle.context.close();
     await handle.browser.close();
   }

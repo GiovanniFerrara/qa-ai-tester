@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
@@ -16,7 +16,7 @@ import { CollectionRunStorageService } from './collection-run-storage.service';
 import { RunCancelledError } from './run-errors';
 
 @Injectable()
-export class OrchestratorService {
+export class OrchestratorService implements OnModuleInit {
   private readonly logger = new Logger(OrchestratorService.name);
   private readonly runs = new Map<string, StoredRunRecord>();
   private readonly collectionRuns = new Map<string, CollectionRunRecord>();
@@ -34,9 +34,12 @@ export class OrchestratorService {
     private readonly collectionRunStorage: CollectionRunStorageService,
   ) {
     this.lastBaseUrlPath = path.resolve(process.cwd(), 'data', 'last-base-url.txt');
-    const storedRuns = this.runStorage.loadRuns();
+  }
+
+  async onModuleInit(): Promise<void> {
+    const storedRuns = await this.runStorage.loadRuns();
     storedRuns.forEach((run) => this.runs.set(run.runId, run));
-    const storedCollectionRuns = this.collectionRunStorage.loadRuns();
+    const storedCollectionRuns = await this.collectionRunStorage.loadRuns();
     storedCollectionRuns.forEach((run) => this.collectionRuns.set(run.id, run));
   }
 
@@ -65,14 +68,14 @@ export class OrchestratorService {
       baseUrlOverride: baseUrlOverride ?? undefined,
     };
     this.runs.set(runId, pendingRecord);
-    this.persistRuns();
+    await this.persistRuns();
 
     const abortController = new AbortController();
     this.runAbortControllers.set(runId, abortController);
 
     const executionPromise = this.runExecutionService
       .execute(runId, task, provider, baseUrlOverride, abortController.signal)
-      .then((result: RunResult) => {
+      .then(async (result: RunResult) => {
         const finishedAt = new Date();
         const completedRecord: StoredRunRecord = {
           ...pendingRecord,
@@ -83,10 +86,10 @@ export class OrchestratorService {
           summary: this.buildRunSummarySnapshot(result.report),
         };
         this.runs.set(runId, completedRecord);
-        this.persistRuns();
+        await this.persistRuns();
         return result;
       })
-      .catch((error) => {
+      .catch(async (error) => {
         const finishedAt = new Date();
         if (error instanceof RunCancelledError) {
           this.logger.warn(`Run ${runId} was cancelled: ${error.message}`);
@@ -97,7 +100,7 @@ export class OrchestratorService {
             error: error.message,
           };
           this.runs.set(runId, cancelledRecord);
-          this.persistRuns();
+          await this.persistRuns();
         } else {
           this.logger.error(
             `Run ${runId} failed during execution: ${(error as Error).message}`,
@@ -110,7 +113,7 @@ export class OrchestratorService {
             error: (error as Error).message,
           };
           this.runs.set(runId, failedRecord);
-          this.persistRuns();
+          await this.persistRuns();
         }
         throw error;
       })
@@ -316,7 +319,7 @@ export class OrchestratorService {
 
     record.status = 'cancelled';
     record.finishedAt = new Date().toISOString();
-    this.persistCollectionRuns();
+    await this.persistCollectionRuns();
     return record;
   }
 
@@ -354,7 +357,7 @@ export class OrchestratorService {
       items: [],
     };
     this.collectionRuns.set(collectionRunId, record);
-    this.persistCollectionRuns();
+    await this.persistCollectionRuns();
     const collectionAbortController = new AbortController();
     this.collectionRunAbortControllers.set(collectionRunId, collectionAbortController);
 
@@ -368,7 +371,7 @@ export class OrchestratorService {
           status: 'cancelled',
           error: 'Collection run cancelled before execution',
         });
-        this.persistCollectionRuns();
+        await this.persistCollectionRuns();
         return null;
       }
       try {
@@ -379,7 +382,7 @@ export class OrchestratorService {
           runId: runRecord.runId,
           status: runRecord.status,
         });
-        this.persistCollectionRuns();
+        await this.persistCollectionRuns();
         this.attachCollectionRunWatcher(collectionRunId, runRecord.runId);
         return runRecord.runId;
       } catch (error) {
@@ -389,7 +392,7 @@ export class OrchestratorService {
           status: 'failed',
           error: (error as Error).message,
         });
-        this.persistCollectionRuns();
+        await this.persistCollectionRuns();
         return null;
       }
     };
@@ -417,19 +420,19 @@ export class OrchestratorService {
       }
 
       this.evaluateCollectionRunCompletion(record);
-      this.persistCollectionRuns();
+      await this.persistCollectionRuns();
       return record;
     } finally {
       this.collectionRunAbortControllers.delete(collectionRunId);
     }
   }
 
-  dismissFinding(
+  async dismissFinding(
     runId: string,
     findingId: string,
     reason: DismissReason,
     dismissedBy?: string,
-  ): StoredRunRecord {
+  ): Promise<StoredRunRecord> {
     return this.updateRunReport(runId, (report) => {
       const index = report.findings.findIndex((finding: Finding) => finding.id === findingId);
       if (index === -1) {
@@ -453,7 +456,7 @@ export class OrchestratorService {
     });
   }
 
-  restoreFinding(runId: string, findingId: string): StoredRunRecord {
+  async restoreFinding(runId: string, findingId: string): Promise<StoredRunRecord> {
     return this.updateRunReport(runId, (report) => {
       const index = report.findings.findIndex((finding: Finding) => finding.id === findingId);
       if (index === -1) {
@@ -471,8 +474,8 @@ export class OrchestratorService {
     });
   }
 
-  private persistRuns(): void {
-    this.runStorage.saveRuns([...this.runs.values()]);
+  private async persistRuns(): Promise<void> {
+    await this.runStorage.saveRuns([...this.runs.values()]);
   }
 
   private waitForRunCompletion(runId: string): Promise<void> {
@@ -490,12 +493,15 @@ export class OrchestratorService {
   private attachCollectionRunWatcher(collectionRunId: string, runId: string): void {
     this.waitForRunCompletion(runId)
       .catch(() => undefined)
-      .then(() => {
-        this.updateCollectionRunItemFromRun(collectionRunId, runId);
+      .then(async () => {
+        await this.updateCollectionRunItemFromRun(collectionRunId, runId);
       });
   }
 
-  private updateCollectionRunItemFromRun(collectionRunId: string, runId: string): void {
+  private async updateCollectionRunItemFromRun(
+    collectionRunId: string,
+    runId: string,
+  ): Promise<void> {
     const record = this.collectionRuns.get(collectionRunId);
     if (!record) {
       return;
@@ -513,7 +519,7 @@ export class OrchestratorService {
       item.error = item.error ?? 'Run data unavailable';
     }
     this.evaluateCollectionRunCompletion(record);
-    this.persistCollectionRuns();
+    await this.persistCollectionRuns();
   }
 
   private evaluateCollectionRunCompletion(record: CollectionRunRecord): void {
@@ -531,8 +537,8 @@ export class OrchestratorService {
     }
   }
 
-  private persistCollectionRuns(): void {
-    this.collectionRunStorage.saveRuns([...this.collectionRuns.values()]);
+  private async persistCollectionRuns(): Promise<void> {
+    await this.collectionRunStorage.saveRuns([...this.collectionRuns.values()]);
   }
 
   private normalizeBaseUrl(value?: string | null): string | undefined {
@@ -565,10 +571,10 @@ export class OrchestratorService {
     };
   }
 
-  private updateRunReport(
+  private async updateRunReport(
     runId: string,
     mutator: (report: QaReport) => QaReport,
-  ): StoredRunRecord {
+  ): Promise<StoredRunRecord> {
     const existing = this.getRun(runId);
     if (!existing.report) {
       throw new NotFoundException(`Run ${runId} does not have a QA report yet`);
@@ -580,7 +586,7 @@ export class OrchestratorService {
       summary: this.buildRunSummarySnapshot(updatedReport),
     };
     this.runs.set(runId, updatedRecord);
-    this.persistRuns();
+    await this.persistRuns();
     return updatedRecord;
   }
 
