@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { AppEnvironment } from '../config/environment';
 import type { CollectionRunRecord } from '../models/collections';
 import { DatabaseService } from '../storage/database.service';
+import { FsDatabaseService } from '../storage/fs-database.service';
 
 type CollectionRunRow = {
   id: string;
@@ -28,6 +28,7 @@ export class CollectionRunStorageService {
   constructor(
     private readonly configService: ConfigService<AppEnvironment, true>,
     private readonly database: DatabaseService,
+    private readonly fsDatabase: FsDatabaseService,
   ) {
     const configuredPath = path.join(process.cwd(), 'data', 'collection-runs.json');
     const overridePath = this.configService.get<string>('COLLECTION_RUNS_DB_PATH');
@@ -64,25 +65,11 @@ export class CollectionRunStorageService {
   }
 
   private async loadFromFile(): Promise<CollectionRunRecord[]> {
-    try {
-      await fs.mkdir(path.dirname(this.storagePath), { recursive: true });
-      const raw = await fs.readFile(this.storagePath, 'utf8').catch((error) => {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          return '';
-        }
-        throw error;
-      });
-      if (!raw.trim()) {
-        return [];
-      }
-      const parsed = JSON.parse(raw) as CollectionRunRecord[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      this.logger.warn(
-        `Failed to load collection runs from ${this.storagePath}: ${(error as Error).message}`,
-      );
-      return [];
-    }
+    return this.fsDatabase.readArray<CollectionRunRecord>({
+      filePath: this.storagePath,
+      context: 'collection runs',
+      logger: this.logger,
+    });
   }
 
   private async saveRunToFile(record: CollectionRunRecord): Promise<void> {
@@ -93,18 +80,12 @@ export class CollectionRunStorageService {
     } else {
       runs[index] = record;
     }
-    await this.writeFile(runs);
-  }
-
-  private async writeFile(runs: CollectionRunRecord[]): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(this.storagePath), { recursive: true });
-      await fs.writeFile(this.storagePath, JSON.stringify(runs, null, 2), 'utf8');
-    } catch (error) {
-      this.logger.error(
-        `Failed to persist collection runs to ${this.storagePath}: ${(error as Error).message}`,
-      );
-    }
+    await this.fsDatabase.write({
+      filePath: this.storagePath,
+      data: runs,
+      context: 'collection runs',
+      logger: this.logger,
+    });
   }
 
   private mapRowToRecord(row: CollectionRunRow): CollectionRunRecord {

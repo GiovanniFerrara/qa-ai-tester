@@ -291,9 +291,9 @@ export class RunExecutionService {
         const highOutput = usageTotals.tokensOutput > 200_000;
         inputRate = highInput ? 6 : 3;
         outputRate = highOutput ? 22.5 : 15;
-      } else if (normalizedModel.includes('opus')) {
-        inputRate = 15;
-        outputRate = 75;
+      } else if (normalizedModel.includes('opus-4-5')) {
+        inputRate = 5;
+        outputRate = 25;
       } else {
         inputRate = 3;
         outputRate = 15;

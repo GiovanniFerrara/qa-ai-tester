@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { AppEnvironment } from '../config/environment';
 import type { StoredRunRecord } from '../models/run';
 import { DatabaseService } from '../storage/database.service';
+import { FsDatabaseService } from '../storage/fs-database.service';
 
 type RunRow = {
   runId: string;
@@ -31,6 +31,7 @@ export class RunStorageService {
   constructor(
     private readonly configService: ConfigService<AppEnvironment, true>,
     private readonly database: DatabaseService,
+    private readonly fsDatabase: FsDatabaseService,
   ) {
     const configuredPath =
       this.configService.get<string>('RUNS_DB_PATH', { infer: true }) ??
@@ -68,23 +69,11 @@ export class RunStorageService {
   }
 
   private async loadFromFile(): Promise<StoredRunRecord[]> {
-    try {
-      await fs.mkdir(path.dirname(this.storagePath), { recursive: true });
-      const raw = await fs.readFile(this.storagePath, 'utf8').catch((error) => {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          return '';
-        }
-        throw error;
-      });
-      if (!raw.trim()) {
-        return [];
-      }
-      const parsed = JSON.parse(raw) as StoredRunRecord[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      this.logger.warn(`Failed to load runs from ${this.storagePath}: ${(error as Error).message}`);
-      return [];
-    }
+    return this.fsDatabase.readArray<StoredRunRecord>({
+      filePath: this.storagePath,
+      context: 'runs',
+      logger: this.logger,
+    });
   }
 
   private async saveRunToFile(run: StoredRunRecord): Promise<void> {
@@ -95,18 +84,12 @@ export class RunStorageService {
     } else {
       runs[index] = run;
     }
-    await this.writeFile(runs);
-  }
-
-  private async writeFile(runs: StoredRunRecord[]): Promise<void> {
-    try {
-      await fs.mkdir(path.dirname(this.storagePath), { recursive: true });
-      await fs.writeFile(this.storagePath, JSON.stringify(runs, null, 2), 'utf8');
-    } catch (error) {
-      this.logger.error(
-        `Failed to persist runs to ${this.storagePath}: ${(error as Error).message}`,
-      );
-    }
+    await this.fsDatabase.write({
+      filePath: this.storagePath,
+      context: 'runs',
+      data: runs,
+      logger: this.logger,
+    });
   }
 
   private mapRowToRun(row: RunRow): StoredRunRecord {
