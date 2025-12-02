@@ -1,7 +1,7 @@
 {
-  "$ref": "#/definitions/domSnapshotRequest",
+  "$ref": "#/definitions/DomSnapshotRequest",
   "definitions": {
-    "domSnapshotRequest": {
+    "DomSnapshotRequest": {
       "type": "object",
       "properties": {
         "selector": {

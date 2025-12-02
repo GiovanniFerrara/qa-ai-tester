@@ -1,7 +1,7 @@
 {
-  "$ref": "#/definitions/computerAction",
+  "$ref": "#/definitions/ComputerAction",
   "definitions": {
-    "computerAction": {
+    "ComputerAction": {
       "type": "object",
       "properties": {
         "action": {

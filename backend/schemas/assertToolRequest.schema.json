@@ -1,7 +1,7 @@
 {
-  "$ref": "#/definitions/assertToolRequest",
+  "$ref": "#/definitions/AssertToolRequest",
   "definitions": {
-    "assertToolRequest": {
+    "AssertToolRequest": {
       "type": "object",
       "properties": {
         "severity": {

@@ -1,7 +1,7 @@
 {
-  "$ref": "#/definitions/qaReport",
+  "$ref": "#/definitions/QAReport",
   "definitions": {
-    "qaReport": {
+    "QAReport": {
       "type": "object",
       "properties": {
         "id": {

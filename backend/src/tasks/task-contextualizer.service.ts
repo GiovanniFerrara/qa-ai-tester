@@ -1,30 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ResponseFormatTextJSONSchemaConfig } from 'openai/resources/responses/responses';
 
 import { OpenAiProviderService } from '../providers/openai-provider.service';
-
-export const TaskDraftSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().default(''),
-  goal: z.string().min(1),
-  instructions: z.string().default(''),
-  route: z.string().min(1),
-  role: z.string().default('analyst'),
-});
-
-export type TaskDraft = z.infer<typeof TaskDraftSchema>;
+import { taskDraftSchemaJson } from '../schemas/generated';
+import { TaskDraftSchema, type TaskDraft } from './task-draft.schema';
 
 @Injectable()
 export class TaskContextualizerService {
   private readonly logger = new Logger(TaskContextualizerService.name);
   private readonly schema = (() => {
-    const schema = zodToJsonSchema(TaskDraftSchema, {
-      $refStrategy: 'none',
-    }) as Record<string, any>;
-
-    const properties = schema.properties as Record<string, any> | undefined;
+    const fullSchema = JSON.parse(JSON.stringify(taskDraftSchemaJson)) as Record<string, any>;
+    
+    const definitions = fullSchema.definitions as Record<string, any> | undefined;
+    if (!definitions?.TaskDraft) {
+      throw new Error('TaskDraft definition not found in schema');
+    }
+    
+    const schema = definitions.TaskDraft as Record<string, any>;
+    const properties = schema.properties as Record<string, unknown> | undefined;
     if (properties) {
       schema.required = Object.keys(properties);
     }
@@ -112,3 +105,5 @@ export class TaskContextualizerService {
     };
   }
 }
+
+export type { TaskDraft } from './task-draft.schema';

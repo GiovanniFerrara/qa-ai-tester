@@ -1,13 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { JsonSchema7Type } from 'zod-to-json-schema';
 
 import {
-  AssertToolRequestSchema,
-  ComputerActionSchema,
-  DomSnapshotRequestSchema,
-  QaReportSchema,
-} from '../models/contracts';
+  assertToolRequestSchemaJson,
+  computerActionSchemaJson,
+  qaReportSchemaJson,
+} from '../schemas/generated';
 
 @Injectable()
 export class SchemaService {
@@ -17,14 +15,8 @@ export class SchemaService {
   private readonly assertToolSchema: JsonSchema7Type;
 
   constructor() {
-    this.qaReportSchema = this.extractRootSchema(
-      zodToJsonSchema(QaReportSchema, { name: 'QAReport' }),
-      'QAReport',
-    );
-    this.computerActionSchema = this.extractRootSchema(
-      zodToJsonSchema(ComputerActionSchema, { name: 'ComputerAction' }),
-      'ComputerAction',
-    );
+    this.qaReportSchema = this.extractRootSchema(qaReportSchemaJson, 'QAReport');
+    this.computerActionSchema = this.extractRootSchema(computerActionSchemaJson, 'ComputerAction');
     this.domSnapshotSchema = {
       type: 'object',
       additionalProperties: false,
@@ -49,7 +41,7 @@ export class SchemaService {
       required: ['selector', 'mode', 'attributes', 'computed'],
     } as JsonSchema7Type;
     this.assertToolSchema = this.extractRootSchema(
-      zodToJsonSchema(AssertToolRequestSchema, { name: 'AssertToolRequest' }),
+      assertToolRequestSchemaJson,
       'AssertToolRequest',
     );
   }
